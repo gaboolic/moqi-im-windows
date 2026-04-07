@@ -1,91 +1,120 @@
-# Moqi IM for Windows - Windows 输入法 TSF 层
+# Moqi IM for Windows
 
-## 项目简介
+Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Text Services Framework (TSF)**，并提供候选窗、语言栏按钮、组合串上屏等 Windows 平台能力。
 
-Moqi IM for Windows 是一个基于 **Microsoft Text Services Framework (TSF)** 开发的 Windows 平台输入法适配层。
+当前状态：已实现 **Rime / 中州韵** 输入法接入，**fcitx5** 输入法接入中。
 
-## 架构定位
+项目 TSF 层核心依赖：[`libIME2`](https://github.com/EasyIME/libIME2)。
+
+## 运行架构
 
 ```
 ┌─────────────────────────────────────────────┐
 │           Windows 应用程序                 │
 │      (记事本 / Word / 浏览器 / 其他)        │
 ├─────────────────────────────────────────────┤
-│      Moqi IM Windows (本项目)               │
-│  ┌─────────────────────────────────────┐   │
-│  │   TSF 接口实现 (ITfTextInputProcessor) │ │
-│  │   - 按键拦截 (ITfKeyEventSink)       │   │
-│  │   - 候选窗口 (ITfCandidateListUI)    │   │
-│  │   - 状态窗口                         │   │
-│  └─────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────┐   │
-│  │   与引擎通信层 (RPC/Cgo/其他)        │   │
-│  └─────────────────────────────────────┘   │
+│  MoqiTextService.dll                        │
+│  - TSF 接口实现                             │
+│  - 按键事件/组合串/候选窗处理               │
+│  - 通过命名管道连接 Launcher                │
 ├─────────────────────────────────────────────┤
-│        Moqi IME 引擎 (moqi-ime)             │
-│        Go 语言实现的输入法核心              │
+│  MoqLauncher.exe                            │
+│  - 读取 backends.json                       │
+│  - 管理后端进程生命周期                     │
+│  - 在命名管道与后端 stdin/stdout 之间转发消息│
+├─────────────────────────────────────────────┤
+│  moqi-ime\server.exe                        │
+│  - Go 后端进程                              │
+│  - 加载 input_methods\*\ime.json            │
+│  - 返回候选、状态、上屏文本等               │
 └─────────────────────────────────────────────┘
 ```
 
+当前默认部署中，`backends.json` 指向 `moqi-ime\server.exe`；Windows 侧通过本地命名管道连到 `MoqLauncher`，`MoqLauncher` 再把请求按行写入后端的标准输入，并从标准输出读取响应。
+
 ## 核心职责
 
-- **TSF 接口实现**：实现 `ITfTextInputProcessor` 等必要接口
-- **UI 组件**：候选窗口、状态栏、语言栏按钮
-- **按键处理**：拦截并转发按键事件到引擎
-- **文本提交**：将引擎返回的候选文本提交到应用程序
-- **与引擎通信**：通过 Cgo / gRPC / REST 等方式调用 `moqi-ime`
+- **TSF 文本服务**：实现 `ITfTextInputProcessor`、`ITfKeyEventSink` 等接口
+- **Windows UI**：管理候选窗口、消息窗口、语言栏按钮和 preserved keys
+- **协议转换**：把按键与状态序列化为 JSON 请求，并应用后端返回的组合串、候选和提交文本
+- **后端接入**：通过 `MoqLauncher` 读取 `backends.json`，按语言配置 GUID 路由到对应后端
 
-## 与 Moqi IME 引擎的关系
+## 与 `moqi-ime` 的关系
 
-本项目 **依赖** `moqi-ime` 项目作为其输入法引擎核心：
-- 本层负责 Windows 平台特定的 UI 和 TSF 交互
-- 拼音解析、候选生成、词库管理等核心逻辑由 `moqi-ime` 提供
+本仓库不实现拼音解析、候选生成、词库管理等输入法核心逻辑，这些能力由 `moqi-ime` 提供。
 
-### 支持的输入模式
+Windows 侧的职责主要是：
 
-Windows 输入法将支持 `moqi-ime` 引擎提供的两种输入模式：
+- 把 TSF 生命周期和按键事件转发给后端
+- 根据后端返回结果更新候选窗、组合串和状态
+- 从已安装后端目录扫描 `input_methods/*/ime.json`，为语言配置提供元数据与配置入口
 
-| 模式 | 说明 | 状态栏指示 |
-|------|------|-----------|
-| **拼音输入** | 标准汉语拼音输入 | 显示 "拼" |
-| **码表输入** | 支持五笔、郑码等码表 | 显示 "码" |
-
-用户可通过语言栏按钮或热键切换输入模式。
+因此，`moqi-im-windows` 与 `moqi-ime` 需要配套部署。
 
 ## 技术栈
 
-- **语言**: C++ (TSF 接口实现) / C (与 Go 引擎通信)
-- **框架**: Microsoft Text Services Framework (TSF)
-- **通信**: 待定 (Cgo / gRPC / REST / COM)
-- **构建**: CMake / MSBuild
+- **语言**：C++
+- **框架**：Microsoft TSF、Win32 API
+- **进程/IO**：命名管道、子进程 `stdin/stdout` 转发、`libuv`
+- **数据格式**：JSON（`jsoncpp`）
+- **日志**：`spdlog`
+- **构建**：CMake + Visual Studio 2022 / MSBuild
 
-## 源码布局（CMake 工程）
+## 源码布局
 
-- `libIME2` — TSF / IME 基础库  
-- `MoqiTextService` — 产出 `MoqiTextService.dll`（TSF 文本服务）  
-- `MoqLauncher` — 产出 `MoqLauncher.exe`（Win32 构建；命名管道与后端进程）  
-- `libuv` — Launcher 依赖  
+- `MoqiTextService`：TSF 文本服务，产出 `MoqiTextService.dll`
+- `MoqLauncher`：后端启动器与消息转发器，产出 `MoqLauncher.exe`
+- `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`EasyIME/libIME2`](https://github.com/EasyIME/libIME2)
+- `libuv`：Launcher 的事件循环与进程/管道依赖
+- `backends.json`：后端清单，定义后端名称、启动命令和工作目录
 
 ## 构建
 
 前置：**Visual Studio 2022**、**CMake 3.21+**、Windows SDK。
 
-在仓库根目录执行 `build.bat`：生成 **Win32 Release** 全量解决方案，以及 **x64 Release** 的 `MoqiTextService`。
+1. 先在 `moqi-ime` 仓库构建后端，例如生成 `server.exe`
+2. 在本仓库根目录执行：
 
-输出示例：`build\Release\`（`MoqLauncher.exe`、`MoqiTextService.dll`）、`build64\Release\MoqiTextService.dll`。
+   `build.bat`
+
+该脚本会生成：
+
+- `build\Release\MoqLauncher.exe`
+- `build\Release\MoqiTextService.dll`（Win32）
+- `build64\Release\MoqiTextService.dll`（x64）
 
 ## 安装部署
 
-1. 在 `moqi-ime` 仓库构建后端（例如 `server.exe`），使与根目录 `backends.json` 中的路径一致。  
-2. 以管理员身份打开 PowerShell（若需写入 `Program Files`），在仓库根执行：
+以管理员身份打开 PowerShell（若需写入 `Program Files`），在仓库根执行：
 
-   `powershell -ExecutionPolicy Bypass -File .\install.ps1`
+`powershell -ExecutionPolicy Bypass -File .\install.ps1`
 
-   可选参数：`-MoqiImeSource <path>` 指定后端源码树；`-SkipMoqiImeCopy` 仅更新已安装目录中的 DLL/启动器。
+常用参数：
 
-安装结果（64 位 Windows）：`%ProgramFiles(x86)%\MoqiIM\`（启动器、Win32 DLL、`backends.json`、`moqi-ime\`），`%ProgramFiles%\MoqiIM\MoqiTextService.dll`（x64）。脚本会对存在的 DLL 调用对应 `regsvr32`，并将 `MoqLauncher.exe` 加入当前用户 **运行** 启动项。
+- `-MoqiImeSource <path>`：指定要复制的 `moqi-ime` 源码树
+- `-SkipMoqiImeCopy`：只更新 DLL / Launcher，不复制后端目录
 
-**注意**：更换 TSF CLSID 或显示名称后，可能需在「语言」设置中重新添加输入法，并视情况先注销旧 COM 注册。
+安装后的目录布局（64 位 Windows）：
+
+- `%ProgramFiles(x86)%\MoqiIM\`
+- `%ProgramFiles%\MoqiIM\`
+
+其中：
+
+- `MoqLauncher.exe`、Win32 `MoqiTextService.dll`、`backends.json`、`moqi-ime\` 安装到 `%ProgramFiles(x86)%\MoqiIM\`
+- x64 `MoqiTextService.dll` 安装到 `%ProgramFiles%\MoqiIM\`
+
+安装脚本会：
+
+- 复制上述文件
+- 对已有 DLL 调用对应位数的 `regsvr32`
+- 将 `MoqLauncher.exe` 写入当前用户的开机启动项
+
+## 说明
+
+- `backends.json` 目前默认内容为 `moqi-ime\server.exe`，其 `workingDir` 也是 `moqi-ime`
+- 更换 TSF CLSID 或显示名称后，通常需要在系统“语言”设置中重新添加输入法
+- 如果只更新后端实现而不重装 DLL，可配合 `-SkipMoqiImeCopy` 或直接替换已安装后端目录
 
 ## 参考文档
 
