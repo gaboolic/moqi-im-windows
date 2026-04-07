@@ -67,6 +67,9 @@ Windows 侧的职责主要是：
 - `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`EasyIME/libIME2`](https://github.com/EasyIME/libIME2)
 - `libuv`：Launcher 的事件循环与进程/管道依赖
 - `backends.json`：后端清单，定义后端名称、启动命令和工作目录
+- `scripts/build.ps1`：CMake 构建脚本
+- `scripts/install.ps1`：准备安装器 stage 并调用安装器构建脚本
+- `installer/`：Inno Setup 安装器脚本与输出目录
 
 ## 构建
 
@@ -75,7 +78,7 @@ Windows 侧的职责主要是：
 1. 先在 `moqi-ime` 仓库构建后端，例如生成 `server.exe`
 2. 在本仓库根目录执行：
 
-   `build.bat`
+   `powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
 
 该脚本会生成：
 
@@ -85,26 +88,27 @@ Windows 侧的职责主要是：
 
 ## 安装部署
 
-以管理员身份打开 PowerShell（若需写入 `Program Files`），在仓库根执行：
+在仓库根执行：
 
-`powershell -ExecutionPolicy Bypass -File .\install.ps1`
+`powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1`
 
 常用参数：
 
 - `-MoqiImeSource <path>`：指定要复制的 `moqi-ime` 源码树
-- `-SkipMoqiImeCopy`：只更新 DLL / Launcher，不复制后端目录
+- `-SkipMoqiImeCopy`：生成安装器时不打包 `moqi-ime` 后端目录
 
-安装后的目录布局（64 位 Windows）：
+该脚本不会直接把文件安装到 `Program Files`，而是会：
 
-- `%ProgramFiles(x86)%\MoqiIM\`
-- `%ProgramFiles%\MoqiIM\`
+- 准备 `installer\stage\` 目录
+- 调用 `installer\build-installer.ps1`
+- 生成 Inno Setup 安装器：`installer\dist\moqi-im-windows-setup.exe`
 
-其中：
+安装器在 64 位 Windows 上会部署为：
 
 - `MoqLauncher.exe`、Win32 `MoqiTextService.dll`、`backends.json`、`moqi-ime\` 安装到 `%ProgramFiles(x86)%\MoqiIM\`
 - x64 `MoqiTextService.dll` 安装到 `%ProgramFiles%\MoqiIM\`
 
-安装脚本会：
+安装器会：
 
 - 复制上述文件
 - 对已有 DLL 调用对应位数的 `regsvr32`

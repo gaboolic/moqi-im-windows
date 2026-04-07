@@ -1,12 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Deploy Moqi IM TSF binaries and backend into Program Files and register the DLLs.
+  Stage Moqi IM for Windows binaries and invoke the installer builder.
 
-  Does not build. Run from an elevated PowerShell if copying under Program Files fails.
+  Does not install files into Program Files directly. Instead it prepares an
+  installer stage tree and calls installer\build-installer.ps1 to produce the
+  setup executable.
 
 .PARAMETER RepoRoot
-  Root of moqi-im-windows (defaults to this script's directory).
+  Root of moqi-im-windows (defaults to the parent directory of this script).
 
 .PARAMETER Win32BuildDir
   CMake Win32 Release output directory (default: RepoRoot\build\Release).
@@ -18,100 +20,164 @@
   Path to the moqi-ime tree to copy as backend (default: sibling ..\moqi-ime next to RepoRoot).
 
 .PARAMETER SkipMoqiImeCopy
-  If set, do not copy the backend tree (you must supply moqi-ime\server.exe yourself).
+  If set, do not include the backend tree in the staged installer payload.
+
+.PARAMETER StageDir
+  Installer staging directory (default: RepoRoot\installer\stage).
+
+.PARAMETER IssPath
+  Optional path to the Inno Setup script (default: RepoRoot\installer\MoqiTsf.iss).
 #>
 param(
-    [string] $RepoRoot = $PSScriptRoot,
+    [string] $RepoRoot = "",
     [string] $Win32BuildDir = "",
     [string] $X64BuildDir = "",
     [string] $MoqiImeSource = "",
-    [switch] $SkipMoqiImeCopy
+    [switch] $SkipMoqiImeCopy,
+    [string] $StageDir = "",
+    [string] $IssPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 
+function New-CleanDirectory {
+    param([string] $Path)
+
+    if (Test-Path -LiteralPath $Path) {
+        Remove-Item -LiteralPath $Path -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+}
+
+function Copy-IfExists {
+    param(
+        [string] $Source,
+        [string] $Destination
+    )
+
+    if (-not (Test-Path -LiteralPath $Source)) {
+        throw "Required file not found: $Source"
+    }
+    Copy-Item -LiteralPath $Source -Destination $Destination -Force
+}
+
+function Resolve-ArtifactPath {
+    param(
+        [string[]] $Candidates,
+        [string] $Label
+    )
+
+    foreach ($candidate in $Candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return [System.IO.Path]::GetFullPath($candidate)
+        }
+    }
+
+    throw "$Label not found. Checked: $($Candidates -join ', ')"
+}
+
+function Copy-MoqiImeRuntime {
+    param(
+        [string] $SourceRoot,
+        [string] $DestinationRoot
+    )
+
+    $serverExe = Join-Path $SourceRoot "server.exe"
+    if (-not (Test-Path -LiteralPath $serverExe)) {
+        throw "moqi-ime server.exe not found: $serverExe"
+    }
+
+    New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
+
+    $directories = Get-ChildItem -Path $SourceRoot -Recurse -Force -Directory
+    foreach ($directory in $directories) {
+        $relativePath = $directory.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
+        $targetDir = Join-Path $DestinationRoot $relativePath
+        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+
+    $files = Get-ChildItem -Path $SourceRoot -Recurse -Force -File | Where-Object { $_.Extension -ne ".go" }
+    foreach ($file in $files) {
+        $relativePath = $file.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
+        $targetPath = Join-Path $DestinationRoot $relativePath
+        $targetDir = Split-Path -Parent $targetPath
+        if (-not (Test-Path -LiteralPath $targetDir)) {
+            New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $file.FullName -Destination $targetPath -Force
+    }
+}
+
+$scriptRepoRoot = Join-Path $PSScriptRoot ".."
+if (-not $RepoRoot) { $RepoRoot = $scriptRepoRoot }
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+
 if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build\Release" }
 if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build64\Release" }
 if (-not $MoqiImeSource) { $MoqiImeSource = Join-Path $RepoRoot "..\moqi-ime" }
+if (-not $StageDir) { $StageDir = Join-Path $RepoRoot "installer\stage" }
+if (-not $IssPath) { $IssPath = Join-Path $RepoRoot "installer\MoqiTsf.iss" }
+$Win32BuildDir = [System.IO.Path]::GetFullPath($Win32BuildDir)
+$X64BuildDir = [System.IO.Path]::GetFullPath($X64BuildDir)
 $MoqiImeSource = [System.IO.Path]::GetFullPath($MoqiImeSource)
+$StageDir = [System.IO.Path]::GetFullPath($StageDir)
+$IssPath = [System.IO.Path]::GetFullPath($IssPath)
 
-$pf32 = ${env:ProgramFiles(x86)}
-if (-not $pf32) { $pf32 = $env:ProgramFiles }
-$dest32 = Join-Path $pf32 "MoqiIM"
-$dest64 = Join-Path $env:ProgramFiles "MoqiIM"
-
-if (-not (Test-Path -LiteralPath $dest32)) {
-    New-Item -ItemType Directory -Path $dest32 -Force | Out-Null
-}
-if ([Environment]::Is64BitOperatingSystem -and -not (Test-Path -LiteralPath $dest64)) {
-    New-Item -ItemType Directory -Path $dest64 -Force | Out-Null
-}
+$stageWin32Root = Join-Path $StageDir "win32\MoqiIM"
+$stageX64Root = Join-Path $StageDir "x64\MoqiIM"
+New-CleanDirectory -Path $StageDir
+New-Item -ItemType Directory -Path $stageWin32Root -Force | Out-Null
+New-Item -ItemType Directory -Path $stageX64Root -Force | Out-Null
 
 $backends = Join-Path $RepoRoot "backends.json"
 if (-not (Test-Path -LiteralPath $backends)) {
     throw "Missing backends.json at $backends"
 }
-Copy-Item -LiteralPath $backends -Destination (Join-Path $dest32 "backends.json") -Force
+Copy-Item -LiteralPath $backends -Destination (Join-Path $stageWin32Root "backends.json") -Force
 
-$launcher = Join-Path $Win32BuildDir "MoqLauncher.exe"
-if (Test-Path -LiteralPath $launcher) {
-    Copy-Item -LiteralPath $launcher -Destination (Join-Path $dest32 "MoqLauncher.exe") -Force
-} else {
-    Write-Warning "MoqLauncher.exe not found at $launcher (Win32 Release build required)."
-}
+$launcher = Resolve-ArtifactPath -Label "MoqLauncher.exe" -Candidates @(
+    (Join-Path $Win32BuildDir "MoqLauncher.exe"),
+    (Join-Path $Win32BuildDir "Release\MoqLauncher.exe"),
+    (Join-Path $Win32BuildDir "MoqLauncher\Release\MoqLauncher.exe")
+)
+Copy-IfExists -Source $launcher -Destination (Join-Path $stageWin32Root "MoqLauncher.exe")
 
-$dll32 = Join-Path $Win32BuildDir "MoqiTextService.dll"
-if (Test-Path -LiteralPath $dll32) {
-    Copy-Item -LiteralPath $dll32 -Destination (Join-Path $dest32 "MoqiTextService.dll") -Force
-} else {
-    Write-Warning "Win32 MoqiTextService.dll not found at $dll32."
-}
+$dll32 = Resolve-ArtifactPath -Label "Win32 MoqiTextService.dll" -Candidates @(
+    (Join-Path $Win32BuildDir "MoqiTextService.dll"),
+    (Join-Path $Win32BuildDir "Release\MoqiTextService.dll"),
+    (Join-Path $Win32BuildDir "MoqiTextService\Release\MoqiTextService.dll")
+)
+Copy-IfExists -Source $dll32 -Destination (Join-Path $stageWin32Root "MoqiTextService.dll")
 
-$dll64 = Join-Path $X64BuildDir "MoqiTextService.dll"
-if ([Environment]::Is64BitOperatingSystem -and (Test-Path -LiteralPath $dll64)) {
-    Copy-Item -LiteralPath $dll64 -Destination (Join-Path $dest64 "MoqiTextService.dll") -Force
-} elseif ([Environment]::Is64BitOperatingSystem) {
-    Write-Warning "x64 MoqiTextService.dll not found at $dll64."
-}
+$dll64 = Resolve-ArtifactPath -Label "x64 MoqiTextService.dll" -Candidates @(
+    (Join-Path $X64BuildDir "MoqiTextService.dll"),
+    (Join-Path $X64BuildDir "Release\MoqiTextService.dll"),
+    (Join-Path $X64BuildDir "MoqiTextService\Release\MoqiTextService.dll")
+)
+Copy-IfExists -Source $dll64 -Destination (Join-Path $stageX64Root "MoqiTextService.dll")
 
 if (-not $SkipMoqiImeCopy) {
     if (-not (Test-Path -LiteralPath $MoqiImeSource)) {
         throw "Moqi IME source not found: $MoqiImeSource (use -MoqiImeSource or -SkipMoqiImeCopy)."
     }
-    $imeDest = Join-Path $dest32 "moqi-ime"
-    if (Test-Path -LiteralPath $imeDest) {
-        Remove-Item -LiteralPath $imeDest -Recurse -Force
-    }
-    Copy-Item -LiteralPath $MoqiImeSource -Destination $imeDest -Recurse -Force
+    $imeDest = Join-Path $stageWin32Root "moqi-ime"
+    Copy-MoqiImeRuntime -SourceRoot $MoqiImeSource -DestinationRoot $imeDest
 } else {
-    Write-Warning "Skipped copying moqi-ime backend; ensure $dest32\moqi-ime matches backends.json."
+    Write-Warning "Skipped copying moqi-ime backend; ensure the final installer payload is sufficient for your deployment."
 }
 
-# Register TSF DLLs (WOW64 vs native regsvr32 on 64-bit Windows)
-$regsvr32Native = Join-Path $env:windir "System32\regsvr32.exe"
-$regsvr32Wow = Join-Path $env:windir "SysWOW64\regsvr32.exe"
-
-if ([Environment]::Is64BitOperatingSystem) {
-    if (Test-Path -LiteralPath (Join-Path $dest32 "MoqiTextService.dll")) {
-        if (Test-Path -LiteralPath $regsvr32Wow) {
-            & $regsvr32Wow /s (Join-Path $dest32 "MoqiTextService.dll")
-        }
-    }
-    if (Test-Path -LiteralPath (Join-Path $dest64 "MoqiTextService.dll")) {
-        & $regsvr32Native /s (Join-Path $dest64 "MoqiTextService.dll")
-    }
-} else {
-    if (Test-Path -LiteralPath (Join-Path $dest32 "MoqiTextService.dll")) {
-        & $regsvr32Native /s (Join-Path $dest32 "MoqiTextService.dll")
-    }
+$installerScript = Join-Path $RepoRoot "installer\build-installer.ps1"
+if (-not (Test-Path -LiteralPath $installerScript)) {
+    throw "Installer builder script not found: $installerScript"
+}
+if (-not (Test-Path -LiteralPath $IssPath)) {
+    throw "Installer ISS file not found: $IssPath"
 }
 
-$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-$launcherDest = Join-Path $dest32 "MoqLauncher.exe"
-if (Test-Path -LiteralPath $launcherDest) {
-    Set-ItemProperty -Path $runKey -Name "MoqLauncher" -Value "`"$launcherDest`"" -Type String
-} else {
-    Write-Warning "Run key not set: MoqLauncher.exe missing at $launcherDest"
-}
+Write-Host "Stage prepared at: $StageDir"
+Write-Host "Win32 payload: $stageWin32Root"
+Write-Host "x64 payload: $stageX64Root"
 
-Write-Host "Install layout: $dest32 (launcher, Win32 DLL, backends, moqi-ime); x64 DLL: $dest64"
+& $installerScript -StageDir $StageDir -IssPath $IssPath
+
+Write-Host "Installer build finished."

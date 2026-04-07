@@ -43,3 +43,5 @@ build
 build_*
 build64
 build64_*
+
+installer/stage
