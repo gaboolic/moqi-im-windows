@@ -1,5 +1,5 @@
-#ifndef _PIME_LAUNCHER_UTILS_H_
-#define _PIME_LAUNCHER_UTILS_H_
+#ifndef _MOQI_LAUNCHER_UTILS_H_
+#define _MOQI_LAUNCHER_UTILS_H_
 
 #include <json/json.h>
 #include <string>
@@ -20,4 +20,4 @@ std::string generateUuidStr();
 
 } // namespace MoqiIME
 
-#endif // _PIME_LAUNCHER_UTILS_H_
+#endif // _MOQI_LAUNCHER_UTILS_H_

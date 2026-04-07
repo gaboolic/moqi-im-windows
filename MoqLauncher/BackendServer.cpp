@@ -281,22 +281,22 @@ void BackendServer::handleBackendReply() {
             break;
         }
 
-		// only handle lines prefixed with "PIME_MSG|" since other lines
+		// only handle lines prefixed with "MOQI_MSG|" since other lines
 		// might be debug messages printed by the backend.
-		// Format of each message: "PIMG_MSG|<client_id>|<reply JSON string>\n"
-        constexpr char pimeMsgPrefix[] = "PIME_MSG|";
-        constexpr size_t pimeMsgPrefixLen = 9;
-		if (line.compare(0, pimeMsgPrefixLen, pimeMsgPrefix) == 0) {
+		// Format of each message: "MOQI_MSG|<client_id>|<reply JSON string>\n"
+        constexpr char moqiMsgPrefix[] = "MOQI_MSG|";
+        constexpr size_t moqiMsgPrefixLen = 9;
+		if (line.compare(0, moqiMsgPrefixLen, moqiMsgPrefix) == 0) {
             // because Windows uses CRLF "\r\n" for new lines, python and node.js
             // try to convert "\n" to "\r\n" sometimes. Let's remove the additional '\r'
             if (line.back() == '\r') {
                 line.pop_back();
             }
 
-            auto sep = line.find('|', pimeMsgPrefixLen);  // Find the next "|".
+            auto sep = line.find('|', moqiMsgPrefixLen);  // Find the next "|".
 			if (sep != line.npos) {
 				// split the client_id from the remaining json reply
-				string clientId = line.substr(pimeMsgPrefixLen, sep - pimeMsgPrefixLen);
+				string clientId = line.substr(moqiMsgPrefixLen, sep - moqiMsgPrefixLen);
                 // send the reply message back to the client
                 auto msgStart = sep + 1;
                 auto msg = line.c_str() + msgStart;

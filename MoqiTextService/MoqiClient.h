@@ -81,7 +81,7 @@ private:
     Json::Value createRpcRequest(const char* methodName);
 	bool callRpcMethod(Json::Value& request, Json::Value& response);
 
-    bool isPipeCreatedByPIMEServer(HANDLE pipe);
+    bool isPipeCreatedByMoqiServer(HANDLE pipe);
     bool waitForRpcConnection();
     bool callRpcPipe(HANDLE pipe, const std::string& serializedRequest, std::string& serializedReply);
     void closeRpcConnection();

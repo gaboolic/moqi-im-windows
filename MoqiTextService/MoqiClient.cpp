@@ -697,7 +697,7 @@ bool MoqiClient::callRpcMethod(Json::Value &request, Json::Value &response) {
   return success;
 }
 
-bool MoqiClient::isPipeCreatedByServer(HANDLE pipe) {
+bool MoqiClient::isPipeCreatedByMoqiServer(HANDLE pipe) {
   // security check: make sure that we're connecting to the correct server
   ULONG serverPid;
   if (GetNamedPipeServerProcessId(pipe, &serverPid)) {
@@ -721,7 +721,7 @@ HANDLE MoqiClient::connectPipe(const wchar_t *pipeName, int timeoutMs) {
   if (pipe != INVALID_HANDLE_VALUE) {
     DWORD mode = PIPE_READMODE_MESSAGE;
     // The pipe is connected; change to message-read mode.
-    if (!isPipeCreatedByServer(pipe) ||
+    if (!isPipeCreatedByMoqiServer(pipe) ||
         !::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
       DisconnectNamedPipe(pipe);
       CloseHandle(pipe);

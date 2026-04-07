@@ -25,7 +25,7 @@ include_directories(
 
 add_executable(MoqLauncher WIN32
     UvPipe.h
-    PIMELauncher.cpp
+    MoqiLauncher.cpp
     PipeServer.cpp
     PipeServer.h
     PipeClient.cpp
@@ -35,7 +35,7 @@ add_executable(MoqLauncher WIN32
     Utils.cpp
     Utils.h
     # resources
-    PIMELauncher.rc
+    MoqiLauncher.rc
 )
 
 set_target_properties(MoqLauncher PROPERTIES OUTPUT_NAME "MoqLauncher")

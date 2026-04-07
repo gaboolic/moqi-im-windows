@@ -17,8 +17,8 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef _PIME_PIPE_SERVER_H_
-#define _PIME_PIPE_SERVER_H_
+#ifndef _MOQI_PIPE_SERVER_H_
+#define _MOQI_PIPE_SERVER_H_
 
 #include <Windows.h>
 #include <ShlObj.h>
@@ -127,4 +127,4 @@ private:
 
 } // namespace MoqiIME
 
-#endif // _PIME_PIPE_SERVER_H_
+#endif // _MOQI_PIPE_SERVER_H_
