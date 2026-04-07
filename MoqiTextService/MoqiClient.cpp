@@ -23,6 +23,7 @@
 #include <json/json.h>
 
 #include "MoqiTextService.h"
+#include "TsfLog.h"
 #include <VersionHelpers.h> // Provided by Windows SDK >= 8.1
 #include <Winnls.h> // for IS_HIGH_SURROGATE() macro for checking UTF16 surrogate pairs
 #include <algorithm>
@@ -56,9 +57,12 @@ bool uuidFromString(const char *uuidStr, UUID &result) {
 MoqiClient::MoqiClient(MoqiTextService *service, REFIID langProfileGuid)
     : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
-      shouldWaitConnection_{true} {}
+      shouldWaitConnection_{true} {
+  tsfLog(L"MoqiClient::ctor guid=" + utf8ToUtf16(guid_.c_str()));
+}
 
 MoqiClient::~MoqiClient(void) {
+  tsfLog(L"MoqiClient::dtor guid=" + utf8ToUtf16(guid_.c_str()));
   closeRpcConnection();
   resetTextServiceState();
   MoqiLangBarButton::clearIconCache();
@@ -385,6 +389,7 @@ void MoqiClient::updateCandidateList(Json::Value &msg,
 
 // handlers for the text service
 void MoqiClient::onActivate() {
+  tsfLog(L"MoqiClient::onActivate guid=" + utf8ToUtf16(guid_.c_str()));
   Json::Value req = createRpcRequest("onActivate");
   req["isKeyboardOpen"] = textService_->isKeyboardOpened();
 
@@ -396,6 +401,7 @@ void MoqiClient::onActivate() {
 }
 
 void MoqiClient::onDeactivate() {
+  tsfLog(L"MoqiClient::onDeactivate guid=" + utf8ToUtf16(guid_.c_str()));
   Json::Value req = createRpcRequest("onDeactivate");
   Json::Value ret;
   callRpcMethod(req, ret);
@@ -615,6 +621,7 @@ void MoqiClient::onCompositionTerminated(bool forced) {
 }
 
 bool MoqiClient::init() {
+  tsfLog(L"MoqiClient::init guid=" + utf8ToUtf16(guid_.c_str()));
   Json::Value req = createRpcRequest("init");
   req["id"] = guid_.c_str(); // language profile guid
   req["isWindows8Above"] = ::IsWindows8OrGreater();
@@ -623,7 +630,9 @@ bool MoqiClient::init() {
   req["isConsole"] = textService_->isConsole();
 
   Json::Value ret;
-  return callRpcMethod(req, ret) && handleRpcResponse(ret);
+  bool ok = callRpcMethod(req, ret) && handleRpcResponse(ret);
+  tsfLog(L"MoqiClient::init result=" + std::to_wstring(ok));
+  return ok;
 }
 
 Json::Value MoqiClient::createRpcRequest(const char *methodName) {
@@ -664,7 +673,10 @@ bool MoqiClient::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
 // send the request to the server
 // a sequence number will be added to the req object automatically.
 bool MoqiClient::callRpcMethod(Json::Value &request, Json::Value &response) {
+  const auto methodName = request.get("method", "").asString();
+  tsfLog(L"MoqiClient::callRpcMethod begin method=" + utf8ToUtf16(methodName.c_str()) + L" guid=" + utf8ToUtf16(guid_.c_str()));
   if (shouldWaitConnection_ && !waitForRpcConnection()) {
+    tsfLog(L"MoqiClient::callRpcMethod waitForRpcConnection failed method=" + utf8ToUtf16(methodName.c_str()));
     return false;
   }
 
@@ -694,6 +706,7 @@ bool MoqiClient::callRpcMethod(Json::Value &request, Json::Value &response) {
     resetTextServiceState(); // since we lost the connection, the state is
                              // unknonw so we reset.
   }
+  tsfLog(L"MoqiClient::callRpcMethod end method=" + utf8ToUtf16(methodName.c_str()) + L" success=" + std::to_wstring(success));
   return success;
 }
 
@@ -712,22 +725,38 @@ bool MoqiClient::isPipeCreatedByMoqiServer(HANDLE pipe) {
 // establish a connection to the specified pipe and returns its handle
 // static
 HANDLE MoqiClient::connectPipe(const wchar_t *pipeName, int timeoutMs) {
+  tsfLog(L"MoqiClient::connectPipe pipe=" + std::wstring(pipeName) + L" timeoutMs=" + std::to_wstring(timeoutMs));
   HANDLE pipe = INVALID_HANDLE_VALUE;
   if (WaitNamedPipe(pipeName, timeoutMs)) {
     pipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                       OPEN_EXISTING, 0, NULL);
+    if (pipe == INVALID_HANDLE_VALUE) {
+      const auto lastError = GetLastError();
+      tsfLog(L"MoqiClient::connectPipe CreateFile failed lastError=" + std::to_wstring(lastError));
+    }
+  } else {
+    const auto lastError = GetLastError();
+    tsfLog(L"MoqiClient::connectPipe WaitNamedPipe failed lastError=" + std::to_wstring(lastError));
   }
 
   if (pipe != INVALID_HANDLE_VALUE) {
     DWORD mode = PIPE_READMODE_MESSAGE;
     // The pipe is connected; change to message-read mode.
-    if (!isPipeCreatedByMoqiServer(pipe) ||
-        !::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
+    if (!isPipeCreatedByMoqiServer(pipe)) {
+      tsfLog(L"MoqiClient::connectPipe isPipeCreatedByMoqiServer failed");
+      DisconnectNamedPipe(pipe);
+      CloseHandle(pipe);
+      pipe = INVALID_HANDLE_VALUE;
+    }
+    else if (!::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
+      const auto lastError = GetLastError();
+      tsfLog(L"MoqiClient::connectPipe SetNamedPipeHandleState failed lastError=" + std::to_wstring(lastError));
       DisconnectNamedPipe(pipe);
       CloseHandle(pipe);
       pipe = INVALID_HANDLE_VALUE;
     }
   }
+  tsfLog(L"MoqiClient::connectPipe result=" + std::to_wstring(pipe != INVALID_HANDLE_VALUE));
   return pipe;
 }
 
@@ -736,13 +765,16 @@ HANDLE MoqiClient::connectPipe(const wchar_t *pipeName, int timeoutMs) {
 // otherwise, it tries to establish the connection.
 bool MoqiClient::waitForRpcConnection() {
   if (pipe_ != INVALID_HANDLE_VALUE) {
+    tsfLog(L"MoqiClient::waitForRpcConnection already-connected");
     return true;
   }
 
   wstring serverPipeName = getPipeName(L"Launcher");
+  tsfLog(L"MoqiClient::waitForRpcConnection start pipe=" + serverPipeName);
   for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 5;
        ++attempt) {
     // try to connect to the server
+    tsfLog(L"MoqiClient::waitForRpcConnection attempt=" + std::to_wstring(attempt + 1));
     pipe_ = connectPipe(serverPipeName.c_str(), 30000);
   }
 
@@ -751,6 +783,7 @@ bool MoqiClient::waitForRpcConnection() {
     shouldWaitConnection_ =
         false; // prevent recursive call of waitForRpcConnection
     if (!init()) {
+      tsfLog(L"MoqiClient::waitForRpcConnection init-after-connect failed");
       closeRpcConnection();
       shouldWaitConnection_ = true;
       return false;
@@ -765,6 +798,7 @@ bool MoqiClient::waitForRpcConnection() {
     shouldWaitConnection_ = true;
   }
   // if init() or onActivate() RPC fails, the pipe_ might have been closed.
+  tsfLog(L"MoqiClient::waitForRpcConnection end connected=" + std::to_wstring(pipe_ != INVALID_HANDLE_VALUE));
   return pipe_ != INVALID_HANDLE_VALUE;
 }
 
@@ -786,6 +820,7 @@ void MoqiClient::resetTextServiceState() {
 
 void MoqiClient::closeRpcConnection() {
   if (pipe_ != INVALID_HANDLE_VALUE) {
+    tsfLog(L"MoqiClient::closeRpcConnection");
     DisconnectNamedPipe(pipe_);
     CloseHandle(pipe_);
     pipe_ = INVALID_HANDLE_VALUE;

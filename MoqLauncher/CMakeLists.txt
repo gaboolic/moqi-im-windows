@@ -14,6 +14,8 @@ add_definitions(
     # Prevent the fd of log files from being inherited by child processes
     # This is required. Otherwise the file rotation will fail since the file is kept open by the child process.
     -DSPDLOG_PREVENT_CHILD_FD=1
+    # Enable the PIME-style patched libuv named pipe entrypoint.
+    -DHAVE_UV_NAMED_PIPE
 )
 
 include_directories(
@@ -30,6 +32,8 @@ add_executable(MoqLauncher WIN32
     PipeServer.h
     PipeClient.cpp
     PipeClient.h
+    PipeSecurity.cpp
+    PipeSecurity.h
     BackendServer.cpp
     BackendServer.h
     Utils.cpp
@@ -43,6 +47,6 @@ set_target_properties(MoqLauncher PROPERTIES OUTPUT_NAME "MoqLauncher")
 target_link_libraries(MoqLauncher 
     jsoncpp_static
     Rpcrt4 # for uuid stuff
-    uv_a
+    libuv
     spdlog::spdlog_header_only
 )

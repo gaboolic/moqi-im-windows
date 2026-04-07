@@ -29,13 +29,29 @@ namespace MoqiIME {
 
 // default to 30 seconds
 static constexpr std::uint64_t BACKEND_REQUEST_TIMEOUT_MS = 30 * 1000;
+static constexpr size_t MAX_LOG_PREVIEW_LEN = 256;
+
+static std::string previewForLog(const char* data, size_t len) {
+    std::string text(data, len);
+    for (char& ch : text) {
+        if (ch == '\r' || ch == '\n') {
+            ch = ' ';
+        }
+    }
+    if (text.size() > MAX_LOG_PREVIEW_LEN) {
+        text.resize(MAX_LOG_PREVIEW_LEN);
+        text += "...";
+    }
+    return text;
+}
 
 
-PipeClient::PipeClient(PipeServer* server) :
+PipeClient::PipeClient(PipeServer* server, DWORD pipeMode, SECURITY_ATTRIBUTES* securityAttributes) :
     server_{ server },
     backend_(nullptr),
     // generate a new uuid for client ID
     clientId_{ generateUuidStr() },
+    pipe_{ pipeMode, securityAttributes },
     waitResponseTimer_{ std::make_unique<uv_timer_t>() } {
 
     pipe_.setBlocking(false);
@@ -79,10 +95,14 @@ std::shared_ptr<spdlog::logger>& PipeClient::logger() {
 }
 
 void PipeClient::close() {
+    logger()->warn("PipeClient::close clientId={} backend={}",
+                   clientId_, backend_ ? backend_->name() : std::string("<null>"));
     pipe_.close();
 }
 
 void PipeClient::onReadError(int error) {
+    logger()->error("PipeClient::onReadError clientId={} error={} err={}",
+                    clientId_, error, uv_strerror(error));
     // the client connection seems to be broken. close it.
     disconnectFromBackend();
     close();
@@ -90,46 +110,71 @@ void PipeClient::onReadError(int error) {
 
 void PipeClient::handleClientMessage(const char* readBuf, size_t len) {
     // NOTE: readBuf is not null terminated.
+    logger()->warn("PipeClient::handleClientMessage clientId={} len={} preview={}",
+                   clientId_, len, previewForLog(readBuf, len));
 	if (!backend_) {
 		// special handling, asked for init launcher.
 		// extract backend info from the request message and find a suitable backend
 		Json::Value msg;
 		Json::Reader reader;
-		if (reader.parse(readBuf, readBuf + len, msg)) {
+        bool parseOk = reader.parse(readBuf, readBuf + len, msg);
+        logger()->warn("PipeClient::handleClientMessage parseOk={} clientId={}",
+                       parseOk, clientId_);
+		if (parseOk) {
 			initBackend(msg);
-		}
+		} else {
+            logger()->error("PipeClient::handleClientMessage parse failed clientId={} payload={}",
+                            clientId_, previewForLog(readBuf, len));
+        }
 	}
 
 	// pass the incoming message to the backend
 	if (backend_) {
 		// start a timer to see if we can get a response from backend server before timeout.
 		startRequestTimeoutTimer(BACKEND_REQUEST_TIMEOUT_MS);
+        logger()->warn("PipeClient::handleClientMessage forwarding clientId={} backend={} len={}",
+                       clientId_, backend_->name(), len);
 		backend_->handleClientMessage(this, readBuf, len);
-	}
+	} else {
+        logger()->warn("PipeClient::handleClientMessage backend missing clientId={}", clientId_);
+    }
 }
 
 bool PipeClient::initBackend(const Json::Value & params) {
 	const char* method = params["method"].asCString();
+    const char* guid = params["id"].asCString();
+    logger()->warn("PipeClient::initBackend clientId={} method={} guid={}",
+                   clientId_,
+                   method ? method : "<null>",
+                   guid ? guid : "<null>");
 	if (method != nullptr && strcmp(method, "init") == 0) {  // the client connects to us the first time
 		// find a backend for the client text service
-		const char* guid = params["id"].asCString();
 		backend_ = server_->backendFromLangProfileGuid(guid);
 		if (backend_ != nullptr) {
+            logger()->warn("PipeClient::initBackend resolved clientId={} guid={} backend={}",
+                           clientId_, guid ? guid : "<null>", backend_->name());
 			// FIXME: write some response to indicate the failure
 			return true;
 		}
 		else {
 			logger()->critical("Backend is not found for text service: {}", guid);
 		}
+	} else {
+        logger()->warn("PipeClient::initBackend unexpected method clientId={} method={}",
+                       clientId_, method ? method : "<null>");
 	}
 	return false;
 }
 
 void PipeClient::disconnectFromBackend() {
 	if (backend_ != nullptr) {
+        logger()->warn("PipeClient::disconnectFromBackend clientId={} backend={}",
+                       clientId_, backend_->name());
 		// notify the backend server to remove the client
 		const char msg[] = "{\"method\":\"close\"}";
 		backend_->handleClientMessage(this, msg, strlen(msg));
+	} else {
+        logger()->warn("PipeClient::disconnectFromBackend clientId={} backend=<null>", clientId_);
 	}
 }
 

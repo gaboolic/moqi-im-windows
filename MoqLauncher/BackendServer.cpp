@@ -46,6 +46,21 @@ namespace MoqiIME {
 
 static wstring_convert<codecvt_utf8<wchar_t>> utf8Codec;
 static constexpr auto MAX_RESPONSE_WAITING_TIME = 30;  // if a backend is non-responsive for 30 seconds, it's considered dead
+static constexpr size_t MAX_LOG_PREVIEW_LEN = 256;
+
+static std::string previewForLog(const char* data, size_t len) {
+    std::string text(data, len);
+    for (char& ch : text) {
+        if (ch == '\r' || ch == '\n') {
+            ch = ' ';
+        }
+    }
+    if (text.size() > MAX_LOG_PREVIEW_LEN) {
+        text.resize(MAX_LOG_PREVIEW_LEN);
+        text += "...";
+    }
+    return text;
+}
 
 static std::string getUtf8CurrentDir() {
     char dirPath[MAX_PATH];
@@ -87,6 +102,8 @@ std::shared_ptr<spdlog::logger>& BackendServer::logger() {
 
 void BackendServer::handleClientMessage(PipeClient * client, const char * readBuf, size_t len) {
 	if (!isProcessRunning()) {
+        logger()->warn("BackendServer::handleClientMessage process not running name={} clientId={}",
+                       name_, client ? client->clientId_ : std::string("<null>"));
 		startProcess();
 	}
 
@@ -96,10 +113,21 @@ void BackendServer::handleClientMessage(PipeClient * client, const char * readBu
 	msg.append(readBuf, len);
 	msg += "\n";
 
-	logger()->debug("SEND: {}", msg);
+	logger()->warn("BackendServer::handleClientMessage name={} clientId={} len={} preview={}",
+                   name_,
+                   client ? client->clientId_ : std::string("<null>"),
+                   len,
+                   previewForLog(readBuf, len));
 
 	// write the message to the backend server
+    if (stdinPipe_ == nullptr) {
+        logger()->error("BackendServer::handleClientMessage stdinPipe is null name={} clientId={}",
+                        name_, client ? client->clientId_ : std::string("<null>"));
+        return;
+    }
     stdinPipe_->write(std::move(msg));
+    logger()->warn("BackendServer::handleClientMessage wrote-to-stdin name={} clientId={}",
+                   name_, client ? client->clientId_ : std::string("<null>"));
 }
 
 uv::Pipe* BackendServer::createStdinPipe() {
@@ -141,6 +169,7 @@ uv::Pipe* BackendServer::createStderrPipe() {
 }
 
 void BackendServer::startProcess() {
+	logger()->warn("BackendServer::startProcess name={} command={} workingDir={}", name_, command_, workingDir_);
 	process_ = new uv_process_t{};
 	// create pipes for stdio of the child process
     stdoutPipe_ = createStdoutPipe();
@@ -193,11 +222,13 @@ void BackendServer::startProcess() {
 	options.stdio = stdio_containers;
 	int ret = uv_spawn(uv_default_loop(), process_, &options);
 	if (ret < 0) {
+        logger()->error("uv_spawn failed name={} ret={} err={}", name_, ret, uv_strerror(ret));
 		delete process_;
 		process_ = nullptr;
 		closeStdioPipes();
 		return;
 	}
+    logger()->warn("uv_spawn success name={} pid={}", name_, process_->pid);
 
 	// start receiving data from the backend server
     stdoutPipe_->startRead();
@@ -231,14 +262,15 @@ bool BackendServer::isProcessRunning() {
 }
 
 void BackendServer::onStdoutRead(const char* buf, size_t len) {
-    if (logger()->level() <= spdlog::level::debug) {
-        logger()->debug("RECV: {}", std::string(buf, len));
-    }
+    logger()->warn("BackendServer::onStdoutRead name={} len={} preview={}",
+                   name_, len, previewForLog(buf, len));
     stdoutReadBuf_.write(buf, len);
     handleBackendReply();
 }
 
 void BackendServer::onReadError(int status) {
+    logger()->error("BackendServer::onReadError name={} status={} err={}",
+                    name_, status, uv_strerror(status));
     // the backend server is broken, restart it.
     restartProcess();
 }
@@ -276,10 +308,17 @@ void BackendServer::handleBackendReply() {
         if (stdoutReadBuf_.eof()) {
             // getline() reached end of buffer before finding a '\n'. The current line is incomplete.
             // Put remaining data back to the buffer and wait for the next \n so it becomes a full line.
+            if (!line.empty()) {
+                logger()->warn("BackendServer::handleBackendReply pending-partial-line name={} preview={}",
+                               name_, previewForLog(line.data(), line.size()));
+            }
             stdoutReadBuf_.clear();
             stdoutReadBuf_.str(line);
             break;
         }
+
+        logger()->warn("BackendServer::handleBackendReply line name={} preview={}",
+                       name_, previewForLog(line.data(), line.size()));
 
 		// only handle lines prefixed with "MOQI_MSG|" since other lines
 		// might be debug messages printed by the backend.
@@ -302,10 +341,21 @@ void BackendServer::handleBackendReply() {
                 auto msg = line.c_str() + msgStart;
 				auto msgLen = line.length() - msgStart;
 				if (auto client = pipeServer_->clientFromId(clientId)) {
+                    logger()->warn("BackendServer::handleBackendReply deliver name={} clientId={} msgLen={} preview={}",
+                                   name_, clientId, msgLen, previewForLog(msg, msgLen));
 					client->writePipe(msg, msgLen);
+				} else {
+                    logger()->error("BackendServer::handleBackendReply client not found name={} clientId={} msgLen={}",
+                                    name_, clientId, msgLen);
 				}
+			} else {
+                logger()->error("BackendServer::handleBackendReply missing client separator name={} line={}",
+                                name_, previewForLog(line.data(), line.size()));
 			}
-		}
+		} else {
+            logger()->warn("BackendServer::handleBackendReply ignored-nonmoqi-line name={} line={}",
+                           name_, previewForLog(line.data(), line.size()));
+        }
 	}
 }
 

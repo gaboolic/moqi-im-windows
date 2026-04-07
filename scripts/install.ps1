@@ -89,14 +89,17 @@ function Copy-MoqiImeRuntime {
 
     New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
 
-    $directories = Get-ChildItem -Path $SourceRoot -Recurse -Force -Directory
+    $directories = Get-ChildItem -Path $SourceRoot -Recurse -Force -Directory |
+        Where-Object { $_.FullName -notmatch '[\\/]\.git(?:[\\/]|$)' }
     foreach ($directory in $directories) {
         $relativePath = $directory.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
         $targetDir = Join-Path $DestinationRoot $relativePath
         New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
     }
 
-    $files = Get-ChildItem -Path $SourceRoot -Recurse -Force -File | Where-Object { $_.Extension -ne ".go" }
+    $files = Get-ChildItem -Path $SourceRoot -Recurse -Force -File | Where-Object {
+        $_.Extension -ne ".go" -and $_.FullName -notmatch '[\\/]\.git(?:[\\/]|$)'
+    }
     foreach ($file in $files) {
         $relativePath = $file.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
         $targetPath = Join-Path $DestinationRoot $relativePath

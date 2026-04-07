@@ -25,6 +25,10 @@
 #include <string>
 #include <functional>
 
+#ifdef HAVE_UV_NAMED_PIPE
+#include <Windows.h>
+#endif
+
 namespace uv {
 
 class Pipe {
@@ -33,6 +37,15 @@ public:
         uv_pipe_init(loop, &pipe_, 0);
         pipe_.data = this;
     }
+
+#ifdef HAVE_UV_NAMED_PIPE
+    // NOTE: When sa is not null, Pipe does not take ownership of the object.
+    // The caller must ensure the pointer stays valid for the pipe lifetime.
+    Pipe(DWORD pipeMode, SECURITY_ATTRIBUTES* sa, uv_loop_t* loop = uv_default_loop()) {
+        uv_pipe_init_windows_named_pipe(loop, &pipe_, 0, pipeMode, sa);
+        pipe_.data = this;
+    }
+#endif
 
     virtual ~Pipe() {
     }

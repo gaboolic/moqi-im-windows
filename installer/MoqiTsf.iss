@@ -45,6 +45,9 @@ Source: "{#StageDir}\x64\MoqiIM\*"; DestDir: "{autopf64}\MoqiIM"; Flags: ignorev
 Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
+[Run]
+Filename: "{autopf32}\MoqiIM\MoqLauncher.exe"; Description: "Launch MoqLauncher"; Flags: nowait postinstall skipifsilent
+
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "MoqLauncher"; \

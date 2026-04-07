@@ -25,6 +25,8 @@ add_library(MoqiTextService SHARED
     MoqiClient.h
     MoqiLangBarButton.cpp
     MoqiLangBarButton.h
+    TsfLog.cpp
+    TsfLog.h
     DllEntry.cpp
     # resources
     ${CMAKE_CURRENT_BINARY_DIR}/MoqiTextService.rc

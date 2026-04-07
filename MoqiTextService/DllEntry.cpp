@@ -9,6 +9,7 @@
 
 #include <json/json.h>
 #include "../libIME2/src/Utils.h"
+#include "TsfLog.h"
 
 
 MoqiIME::MoqiImeModule* g_imeModule = NULL;
@@ -35,6 +36,7 @@ STDAPI DllCanUnloadNow(void) {
 }
 
 STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppvObj) {
+	MoqiIME::tsfLog(L"DllGetClassObject clsid=" + MoqiIME::tsfGuidToString(rclsid) + L" iid=" + MoqiIME::tsfGuidToString(riid));
 	return g_imeModule->getClassObject(rclsid, riid, ppvObj);
 }
 
@@ -78,6 +80,7 @@ static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::s
 }
 
 STDAPI DllRegisterServer(void) {
+	MoqiIME::tsfLog(L"DllRegisterServer begin");
 	int iconIndex = 0; // use classic icon
 	if(::IsWindows8OrGreater()) {
 		iconIndex = 1; // use Windows 8 style IME icon
@@ -114,5 +117,7 @@ STDAPI DllRegisterServer(void) {
 			::FindClose(hFind);
 		}
 	}
-	return g_imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
+	auto hr = g_imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
+	MoqiIME::tsfLog(L"DllRegisterServer end hr=" + std::to_wstring(hr) + L" profiles=" + std::to_wstring(langProfiles.size()));
+	return hr;
 }

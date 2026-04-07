@@ -20,6 +20,7 @@
 #ifndef _MOQI_PIPE_CLIENT_H_
 #define _MOQI_PIPE_CLIENT_H_
 
+#include <Windows.h>
 #include <memory>
 #include <cstdint>
 #include <string>
@@ -41,7 +42,7 @@ public:
 	std::string textServiceGuid_;
 	std::string clientId_;
 
-	PipeClient(PipeServer* server);
+	PipeClient(PipeServer* server, DWORD pipeMode, SECURITY_ATTRIBUTES* securityAttributes);
 
     ~PipeClient();
 
