@@ -1,0 +1,434 @@
+//
+//	Copyright (C) 2013 Hong Jen Yee (PCMan) <pcman.tw@gmail.com>
+//
+//	This library is free software; you can redistribute it and/or
+//	modify it under the terms of the GNU Library General Public
+//	License as published by the Free Software Foundation; either
+//	version 2 of the License, or (at your option) any later version.
+//
+//	This library is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//	Library General Public License for more details.
+//
+//	You should have received a copy of the GNU Library General Public
+//	License along with this library; if not, write to the
+//	Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+//	Boston, MA  02110-1301, USA.
+//
+
+#include "MoqiTextService.h"
+#include <assert.h>
+#include <string>
+#include <libIME2/src/ComPtr.h>
+#include <libIME2/src/Utils.h>
+#include <libIME2/src/LangBarButton.h>
+#include "MoqiImeModule.h"
+#include "resource.h"
+#include <Shellapi.h>
+#include <sys/stat.h>
+
+using namespace std;
+
+namespace MoqiIME {
+
+MoqiTextService::MoqiTextService(MoqiImeModule* module):
+	Ime::TextService(module),
+	client_(nullptr),
+	messageWindow_(nullptr),
+	messageTimerId_(0),
+	validCandidateListElementId_(false),
+	candidateListElementId_(0),
+	candidateWindow_(nullptr),
+	showingCandidates_(false),
+	updateFont_(false),
+	candPerRow_(10),
+	selKeys_(L"1234567890"),
+	candUseCursor_(false),
+	candFontSize_(12) {
+
+	// font for candidate and mesasge windows
+	font_ = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+	LOGFONT lf;
+	GetObject(font_, sizeof(lf), &lf);
+	lf.lfHeight = candFontHeight(); // FIXME: make this configurable
+	lf.lfWeight = FW_NORMAL;
+	font_ = CreateFontIndirect(&lf);
+}
+
+MoqiTextService::~MoqiTextService(void) {
+	if (client_) {
+		closeClient();
+	}
+
+	if(popupMenu_)
+		::DestroyMenu(popupMenu_);
+
+	if (candidateWindow_) {
+		hideCandidates();
+	}
+
+	if(messageWindow_)
+		hideMessage();
+
+	if(font_)
+		::DeleteObject(font_);
+}
+
+// virtual
+void MoqiTextService::onActivate() {
+	// Since we support multiple language profiles in this text service,
+	// we do nothing when the whole text service is activated.
+	// Instead, we do the actual initilization for each language profile when it is activated.
+	// We create different client connections for different language profiles.
+}
+
+// virtual
+void MoqiTextService::onDeactivate() {
+	if(client_) {
+		closeClient();
+	}
+}
+
+// virtual
+void MoqiTextService::onFocus() {
+}
+
+// virtual
+bool MoqiTextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
+	// if (keyEvent.isKeyToggled(VK_CAPITAL))
+	//	return true;
+	if(!client_)
+		return false;
+	return client_->filterKeyDown(keyEvent);
+}
+
+// virtual
+bool MoqiTextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+	//if (keyEvent.isKeyToggled(VK_CAPITAL))
+	//	return true;
+	if (!client_)
+		return false;
+	return client_->onKeyDown(keyEvent, session);
+}
+
+// virtual
+bool MoqiTextService::filterKeyUp(Ime::KeyEvent& keyEvent) {
+	if(!client_)
+		return false;
+	return client_->filterKeyUp(keyEvent);
+}
+
+// virtual
+bool MoqiTextService::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+	if(!client_)
+		return false;
+	return client_->onKeyUp(keyEvent, session);
+}
+
+// virtual
+bool MoqiTextService::onPreservedKey(const GUID& guid) {
+	if(!client_)
+		return false;
+	// some preserved keys registered in ctor are pressed
+	return client_->onPreservedKey(guid);
+}
+
+
+// virtual
+bool MoqiTextService::onCommand(UINT id, CommandType type) {
+	if(!client_)
+		return false;
+	return client_->onCommand(id, type);
+}
+
+
+// called when a language bar button needs a menu
+// virtual
+bool MoqiTextService::onMenu(MoqiLangBarButton* btn, ITfMenu* pMenu) {
+	if (client_ != nullptr) {
+		return client_->onMenu(btn, pMenu);
+	}
+	return false;
+}
+
+// called when a language bar button needs a menu
+// virtual
+HMENU MoqiTextService::onMenu(MoqiLangBarButton* btn) {
+	if (client_ != nullptr) {
+		return client_->onMenu(btn);
+	}
+	return NULL;
+}
+
+
+// virtual
+void MoqiTextService::onCompartmentChanged(const GUID& key) {
+	Ime::TextService::onCompartmentChanged(key);
+	if(client_)
+		client_->onCompartmentChanged(key);
+}
+
+// called when the keyboard is opened or closed
+// virtual
+void MoqiTextService::onKeyboardStatusChanged(bool opened) {
+	Ime::TextService::onKeyboardStatusChanged(opened);
+	if(client_)
+		client_->onKeyboardStatusChanged(opened);
+	if(opened) { // keyboard is opened
+	}
+	else { // keyboard is closed
+		if(isComposing()) {
+			// end current composition if needed
+			if(auto context = currentContext()) {
+				endComposition(context);
+			}
+		}
+		if(showingCandidates()) // disable candidate window if it's opened
+			hideCandidates();
+		hideMessage(); // hide message window, if there's any
+	}
+}
+
+// called just before current composition is terminated for doing cleanup.
+// if forced is true, the composition is terminated by others, such as
+// the input focus is grabbed by another application.
+// if forced is false, the composition is terminated gracefully by endComposition().
+// virtual
+void MoqiTextService::onCompositionTerminated(bool forced) {
+	// we do special handling here for forced composition termination.
+	if(forced) {
+		// we're still editing our composition and have something in the preedit buffer.
+		// however, some other applications grabs the focus and force us to terminate
+		// our composition.
+		if (showingCandidates()) // disable candidate window if it's opened
+			hideCandidates();
+		hideMessage(); // hide message window, if there's any
+	}
+	if(client_)
+		client_->onCompositionTerminated(forced);
+}
+
+void MoqiTextService::onLangProfileActivated(REFIID lang) {
+	// Sometimes, Windows does not deactivate the old language profile before
+	// activating the new one. So here we do it by ourselves.
+	// If a new profile is activated, but there is an old one remaining active,
+	// deactive it first.
+	if (client_ != nullptr)
+		closeClient();
+
+	// create a new client connection to the input method server for the language profile
+	client_ = std::make_unique<MoqiClient>(this, lang);
+	client_->onActivate();
+}
+
+void MoqiTextService::onLangProfileDeactivated(REFIID lang) {
+	closeClient();
+}
+
+void MoqiTextService::createCandidateWindow(Ime::EditSession* session) {
+	if (!candidateWindow_) {
+		candidateWindow_ = new Ime::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
+		candidateWindow_->Release();  // decrease ref count caused by new
+
+		candidateWindow_->setFont(font_);
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			BOOL pbShow = false;
+			if (validCandidateListElementId_ =
+				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
+				candidateWindow_->Show(pbShow);
+			}
+		}
+	}
+}
+
+void MoqiTextService::updateCandidates(Ime::EditSession* session) {
+	createCandidateWindow(session);
+	candidateWindow_->clear();
+
+	// FIXME: is this the right place to do it?
+	if (updateFont_) {
+		// font for candidate and mesasge windows
+		LOGFONT lf;
+		GetObject(font_, sizeof(lf), &lf);
+		::DeleteObject(font_); // delete old font
+		lf.lfHeight = candFontHeight(); // apply the new size
+		if (!candFontName_.empty()) { // apply new font name
+			wcsncpy(lf.lfFaceName, candFontName_.c_str(), 31);
+		}
+		font_ = CreateFontIndirect(&lf); // create new font
+		// if (messageWindow_)
+		//	messageWindow_->setFont(font_);
+		if (candidateWindow_)
+			candidateWindow_->setFont(font_);
+		updateFont_ = false;
+	}
+
+	candidateWindow_->setUseCursor(candUseCursor_);
+	candidateWindow_->setCandPerRow(candPerRow_);
+
+	// the items in the candidate list should not exist the
+	// number of available keys used to select them.
+	assert(candidates_.size() <= selKeys_.size());
+	for (int i = 0; i < candidates_.size(); ++i) {
+		candidateWindow_->add(candidates_[i], selKeys_[i]);
+	}
+	candidateWindow_->recalculateSize();
+	candidateWindow_->refresh();
+
+	RECT textRect;
+	// get the position of composition area from TSF
+	if (selectionRect(session, &textRect)) {
+		// FIXME: where should we put the candidate window?
+		candidateWindow_->move(textRect.left, textRect.bottom);
+	}
+
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->UpdateUIElement(candidateListElementId_);
+		}
+	}
+}
+
+void MoqiTextService::updateCandidatesWindow(Ime::EditSession* session) {
+    if (candidateWindow_) {
+        RECT textRect;
+        // get the position of composition area from TSF
+        if (selectionRect(session, &textRect)) {
+            // FIXME: where should we put the candidate window?
+            candidateWindow_->move(textRect.left, textRect.bottom);
+        }
+    }
+}
+
+void MoqiTextService::refreshCandidates() {
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->UpdateUIElement(candidateListElementId_);
+		}
+	}
+}
+
+// show candidate list window
+void MoqiTextService::showCandidates(Ime::EditSession* session) {
+	// TODO: implement ITfCandidateListUIElement interface to support UI less mode
+	// Great reference: http://msdn.microsoft.com/en-us/library/windows/desktop/aa966970(v=vs.85).aspx
+
+	// NOTE: in Windows 8 store apps, candidate window should be owned by
+	// composition window, which can be returned by Ime::TextService::compositionWindow().
+	// Otherwise, the candidate window cannot be shown.
+	// Ime::CandidateWindow handles this internally. If you create your own
+	// candidate window, you need to call Ime::TextService::isImmersive() to check
+	// if we're in a Windows store app. If isImmersive() returns true,
+	// The candidate window created should be a child window of the composition window.
+	// Please see Ime::CandidateWindow::CandidateWindow() for an example.
+	createCandidateWindow(session);
+	showingCandidates_ = true;
+}
+
+// hide candidate list window
+void MoqiTextService::hideCandidates() {
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->EndUIElement(candidateListElementId_);
+			candidateListElementId_ = 0;
+			validCandidateListElementId_ = false;
+		}
+	}
+	if (candidateWindow_) {
+		candidateWindow_ = nullptr;
+	}
+	showingCandidates_ = false;
+}
+
+// message window
+void MoqiTextService::showMessage(Ime::EditSession* session, std::wstring message, int duration) {
+	// remove previous message if there's any
+	hideMessage();
+	// FIXME: reuse the window whenever possible
+	messageWindow_ = make_unique<Ime::MessageWindow>(this, session);
+	messageWindow_->setFont(font_);
+	messageWindow_->setText(message);
+	
+	int x = 0, y = 0;
+	if(isComposing()) {
+		RECT rc;
+		if(selectionRect(session, &rc)) {
+			x = rc.left;
+			y = rc.bottom;
+		}
+	}
+	messageWindow_->move(x, y);
+	messageWindow_->show();
+
+	messageTimerId_ = ::SetTimer(messageWindow_->hwnd(), 1, duration * 1000, (TIMERPROC)MoqiTextService::onMessageTimeout);
+}
+
+void MoqiTextService::updateMessageWindow(Ime::EditSession* session) {
+    if (messageWindow_) {
+        RECT textRect;
+        // get the position of composition area from TSF
+        if (selectionRect(session, &textRect)) {
+            // FIXME: where should we put the message window?
+            messageWindow_->move(textRect.left, textRect.bottom);
+        }
+    }
+}
+
+void MoqiTextService::hideMessage() {
+	if(messageTimerId_) {
+		::KillTimer(messageWindow_->hwnd(), messageTimerId_);
+		messageTimerId_ = 0;
+	}
+	if(messageWindow_) {
+		messageWindow_ = nullptr;
+	}
+}
+
+// called when the message window timeout
+void MoqiTextService::onMessageTimeout() {
+	hideMessage();
+}
+
+// static
+void CALLBACK MoqiTextService::onMessageTimeout(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+	Ime::MessageWindow* messageWindow = (Ime::MessageWindow*)Ime::Window::fromHwnd(hwnd);
+	assert(messageWindow);
+	if(messageWindow) {
+		MoqiTextService* pThis = (MoqiIME::MoqiTextService*)messageWindow->textService();
+		pThis->onMessageTimeout();
+	}
+}
+
+
+void MoqiTextService::updateLangButtons() {
+}
+
+int MoqiTextService::candFontHeight() {
+	int candFontHeight_ = candFontSize_;
+	HDC hdc = GetDC(NULL);
+	if (hdc)
+	{
+		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+		ReleaseDC(NULL, hdc);
+	}
+	return candFontHeight_;
+}
+
+void MoqiTextService::closeClient() {
+	// deactive currently active language profile
+	if (client_) {
+		// disconnect from the server
+		client_->onDeactivate();
+		client_ = nullptr;
+		// detroy UI resources
+		hideMessage();
+		hideCandidates();
+	}
+}
+
+} // namespace MoqiIME

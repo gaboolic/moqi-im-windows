@@ -39,3 +39,7 @@
 
 # debug information files
 *.dwo
+build
+build_*
+build64
+build64_*

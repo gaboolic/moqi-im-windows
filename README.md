@@ -59,29 +59,33 @@ Windows 输入法将支持 `moqi-ime` 引擎提供的两种输入模式：
 - **通信**: 待定 (Cgo / gRPC / REST / COM)
 - **构建**: CMake / MSBuild
 
-## 目录规划 (待定)
+## 源码布局（CMake 工程）
 
-```
-moqi-im-windows/
-├── tsf/                  # TSF 接口实现
-│   ├── dllmain.cpp       # DLL 入口
-│   ├── text_service.cpp  # ITfTextInputProcessor 实现
-│   ├── key_event.cpp     # ITfKeyEventSink 实现
-│   └── candidate_ui.cpp  # 候选窗口 UI
-├── ui/                   # UI 组件
-│   ├── candidate_window.cpp
-│   ├── status_window.cpp
-│   └── langbar_button.cpp
-├── engine_bridge/        # 与引擎通信层
-│   └── go_bridge.cpp     # Cgo / RPC 调用
-├── common/               # 公共工具
-├── resources/            # 资源文件
-└── tests/                # 测试
-```
+- `libIME2` — TSF / IME 基础库  
+- `MoqiTextService` — 产出 `MoqiTextService.dll`（TSF 文本服务）  
+- `MoqLauncher` — 产出 `MoqLauncher.exe`（Win32 构建；命名管道与后端进程）  
+- `libuv` — Launcher 依赖  
 
-## 开发状态
+## 构建
 
-🚧 项目初始化中...
+前置：**Visual Studio 2022**、**CMake 3.21+**、Windows SDK。
+
+在仓库根目录执行 `build.bat`：生成 **Win32 Release** 全量解决方案，以及 **x64 Release** 的 `MoqiTextService`。
+
+输出示例：`build\Release\`（`MoqLauncher.exe`、`MoqiTextService.dll`）、`build64\Release\MoqiTextService.dll`。
+
+## 安装部署
+
+1. 在 `moqi-ime` 仓库构建后端（例如 `server.exe`），使与根目录 `backends.json` 中的路径一致。  
+2. 以管理员身份打开 PowerShell（若需写入 `Program Files`），在仓库根执行：
+
+   `powershell -ExecutionPolicy Bypass -File .\install.ps1`
+
+   可选参数：`-MoqiImeSource <path>` 指定后端源码树；`-SkipMoqiImeCopy` 仅更新已安装目录中的 DLL/启动器。
+
+安装结果（64 位 Windows）：`%ProgramFiles(x86)%\MoqiIM\`（启动器、Win32 DLL、`backends.json`、`moqi-ime\`），`%ProgramFiles%\MoqiIM\MoqiTextService.dll`（x64）。脚本会对存在的 DLL 调用对应 `regsvr32`，并将 `MoqLauncher.exe` 加入当前用户 **运行** 启动项。
+
+**注意**：更换 TSF CLSID 或显示名称后，可能需在「语言」设置中重新添加输入法，并视情况先注销旧 COM 注册。
 
 ## 参考文档
 
