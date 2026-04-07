@@ -11,13 +11,16 @@
   Root of moqi-im-windows (defaults to the parent directory of this script).
 
 .PARAMETER Win32BuildDir
-  CMake Win32 Release output directory (default: RepoRoot\build\Release).
+  CMake Win32 build directory (default: RepoRoot\build).
 
 .PARAMETER X64BuildDir
-  CMake x64 Release output directory (default: RepoRoot\build64\Release).
+  CMake x64 build directory (default: RepoRoot\build64).
 
 .PARAMETER MoqiImeSource
-  Path to the moqi-ime tree to copy as backend (default: sibling ..\moqi-ime next to RepoRoot).
+  Path to the moqi-ime runtime tree to copy as backend.
+  Default detection order:
+    1. sibling ..\moqi-ime\scripts\build\moqi-ime
+    2. sibling ..\moqi-ime
 
 .PARAMETER SkipMoqiImeCopy
   If set, do not include the backend tree in the staged installer payload.
@@ -76,6 +79,31 @@ function Resolve-ArtifactPath {
     throw "$Label not found. Checked: $($Candidates -join ', ')"
 }
 
+function Resolve-MoqiImeSource {
+    param(
+        [string] $RepoRoot,
+        [string] $RequestedSource
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedSource)) {
+        return [System.IO.Path]::GetFullPath($RequestedSource)
+    }
+
+    $candidates = @(
+        (Join-Path $RepoRoot "..\moqi-ime\scripts\build\moqi-ime"),
+        (Join-Path $RepoRoot "..\moqi-ime")
+    )
+
+    foreach ($candidate in $candidates) {
+        $fullPath = [System.IO.Path]::GetFullPath($candidate)
+        if (Test-Path -LiteralPath (Join-Path $fullPath "server.exe")) {
+            return $fullPath
+        }
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $RepoRoot "..\moqi-ime\scripts\build\moqi-ime"))
+}
+
 function Copy-MoqiImeRuntime {
     param(
         [string] $SourceRoot,
@@ -115,14 +143,13 @@ $scriptRepoRoot = Join-Path $PSScriptRoot ".."
 if (-not $RepoRoot) { $RepoRoot = $scriptRepoRoot }
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 
-if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build\Release" }
-if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build64\Release" }
-if (-not $MoqiImeSource) { $MoqiImeSource = Join-Path $RepoRoot "..\moqi-ime" }
+if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build" }
+if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build64" }
+$MoqiImeSource = Resolve-MoqiImeSource -RepoRoot $RepoRoot -RequestedSource $MoqiImeSource
 if (-not $StageDir) { $StageDir = Join-Path $RepoRoot "installer\stage" }
 if (-not $IssPath) { $IssPath = Join-Path $RepoRoot "installer\MoqiTsf.iss" }
 $Win32BuildDir = [System.IO.Path]::GetFullPath($Win32BuildDir)
 $X64BuildDir = [System.IO.Path]::GetFullPath($X64BuildDir)
-$MoqiImeSource = [System.IO.Path]::GetFullPath($MoqiImeSource)
 $StageDir = [System.IO.Path]::GetFullPath($StageDir)
 $IssPath = [System.IO.Path]::GetFullPath($IssPath)
 

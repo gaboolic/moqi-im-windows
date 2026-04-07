@@ -24,7 +24,6 @@
 #include <libIME2/src/Utils.h>
 #include <libIME2/src/LangBarButton.h>
 #include "MoqiImeModule.h"
-#include "TsfLog.h"
 #include "resource.h"
 #include <Shellapi.h>
 #include <sys/stat.h>
@@ -82,12 +81,10 @@ void MoqiTextService::onActivate() {
 	// we do nothing when the whole text service is activated.
 	// Instead, we do the actual initilization for each language profile when it is activated.
 	// We create different client connections for different language profiles.
-	tsfLog(L"MoqiTextService::onActivate");
 }
 
 // virtual
 void MoqiTextService::onDeactivate() {
-	tsfLog(L"MoqiTextService::onDeactivate client=" + std::to_wstring(client_ != nullptr));
 	if(client_) {
 		closeClient();
 	}
@@ -101,11 +98,6 @@ void MoqiTextService::onFocus() {
 bool MoqiTextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
 	// if (keyEvent.isKeyToggled(VK_CAPITAL))
 	//	return true;
-	tsfLog(
-		L"MoqiTextService::filterKeyDown client=" + std::to_wstring(client_ != nullptr) +
-		L" keyCode=" + std::to_wstring(keyEvent.keyCode()) +
-		L" charCode=" + std::to_wstring(keyEvent.charCode())
-	);
 	if(!client_)
 		return false;
 	return client_->filterKeyDown(keyEvent);
@@ -115,11 +107,6 @@ bool MoqiTextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
 bool MoqiTextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	//if (keyEvent.isKeyToggled(VK_CAPITAL))
 	//	return true;
-	tsfLog(
-		L"MoqiTextService::onKeyDown client=" + std::to_wstring(client_ != nullptr) +
-		L" keyCode=" + std::to_wstring(keyEvent.keyCode()) +
-		L" charCode=" + std::to_wstring(keyEvent.charCode())
-	);
 	if (!client_)
 		return false;
 	return client_->onKeyDown(keyEvent, session);
@@ -127,11 +114,6 @@ bool MoqiTextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* sessi
 
 // virtual
 bool MoqiTextService::filterKeyUp(Ime::KeyEvent& keyEvent) {
-	tsfLog(
-		L"MoqiTextService::filterKeyUp client=" + std::to_wstring(client_ != nullptr) +
-		L" keyCode=" + std::to_wstring(keyEvent.keyCode()) +
-		L" charCode=" + std::to_wstring(keyEvent.charCode())
-	);
 	if(!client_)
 		return false;
 	return client_->filterKeyUp(keyEvent);
@@ -139,11 +121,6 @@ bool MoqiTextService::filterKeyUp(Ime::KeyEvent& keyEvent) {
 
 // virtual
 bool MoqiTextService::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
-	tsfLog(
-		L"MoqiTextService::onKeyUp client=" + std::to_wstring(client_ != nullptr) +
-		L" keyCode=" + std::to_wstring(keyEvent.keyCode()) +
-		L" charCode=" + std::to_wstring(keyEvent.charCode())
-	);
 	if(!client_)
 		return false;
 	return client_->onKeyUp(keyEvent, session);
@@ -233,7 +210,6 @@ void MoqiTextService::onCompositionTerminated(bool forced) {
 }
 
 void MoqiTextService::onLangProfileActivated(REFIID lang) {
-	tsfLog(L"MoqiTextService::onLangProfileActivated lang=" + tsfGuidToString(lang));
 	// Sometimes, Windows does not deactivate the old language profile before
 	// activating the new one. So here we do it by ourselves.
 	// If a new profile is activated, but there is an old one remaining active,
@@ -247,7 +223,6 @@ void MoqiTextService::onLangProfileActivated(REFIID lang) {
 }
 
 void MoqiTextService::onLangProfileDeactivated(REFIID lang) {
-	tsfLog(L"MoqiTextService::onLangProfileDeactivated lang=" + tsfGuidToString(lang));
 	closeClient();
 }
 
@@ -445,7 +420,6 @@ int MoqiTextService::candFontHeight() {
 }
 
 void MoqiTextService::closeClient() {
-	tsfLog(L"MoqiTextService::closeClient client=" + std::to_wstring(client_ != nullptr));
 	// deactive currently active language profile
 	if (client_) {
 		// disconnect from the server
