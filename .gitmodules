@@ -10,3 +10,6 @@
 [submodule "jsoncpp"]
 	path = jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "installer/Inno-Setup-Chinese-Simplified-Translation"]
+	path = installer/Inno-Setup-Chinese-Simplified-Translation
+	url = https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation

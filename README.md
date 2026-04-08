@@ -18,7 +18,7 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 │  - 按键事件/组合串/候选窗处理               │
 │  - 通过命名管道连接 Launcher                │
 ├─────────────────────────────────────────────┤
-│  MoqLauncher.exe                            │
+│  MoqiLauncher.exe                            │
 │  - 读取 backends.json                       │
 │  - 管理后端进程生命周期                     │
 │  - 在命名管道与后端 stdin/stdout 之间转发消息│
@@ -63,7 +63,7 @@ Windows 侧的职责主要是：
 ## 源码布局
 
 - `MoqiTextService`：TSF 文本服务，产出 `MoqiTextService.dll`
-- `MoqLauncher`：后端启动器与消息转发器，产出 `MoqLauncher.exe`
+- `MoqLauncher`：后端启动器与消息转发器，产出 `MoqiLauncher.exe`
 - `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`EasyIME/libIME2`](https://github.com/EasyIME/libIME2)
 - `libuv`：Launcher 的事件循环与进程/管道依赖
 - `backends.json`：后端清单，定义后端名称、启动命令和工作目录
@@ -82,7 +82,7 @@ Windows 侧的职责主要是：
 
 该脚本会生成：
 
-- `build\Release\MoqLauncher.exe`
+- `build\Release\MoqiLauncher.exe`
 - `build\Release\MoqiTextService.dll`（Win32）
 - `build64\Release\MoqiTextService.dll`（x64）
 
@@ -105,14 +105,14 @@ Windows 侧的职责主要是：
 
 安装器在 64 位 Windows 上会部署为：
 
-- `MoqLauncher.exe`、Win32 `MoqiTextService.dll`、`backends.json`、`moqi-ime\` 安装到 `%ProgramFiles(x86)%\MoqiIM\`
+- `MoqiLauncher.exe`、Win32 `MoqiTextService.dll`、`backends.json`、`moqi-ime\` 安装到 `%ProgramFiles(x86)%\MoqiIM\`
 - x64 `MoqiTextService.dll` 安装到 `%ProgramFiles%\MoqiIM\`
 
 安装器会：
 
 - 复制上述文件
 - 对已有 DLL 调用对应位数的 `regsvr32`
-- 将 `MoqLauncher.exe` 写入当前用户的开机启动项
+- 将 `MoqiLauncher.exe` 写入当前用户的开机启动项
 
 ## 说明
 

@@ -7,7 +7,7 @@ Produces:
 
 Prerequisites:
   1) A stage directory produced by scripts\install.ps1, containing:
-     - win32\MoqiIM\MoqLauncher.exe
+     - win32\MoqiIM\MoqiLauncher.exe
      - win32\MoqiIM\MoqiTextService.dll
      - win32\MoqiIM\backends.json
      - optionally win32\MoqiIM\moqi-ime\...

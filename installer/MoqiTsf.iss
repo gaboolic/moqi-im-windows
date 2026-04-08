@@ -34,8 +34,8 @@ WizardSizePercent=110,100
 DisableWelcomePage=no
 
 [Languages]
-; English only: chocolatey innosetup omits compiler:Languages\*.isl packs.
-Name: "english"; MessagesFile: "compiler:Default.isl"
+; Use the vendored translation file so packaging does not depend on local Inno Setup language packs.
+Name: "chinesesimplified"; MessagesFile: ".\Inno-Setup-Chinese-Simplified-Translation\ChineseSimplified.isl"
 
 [Files]
 Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -46,7 +46,7 @@ Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
 [Run]
-Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Description: "Launch MoqiLauncher"; Flags: nowait postinstall skipifsilent
+Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Flags: nowait
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
