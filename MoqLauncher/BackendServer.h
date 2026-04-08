@@ -21,9 +21,9 @@
 #define _BACKEND_SERVER_H_
 
 #include <Windows.h>
-#include <ShlObj.h>
-#include <Shellapi.h>
 #include <Lmcons.h> // for UNLEN
+#include <Shellapi.h>
+#include <ShlObj.h>
 #include <cstring>
 #include <string>
 #include <vector>

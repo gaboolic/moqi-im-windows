@@ -21,9 +21,9 @@
 #define _Moqi_PIPE_SERVER_H_
 
 #include <Windows.h>
-#include <ShlObj.h>
-#include <Shellapi.h>
 #include <Lmcons.h> // for UNLEN
+#include <Shellapi.h>
+#include <ShlObj.h>
 #include <Winnt.h> // for security attributes constants
 #include <aclapi.h> // for ACL
 #include <rpc.h> // for UuidCreate
