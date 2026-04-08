@@ -7,3 +7,6 @@
 [submodule "libIME2"]
 	path = libIME2
 	url = https://github.com/EasyIME/libIME2.git
+[submodule "jsoncpp"]
+	path = jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
