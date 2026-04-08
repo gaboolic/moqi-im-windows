@@ -152,7 +152,7 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
                                          commitString.length());
       // FIXME: update the position of candidate and message window when the
       // composition string is changed.
-      if (textService_->candidateWindow_ != nullptr) {
+      if (textService_->hasCandidateWindow()) {
         textService_->updateCandidatesWindow(session);
       }
       if (textService_->messageWindow_ != nullptr) {
@@ -190,7 +190,7 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
     }
     // FIXME: update the position of candidate and message window when the
     // composition string is changed.
-    if (textService_->candidateWindow_ != nullptr) {
+    if (textService_->hasCandidateWindow()) {
       textService_->updateCandidatesWindow(session);
     }
     if (textService_->messageWindow_ != nullptr) {
@@ -377,8 +377,8 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 
   const auto &candidateCursorVal = msg["candidateCursor"];
   if (candidateCursorVal.isInt()) {
-    if (textService_->candidateWindow_ != nullptr) {
-      textService_->candidateWindow_->setCurrentSel(candidateCursorVal.asInt());
+    if (textService_->hasCandidateWindow()) {
+      textService_->setCandidateCursor(candidateCursorVal.asInt());
       textService_->refreshCandidates();
     }
   }

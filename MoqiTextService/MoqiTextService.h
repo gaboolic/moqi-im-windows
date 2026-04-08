@@ -21,11 +21,11 @@
 #define NODE_TEXT_SERVICE_H
 
 #include <LibIME2/src/TextService.h>
-#include <LibIME2/src/CandidateWindow.h>
 #include <LibIME2/src/MessageWindow.h>
 #include <LibIME2/src/EditSession.h>
 #include <LibIME2/src/LangBarButton.h>
 #include "MoqiImeModule.h"
+#include "MoqiCandidateWindow.h"
 #include <sys/types.h>
 #include "MoqiClient.h"
 #include <memory>
@@ -129,6 +129,10 @@ public:
 	void hideCandidates();
 
 	void refreshCandidates();
+	void setCandidateCursor(int cursor);
+	bool hasCandidateWindow() const {
+		return candidateWindow_ != nullptr;
+	}
 
 	// message window
 	void showMessage(Ime::EditSession* session, std::wstring message, int duration = 3);
@@ -144,6 +148,7 @@ private:
 	void updateLangButtons(); // update status of language bar buttons
 
 	void createCandidateWindow(Ime::EditSession* session);
+	void destroyCandidateWindow();
 	int candFontHeight();
 
 	void closeClient();
@@ -151,7 +156,7 @@ private:
 private:
 	bool validCandidateListElementId_;
 	DWORD candidateListElementId_;
-	Ime::ComPtr<Ime::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
+	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
 	std::vector<std::wstring> candidates_; // current candidate list
 	std::unique_ptr<Ime::MessageWindow> messageWindow_;

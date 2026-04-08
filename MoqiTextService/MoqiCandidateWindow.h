@@ -1,0 +1,70 @@
+//
+//    Copyright (C) 2026
+//
+
+#pragma once
+
+#include <LibIME2/src/ComObject.h>
+#include <LibIME2/src/ImeWindow.h>
+
+#include <string>
+#include <vector>
+
+namespace Ime {
+class EditSession;
+}
+
+namespace Moqi {
+
+class CandidateWindow
+    : public Ime::ImeWindow,
+      public Ime::ComObject<Ime::ComInterface<ITfCandidateListUIElement>> {
+public:
+    CandidateWindow(Ime::TextService* service, Ime::EditSession* session);
+
+    STDMETHODIMP GetDescription(BSTR* pbstrDescription);
+    STDMETHODIMP GetGUID(GUID* pguid);
+    STDMETHODIMP Show(BOOL bShow);
+    STDMETHODIMP IsShown(BOOL* pbShow);
+
+    STDMETHODIMP GetUpdatedFlags(DWORD* pdwFlags);
+    STDMETHODIMP GetDocumentMgr(ITfDocumentMgr** ppdim);
+    STDMETHODIMP GetCount(UINT* puCount);
+    STDMETHODIMP GetSelection(UINT* puIndex);
+    STDMETHODIMP GetString(UINT uIndex, BSTR* pbstr);
+    STDMETHODIMP GetPageIndex(UINT* puIndex, UINT uSize, UINT* puPageCnt);
+    STDMETHODIMP SetPageIndex(UINT* puIndex, UINT uPageCnt);
+    STDMETHODIMP GetCurrentPage(UINT* puPage);
+
+    void add(std::wstring item, wchar_t selKey);
+    void clear();
+    void setCandPerRow(int n);
+    void setCurrentSel(int sel);
+    void setUseCursor(bool use);
+    void recalculateSize() override;
+
+protected:
+    ~CandidateWindow(void) override;
+
+    LRESULT wndProc(UINT msg, WPARAM wp, LPARAM lp) override;
+
+private:
+    void onPaint();
+    void paintItem(HDC hdc, int index, int x, int y);
+    void itemRect(int index, RECT& rect) const;
+
+private:
+    BOOL shown_;
+    int selKeyWidth_;
+    int textWidth_;
+    int itemHeight_;
+    int candPerRow_;
+    int colSpacing_;
+    int rowSpacing_;
+    std::vector<wchar_t> selKeys_;
+    std::vector<std::wstring> items_;
+    int currentSel_;
+    bool useCursor_;
+};
+
+} // namespace Moqi

@@ -27,10 +27,34 @@
 #include "resource.h"
 #include <Shellapi.h>
 #include <sys/stat.h>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
 namespace Moqi {
+
+namespace {
+
+void appendCandidateWindowLog(const std::wstring& message) {
+	const wchar_t* localAppData = _wgetenv(L"LOCALAPPDATA");
+	if (!localAppData || !*localAppData) {
+		return;
+	}
+
+	std::wstring logDir = std::wstring(localAppData) + L"\\MoqiIM\\Log";
+	::CreateDirectoryW((std::wstring(localAppData) + L"\\MoqiIM").c_str(), nullptr);
+	::CreateDirectoryW(logDir.c_str(), nullptr);
+	std::wstring logPath = logDir + L"\\candidate-window.log";
+
+	std::wofstream stream(logPath, std::ios::app);
+	if (!stream.is_open()) {
+		return;
+	}
+	stream << message << L"\n";
+}
+
+}
 
 TextService::TextService(ImeModule* module):
 	Ime::TextService(module),
@@ -64,9 +88,7 @@ TextService::~TextService(void) {
 	if(popupMenu_)
 		::DestroyMenu(popupMenu_);
 
-	if (candidateWindow_) {
-		hideCandidates();
-	}
+	destroyCandidateWindow();
 
 	if(messageWindow_)
 		hideMessage();
@@ -228,7 +250,8 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 
 void TextService::createCandidateWindow(Ime::EditSession* session) {
 	if (!candidateWindow_) {
-		candidateWindow_ = new Ime::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
+		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
+		candidateWindow_ = new Moqi::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
 		candidateWindow_->Release();  // decrease ref count caused by new
 
 		candidateWindow_->setFont(font_);
@@ -237,10 +260,37 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 			BOOL pbShow = false;
 			if (validCandidateListElementId_ =
 				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
-				candidateWindow_->Show(pbShow);
+				std::wostringstream log;
+				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
+					<< L" elementId=" << candidateListElementId_;
+				appendCandidateWindowLog(log.str());
+				candidateWindow_->Show(TRUE);
+			}
+			else {
+				appendCandidateWindowLog(L"[TextService::createCandidateWindow] BeginUIElement failed");
 			}
 		}
+		else {
+			appendCandidateWindowLog(L"[TextService::createCandidateWindow] elementMgr unavailable");
+		}
 	}
+}
+
+void TextService::destroyCandidateWindow() {
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->EndUIElement(candidateListElementId_);
+		}
+		candidateListElementId_ = 0;
+		validCandidateListElementId_ = false;
+	}
+	if (candidateWindow_) {
+		candidateWindow_->Show(FALSE);
+		candidateWindow_ = nullptr;
+		appendCandidateWindowLog(L"[TextService::destroyCandidateWindow] destroyed");
+	}
+	showingCandidates_ = false;
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
@@ -312,6 +362,12 @@ void TextService::refreshCandidates() {
 	}
 }
 
+void TextService::setCandidateCursor(int cursor) {
+	if (candidateWindow_) {
+		candidateWindow_->setCurrentSel(cursor);
+	}
+}
+
 // show candidate list window
 void TextService::showCandidates(Ime::EditSession* session) {
 	// TODO: implement ITfCandidateListUIElement interface to support UI less mode
@@ -326,23 +382,20 @@ void TextService::showCandidates(Ime::EditSession* session) {
 	// The candidate window created should be a child window of the composition window.
 	// Please see Ime::CandidateWindow::CandidateWindow() for an example.
 	createCandidateWindow(session);
+	if (candidateWindow_) {
+		candidateWindow_->Show(TRUE);
+	}
 	showingCandidates_ = true;
 }
 
 // hide candidate list window
 void TextService::hideCandidates() {
-	if (validCandidateListElementId_) {
-		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
-		if (elementMgr) {
-			elementMgr->EndUIElement(candidateListElementId_);
-			candidateListElementId_ = 0;
-			validCandidateListElementId_ = false;
-		}
-	}
 	if (candidateWindow_) {
-		candidateWindow_ = nullptr;
+		candidateWindow_->Show(FALSE);
+		candidateWindow_->clear();
 	}
 	showingCandidates_ = false;
+	appendCandidateWindowLog(L"[TextService::hideCandidates] hidden");
 }
 
 // message window
@@ -427,7 +480,7 @@ void TextService::closeClient() {
 		client_ = nullptr;
 		// detroy UI resources
 		hideMessage();
-		hideCandidates();
+		destroyCandidateWindow();
 	}
 }
 
