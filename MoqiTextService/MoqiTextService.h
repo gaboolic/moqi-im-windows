@@ -17,8 +17,8 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef MOQI_TEXT_SERVICE_H
-#define MOQI_TEXT_SERVICE_H
+#ifndef NODE_TEXT_SERVICE_H
+#define NODE_TEXT_SERVICE_H
 
 #include <LibIME2/src/TextService.h>
 #include <LibIME2/src/CandidateWindow.h>
@@ -31,12 +31,12 @@
 #include <memory>
 
 
-namespace MoqiIME {
+namespace Moqi {
 
-class MoqiTextService: public Ime::TextService {
-	friend class MoqiClient;
+class TextService: public Ime::TextService {
+	friend class Client;
 public:
-	MoqiTextService(MoqiImeModule* module);
+	TextService(ImeModule* module);
 
 	virtual void onActivate();
 	virtual void onDeactivate();
@@ -54,10 +54,10 @@ public:
 	virtual bool onCommand(UINT id, CommandType type);
 
 	// called when a language bar button needs a menu
-	virtual bool onMenu(MoqiLangBarButton* btn, ITfMenu* pMenu);
+	virtual bool onMenu(LangBarButton* btn, ITfMenu* pMenu);
 
 	// called when a language bar button needs a menu
-	virtual HMENU onMenu(MoqiLangBarButton* btn);
+	virtual HMENU onMenu(LangBarButton* btn);
 
 	// called when a compartment value is changed
 	virtual void onCompartmentChanged(const GUID& key);
@@ -75,7 +75,7 @@ public:
 
 	virtual void onLangProfileDeactivated(REFIID lang);
 
-	// methods called by MoqiIME::MoqiClient
+	// methods called by Moqi::Client
 	int candPerRow() const {
 		return candPerRow_;
 	}
@@ -136,7 +136,7 @@ public:
 	void hideMessage();
 
 private:
-	virtual ~MoqiTextService(void);  // COM object should only be deleted using Release()
+	virtual ~TextService(void);  // COM object should only be deleted using Release()
 
 	void onMessageTimeout();
 	static void CALLBACK onMessageTimeout(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
@@ -166,10 +166,10 @@ private:
 
 	HMENU popupMenu_;
 
-	std::unique_ptr<MoqiClient> client_; // connection client
+	std::unique_ptr<Client> client_; // connection client
 	GUID currentLangProfile_;
 };
 
-} // namespace MoqiIME
+}
 
 #endif

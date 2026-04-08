@@ -17,13 +17,15 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef _MOQI_PIPE_SERVER_H_
-#define _MOQI_PIPE_SERVER_H_
+#ifndef _Moqi_PIPE_SERVER_H_
+#define _Moqi_PIPE_SERVER_H_
 
 #include <Windows.h>
 #include <ShlObj.h>
 #include <Shellapi.h>
 #include <Lmcons.h> // for UNLEN
+#include <Winnt.h> // for security attributes constants
+#include <aclapi.h> // for ACL
 #include <rpc.h> // for UuidCreate
 #include <cstring>
 #include <string>
@@ -40,7 +42,7 @@
 #include <spdlog/spdlog.h>
 
 
-namespace MoqiIME {
+namespace Moqi {
 
 class PipeServer;
 class BackendServer;
@@ -106,7 +108,7 @@ private:
 private:
 	// security attribute stuff for creating the server pipe
     PipeSecurityAttributes securityAttributes_;
-
+	
 	std::wstring topDirPath_;
 	bool quitExistingLauncher_;
 	static PipeServer* singleton_;
@@ -129,6 +131,6 @@ private:
 	std::shared_ptr<spdlog::logger> logger_;
 };
 
-} // namespace MoqiIME
+} // namespace Moqi
 
-#endif // _MOQI_PIPE_SERVER_H_
+#endif // _Moqi_PIPE_SERVER_H_

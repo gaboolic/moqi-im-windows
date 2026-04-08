@@ -50,12 +50,12 @@
 
 using namespace std;
 
-namespace MoqiIME {
+namespace Moqi {
 
 PipeServer* PipeServer::singleton_ = nullptr;
-wchar_t PipeServer::singleInstanceMutexName_[] = L"MoqLauncherMutex";
+wchar_t PipeServer::singleInstanceMutexName_[] = L"MoqiLauncherMutex";
 
-wchar_t PipeServer::wndClassName_[] = L"MoqLauncherWnd";
+wchar_t PipeServer::wndClassName_[] = L"MoqiLauncherWnd";
 
 static wstring_convert<codecvt_utf8<wchar_t>> utf8Codec;
 
@@ -64,12 +64,12 @@ static constexpr UINT MAIN_SHELL_NOTIFY_ICON_ID = 1;
 
 static constexpr UINT ID_ENABLE_DEBUG_LOG = 1000;
 static constexpr UINT ID_SHOW_DEBUG_LOGS = 1001;
-static constexpr UINT ID_RESTART_MOQI_BACKENDS = 1002;
+static constexpr UINT ID_RESTART_Moqi_BACKENDS = 1002;
 
 static constexpr size_t MAX_LOG_FILE_SIZE = 5 * 1024 * 1024; // log file size: 5 MB
 static constexpr int NUM_LOG_FILES = 5;  // backup 3 copies of the log file
 
-static constexpr wchar_t CONFIG_FILE_REL_PATH[] = L"\\MoqLauncher.json";
+static constexpr wchar_t CONFIG_FILE_REL_PATH[] = L"\\MoqiLauncher.json";
 
 
 PipeServer::PipeServer() :
@@ -84,7 +84,6 @@ PipeServer::PipeServer() :
 	initDataDir();
 	loadConfig();
 	initLogger();
-    logger_->warn("PipeServer ctor dataDir={}", utf8Codec.to_bytes(dataDirPath_));
 }
 
 PipeServer::~PipeServer() {
@@ -104,14 +103,14 @@ void PipeServer::initLogger() {
 	auto logDirPath = dataDirPath_ + L"\\Log";
 	makeDirs(logDirPath);
 
-	auto logFile = logDirPath + L"\\MoqLauncher.log";
+	auto logFile = logDirPath + L"\\MoqiLauncher.log";
 	try {
-		logger_ = spdlog::rotating_logger_mt("MoqLauncher", logFile, MAX_LOG_FILE_SIZE, NUM_LOG_FILES);
+		logger_ = spdlog::rotating_logger_mt("MoqiLauncher", logFile, MAX_LOG_FILE_SIZE, NUM_LOG_FILES);
 		spdlog::flush_on(spdlog::level::debug);  // flush to the file on any kind of errors (always flush)
 	}
 	catch(const spdlog::spdlog_ex& exc) {
 		// fail to create file logger, fallback to console logger
-		logger_ = spdlog::stderr_logger_mt("MoqLauncher");
+		logger_ = spdlog::stderr_logger_mt("MoqiLauncher");
 	}
 
 	logger_->set_level(logLevel_);
@@ -129,15 +128,13 @@ void PipeServer::loadConfig() {
 void PipeServer::saveConfig() {
 	auto configFile = dataDirPath_ + CONFIG_FILE_REL_PATH;
 	Json::Value config;
-	const auto levelSv = spdlog::level::to_string_view(logLevel_);
-	config["logLevel"] = std::string(levelSv.data(), levelSv.size());
+	config["logLevel"] = spdlog::level::to_c_str(logLevel_);
 	if (!saveJsonFile(configFile, config)) {
 		logger_->error("fail to write config file");
 	}
 }
 
 void PipeServer::initBackendServers(const std::wstring & topDirPath) {
-    logger_->warn("initBackendServers topDir={}", utf8Codec.to_bytes(topDirPath));
 	// load known backend implementations
 	Json::Value backends;
 	if (loadJsonFile(topDirPath + L"\\backends.json", backends) && backends.isArray()) {
@@ -145,26 +142,17 @@ void PipeServer::initBackendServers(const std::wstring & topDirPath) {
 			backends_.emplace_back(
                 std::make_unique<BackendServer>(this, backendInfo)
                 );
-            logger_->warn("loaded backend name={} command={} workingDir={}",
-                backendInfo["name"].asString(),
-                backendInfo["command"].asString(),
-                backendInfo["workingDir"].asString());
 		}
 	}
-    else {
-        logger_->warn("backends.json missing or invalid at {}", utf8Codec.to_bytes(topDirPath + L"\\backends.json"));
-    }
 
 	// maps language profiles to backend names
 	initInputMethods(topDirPath);
-    logger_->warn("initBackendServers done backends={} mappings={}", backends_.size(), backendMap_.size());
 }
 
 void PipeServer::initInputMethods(const std::wstring& topDirPath) {
 	// maps language profiles to backend names
 	for (auto& backend : backends_) {
 		std::wstring dirPath = topDirPath + L"\\" + utf8Codec.from_bytes(backend->name_) + L"\\input_methods";
-        logger_->warn("scan input_methods dir={}", utf8Codec.to_bytes(dirPath));
 		// scan the dir for lang profile definition files (ime.json)
 		WIN32_FIND_DATA findData = { 0 };
 		HANDLE hFind = ::FindFirstFile((dirPath + L"\\*").c_str(), &findData);
@@ -189,7 +177,6 @@ void PipeServer::initInputMethods(const std::wstring& topDirPath) {
 							transform(guid.begin(), guid.end(), guid.begin(), tolower);  // convert GUID to lwoer case
 																							// map text service GUID to its backend server
 							backendMap_.insert(std::make_pair(guid, backendFromName(backend->name_.c_str())));
-                            logger_->warn("mapped guid={} backend={}", guid, backend->name_);
 						}
 					}
 				}
@@ -305,29 +292,16 @@ PipeClient* PipeServer::clientFromId(const std::string& clientId) {
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365588(v=vs.85).aspx
 void PipeServer::initPipe(uv_pipe_t* pipe, const wchar_t* appName, SECURITY_ATTRIBUTES* sa) {
     auto utf8PipeName = utf8Codec.to_bytes(getPipeName(appName));
-    logger_->warn("initPipe pipeName={}", utf8PipeName);
-#ifdef HAVE_UV_NAMED_PIPE
-    uv_pipe_init_windows_named_pipe(uv_default_loop(), pipe, 0,
-        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, sa);
-#else
-	uv_pipe_init(uv_default_loop(), pipe, 0);
-#endif
+	uv_pipe_init_windows_named_pipe(uv_default_loop(), pipe, 0, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, sa);
 	pipe->data = this;
-	int bindRet = uv_pipe_bind(pipe, utf8PipeName.c_str());
-    logger_->warn("uv_pipe_bind pipeName={} ret={} err={}", utf8PipeName, bindRet, bindRet < 0 ? uv_strerror(bindRet) : "ok");
+	uv_pipe_bind(pipe, utf8PipeName.c_str());
 }
 
 
 void PipeServer::acceptClient(PipeClient* client) {
 	auto serverStream = reinterpret_cast<uv_stream_t*>(&serverPipe_);
-	int acceptRet = uv_accept(serverStream, client->stream());
-    logger_->warn("acceptClient uv_accept ret={} err={}", acceptRet, acceptRet < 0 ? uv_strerror(acceptRet) : "ok");
-    if (acceptRet >= 0) {
-	    clients_.push_back(client);
-    }
-    else {
-        delete client;
-    }
+	uv_accept(serverStream, client->stream());
+	clients_.push_back(client);
 }
 
 void PipeServer::removeClient(PipeClient* client) {
@@ -336,27 +310,14 @@ void PipeServer::removeClient(PipeClient* client) {
 }
 
 void PipeServer::onNewClientConnected(uv_stream_t* server, int status) {
-    logger_->warn("onNewClientConnected status={} err={}", status, status < 0 ? uv_strerror(status) : "ok");
-	if (status < 0) {
-		return;
-	}
-	auto serverPipe = reinterpret_cast<uv_pipe_t*>(server);
-#ifdef HAVE_UV_NAMED_PIPE
-	auto client = new PipeClient(this, serverPipe->pipe_mode, serverPipe->security_attributes);
-#else
-	auto client = new PipeClient(this, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, nullptr);
-#endif
+	auto server_pipe = reinterpret_cast<uv_pipe_t*>(server);
+	auto client = new PipeClient{this, server_pipe->pipe_mode, server_pipe->security_attributes };
 	acceptClient(client);
-    if (find(clients_.begin(), clients_.end(), client) != clients_.end()) {
-	    client->startRead();
-        logger_->warn("onNewClientConnected client-startRead");
-    }
+	client->startRead();
 }
 
 bool PipeServer::initSingleInstance() {
     singleInstanceMutex_ = ::CreateMutex(NULL, FALSE, singleInstanceMutexName_);
-    auto lastError = GetLastError();
-    logger_->warn("initSingleInstance mutexName={} lastError={}", utf8Codec.to_bytes(singleInstanceMutexName_), lastError);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         // mutex already exists: found an existing process.
         return false;
@@ -366,18 +327,15 @@ bool PipeServer::initSingleInstance() {
 
 int PipeServer::exec(LPSTR cmd) {
 	parseCommandLine(cmd);
-    logger_->warn("exec begin quitExistingLauncher={}", quitExistingLauncher_);
 
 	if (quitExistingLauncher_) { // terminate existing launcher process
-        logger_->warn("exec handling /quit");
 		if (HWND existingHwnd = ::FindWindow(wndClassName_, nullptr)) {
 			terminateExistingLauncher(existingHwnd);
 		}
 		return 0;
 	}
-    // ensure that only one instance of MoqLauncher can be running
+    // ensure that only one instance of MoqiLauncher can be running
     if (!initSingleInstance()) {
-        logger_->warn("exec abort because another launcher instance is active");
         return 0;
     }
 
@@ -386,39 +344,37 @@ int PipeServer::exec(LPSTR cmd) {
 
 	// get the Moqi installation directory
     topDirPath_ = getCurrentExecutableDir();
-    logger_->warn("exec topDirPath={}", utf8Codec.to_bytes(topDirPath_));
 	// must set CWD to our dir. otherwise the backends won't launch.
 	::SetCurrentDirectoryW(topDirPath_.c_str());
-    logger_->warn("exec current directory set");
 
 	// this is the first instance
 	initBackendServers(topDirPath_);
 
+	// preparing for the server pipe
+	SECURITY_ATTRIBUTES* sa = nullptr;
+	if (::IsWindows8OrGreater()) {
+		// Setting special security attributes to the named pipe is only needed 
+		// for Windows >= 8 since older versions do not have app containers (metro apps) 
+		// in which connecting to pipes are blocked by default permission settings.
+		sa = securityAttributes_.get();
+	}
 	// initialize the server pipe
-    SECURITY_ATTRIBUTES* sa = nullptr;
-    if (::IsWindows8OrGreater()) {
-        sa = securityAttributes_.get();
-    }
 	initPipe(&serverPipe_, L"Launcher", sa);
 
 	// listen to events from clients
-	int listenRet = uv_listen(reinterpret_cast<uv_stream_t*>(&serverPipe_), 32, [](uv_stream_t* server, int status) {
+	uv_listen(reinterpret_cast<uv_stream_t*>(&serverPipe_), 32, [](uv_stream_t* server, int status) {
 		auto _this = reinterpret_cast<PipeServer*>(server->data);
 		_this->onNewClientConnected(server, status);
 	});
-    logger_->warn("uv_listen ret={} err={}", listenRet, listenRet < 0 ? uv_strerror(listenRet) : "ok");
 
 	// run GUI message loop in another worker thread
 	uv_thread_t uiThread;
-	int threadRet = uv_thread_create(&uiThread, [](void* arg) {
+	uv_thread_create(&uiThread, [](void* arg) {
 		reinterpret_cast<PipeServer*>(arg)->runGuiThread();
 	}, this);
-    logger_->warn("uv_thread_create ret={}", threadRet);
 
 	// run the main loop
-    logger_->warn("uv_run enter");
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
-    logger_->warn("uv_run exit");
 
 	uv_thread_join(&uiThread);  // wait for the GUI message loop to quit
 	return 0;
@@ -441,7 +397,7 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
 		break;
 	case WM_COMMAND:
 		switch (LOWORD(wp)) {
-		case ID_RESTART_MOQI_BACKENDS:
+		case ID_RESTART_Moqi_BACKENDS:
             asyncRestartAllBackends();
 			return 0;
 		case ID_ENABLE_DEBUG_LOG:
@@ -499,7 +455,7 @@ void PipeServer::createShellNotifyIcon() {
 	shellNotifyIconData_.hIcon = ::LoadIcon(NULL, IDI_APPLICATION);
 
 	// FIXME: make this translatable later
-	wcscpy(shellNotifyIconData_.szTip, L"Moq Launcher");
+	wcscpy(shellNotifyIconData_.szTip, L"Moqi Launcher");
 
 	::Shell_NotifyIcon(NIM_ADD, &shellNotifyIconData_);
 }
@@ -520,7 +476,7 @@ void PipeServer::showPopupMenu() const {
 	::AppendMenu(hmenu, MF_STRING|MF_ENABLED|(debugEnabled ? MF_CHECKED : 0), ID_ENABLE_DEBUG_LOG, L"Enable Debug Log");
 	::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_SHOW_DEBUG_LOGS, L"Show Debug Logs");
 	::AppendMenu(hmenu, MF_SEPARATOR, 0, 0);
-	::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_RESTART_MOQI_BACKENDS, L"Restart Moqi");
+	::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_RESTART_Moqi_BACKENDS, L"Restart Moqi");
 
 	::SetForegroundWindow(hwnd_);
 	::TrackPopupMenu(hmenu, TPM_LEFTALIGN| TPM_BOTTOMALIGN, pos.x, pos.y, 0, hwnd_, NULL);
@@ -532,23 +488,18 @@ void PipeServer::showPopupMenu() const {
 void PipeServer::runGuiThread() {
 	// this method is called from an worker thread other than the main thread
 	// For libuv, it's only safe to use uv_aysnc_*() from within this thread.
-    logger_->warn("runGuiThread enter");
 
 	WNDCLASSEX wndClass;
 	auto wndClassAtom = registerWndClass(wndClass);
-    logger_->warn("registerWndClass atom={}", reinterpret_cast<uintptr_t>(wndClassAtom));
 	hwnd_ = ::CreateWindowEx(0, LPCTSTR(wndClassAtom), NULL, 0, 0, 0, 0, 0, HWND_DESKTOP, NULL, wndClass.hInstance, this);
-    logger_->warn("CreateWindowEx hwnd={} lastError={}", reinterpret_cast<uintptr_t>(hwnd_), GetLastError());
 
 	createShellNotifyIcon();
-    logger_->warn("createShellNotifyIcon done");
 
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0)) {
 		::TranslateMessage(&msg);
 		::DispatchMessage(&msg);
 	}
-    logger_->warn("runGuiThread message loop exit");
 
 	destroyShellNotifyIcon();
 
@@ -556,4 +507,4 @@ void PipeServer::runGuiThread() {
 }
 
 
-} // namespace MoqiIME
+} // namespace Moqi

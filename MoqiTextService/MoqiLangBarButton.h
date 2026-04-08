@@ -17,23 +17,23 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef MOQI_LANGUAGE_BAR_BUTTON_H
-#define MOQI_LANGUAGE_BAR_BUTTON_H
+#ifndef Moqi_LANGUAGE_BAR_BUTTON_H
+#define Moqi_LANGUAGE_BAR_BUTTON_H
 
 #include <libIME2/src/LangBarButton.h>
 #include <json/json.h>
 #include <string>
 #include <unordered_map>
 
-namespace MoqiIME {
+namespace Moqi {
 
-class MoqiTextService;
+class TextService;
 
-class MoqiLangBarButton : public Ime::LangBarButton {
+class LangBarButton : public Ime::LangBarButton {
 public:
-	MoqiLangBarButton(MoqiTextService* service, const std::string& id, const GUID& guid, UINT commandId = 0, const wchar_t* text = NULL, DWORD style = TF_LBI_STYLE_BTN_BUTTON);
+	LangBarButton(TextService* service, const std::string& id, const GUID& guid, UINT commandId = 0, const wchar_t* text = NULL, DWORD style = TF_LBI_STYLE_BTN_BUTTON);
 
-	static MoqiLangBarButton* fromJson(MoqiTextService* service, const Json::Value& info);
+	static LangBarButton* fromJson(TextService* service, const Json::Value& info);
 	void updateFromJson(const Json::Value& info);
 
 	const std::string& id() const {
@@ -49,7 +49,7 @@ public:
 	STDMETHODIMP InitMenu(ITfMenu *pMenu);
 
 protected:
-	virtual ~MoqiLangBarButton(); // COM object should be deleted using Rlease()
+	virtual ~LangBarButton(); // COM object should be deleted using Rlease()
 
 private:
 	std::string id_;
@@ -57,6 +57,6 @@ private:
 	static std::unordered_map<std::wstring, HICON> iconCache_; // cache loaded icons
 };
 
-} // namespace MoqiIME
+} // namespace Moqi
 
-#endif // MOQI_LANGUAGE_BAR_BUTTON_H
+#endif // Moqi_LANGUAGE_BAR_BUTTON_H

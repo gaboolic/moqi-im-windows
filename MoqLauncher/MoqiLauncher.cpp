@@ -25,6 +25,6 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show) {
 	// this will block user input. We want to handle the errors silently.
 	::SetErrorMode(SEM_NOOPENFILEERRORBOX|SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOALIGNMENTFAULTEXCEPT);
 
-	MoqiIME::PipeServer server;
+	Moqi::PipeServer server;
 	return server.exec(cmd);
 }

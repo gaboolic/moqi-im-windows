@@ -4,7 +4,7 @@
 #include <Windows.h>
 #include <ShlObj.h>
 
-namespace MoqiIME {
+namespace Moqi {
 
 bool loadJsonFile(const std::wstring filename, Json::Value& result) {
 	std::ifstream fp(filename, std::ifstream::binary);
@@ -60,4 +60,4 @@ std::string generateUuidStr() {
     return result;
 }
 
-} // namespace MoqiIME
+} // namespace Moqi

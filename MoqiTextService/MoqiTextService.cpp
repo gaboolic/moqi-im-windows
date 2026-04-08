@@ -30,9 +30,9 @@
 
 using namespace std;
 
-namespace MoqiIME {
+namespace Moqi {
 
-MoqiTextService::MoqiTextService(MoqiImeModule* module):
+TextService::TextService(ImeModule* module):
 	Ime::TextService(module),
 	client_(nullptr),
 	messageWindow_(nullptr),
@@ -56,7 +56,7 @@ MoqiTextService::MoqiTextService(MoqiImeModule* module):
 	font_ = CreateFontIndirect(&lf);
 }
 
-MoqiTextService::~MoqiTextService(void) {
+TextService::~TextService(void) {
 	if (client_) {
 		closeClient();
 	}
@@ -76,26 +76,26 @@ MoqiTextService::~MoqiTextService(void) {
 }
 
 // virtual
-void MoqiTextService::onActivate() {
+void TextService::onActivate() {
 	// Since we support multiple language profiles in this text service,
 	// we do nothing when the whole text service is activated.
 	// Instead, we do the actual initilization for each language profile when it is activated.
-	// We create different client connections for different language profiles.
+	// In Moqi, we create different client connections for different language profiles.
 }
 
 // virtual
-void MoqiTextService::onDeactivate() {
+void TextService::onDeactivate() {
 	if(client_) {
 		closeClient();
 	}
 }
 
 // virtual
-void MoqiTextService::onFocus() {
+void TextService::onFocus() {
 }
 
 // virtual
-bool MoqiTextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
+bool TextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
 	// if (keyEvent.isKeyToggled(VK_CAPITAL))
 	//	return true;
 	if(!client_)
@@ -104,7 +104,7 @@ bool MoqiTextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
 }
 
 // virtual
-bool MoqiTextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+bool TextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	//if (keyEvent.isKeyToggled(VK_CAPITAL))
 	//	return true;
 	if (!client_)
@@ -113,21 +113,21 @@ bool MoqiTextService::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* sessi
 }
 
 // virtual
-bool MoqiTextService::filterKeyUp(Ime::KeyEvent& keyEvent) {
+bool TextService::filterKeyUp(Ime::KeyEvent& keyEvent) {
 	if(!client_)
 		return false;
 	return client_->filterKeyUp(keyEvent);
 }
 
 // virtual
-bool MoqiTextService::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+bool TextService::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	if(!client_)
 		return false;
 	return client_->onKeyUp(keyEvent, session);
 }
 
 // virtual
-bool MoqiTextService::onPreservedKey(const GUID& guid) {
+bool TextService::onPreservedKey(const GUID& guid) {
 	if(!client_)
 		return false;
 	// some preserved keys registered in ctor are pressed
@@ -136,7 +136,7 @@ bool MoqiTextService::onPreservedKey(const GUID& guid) {
 
 
 // virtual
-bool MoqiTextService::onCommand(UINT id, CommandType type) {
+bool TextService::onCommand(UINT id, CommandType type) {
 	if(!client_)
 		return false;
 	return client_->onCommand(id, type);
@@ -145,7 +145,7 @@ bool MoqiTextService::onCommand(UINT id, CommandType type) {
 
 // called when a language bar button needs a menu
 // virtual
-bool MoqiTextService::onMenu(MoqiLangBarButton* btn, ITfMenu* pMenu) {
+bool TextService::onMenu(LangBarButton* btn, ITfMenu* pMenu) {
 	if (client_ != nullptr) {
 		return client_->onMenu(btn, pMenu);
 	}
@@ -154,7 +154,7 @@ bool MoqiTextService::onMenu(MoqiLangBarButton* btn, ITfMenu* pMenu) {
 
 // called when a language bar button needs a menu
 // virtual
-HMENU MoqiTextService::onMenu(MoqiLangBarButton* btn) {
+HMENU TextService::onMenu(LangBarButton* btn) {
 	if (client_ != nullptr) {
 		return client_->onMenu(btn);
 	}
@@ -163,7 +163,7 @@ HMENU MoqiTextService::onMenu(MoqiLangBarButton* btn) {
 
 
 // virtual
-void MoqiTextService::onCompartmentChanged(const GUID& key) {
+void TextService::onCompartmentChanged(const GUID& key) {
 	Ime::TextService::onCompartmentChanged(key);
 	if(client_)
 		client_->onCompartmentChanged(key);
@@ -171,7 +171,7 @@ void MoqiTextService::onCompartmentChanged(const GUID& key) {
 
 // called when the keyboard is opened or closed
 // virtual
-void MoqiTextService::onKeyboardStatusChanged(bool opened) {
+void TextService::onKeyboardStatusChanged(bool opened) {
 	Ime::TextService::onKeyboardStatusChanged(opened);
 	if(client_)
 		client_->onKeyboardStatusChanged(opened);
@@ -195,7 +195,7 @@ void MoqiTextService::onKeyboardStatusChanged(bool opened) {
 // the input focus is grabbed by another application.
 // if forced is false, the composition is terminated gracefully by endComposition().
 // virtual
-void MoqiTextService::onCompositionTerminated(bool forced) {
+void TextService::onCompositionTerminated(bool forced) {
 	// we do special handling here for forced composition termination.
 	if(forced) {
 		// we're still editing our composition and have something in the preedit buffer.
@@ -209,7 +209,7 @@ void MoqiTextService::onCompositionTerminated(bool forced) {
 		client_->onCompositionTerminated(forced);
 }
 
-void MoqiTextService::onLangProfileActivated(REFIID lang) {
+void TextService::onLangProfileActivated(REFIID lang) {
 	// Sometimes, Windows does not deactivate the old language profile before
 	// activating the new one. So here we do it by ourselves.
 	// If a new profile is activated, but there is an old one remaining active,
@@ -218,15 +218,15 @@ void MoqiTextService::onLangProfileActivated(REFIID lang) {
 		closeClient();
 
 	// create a new client connection to the input method server for the language profile
-	client_ = std::make_unique<MoqiClient>(this, lang);
+	client_ = std::make_unique<Client>(this, lang);
 	client_->onActivate();
 }
 
-void MoqiTextService::onLangProfileDeactivated(REFIID lang) {
+void TextService::onLangProfileDeactivated(REFIID lang) {
 	closeClient();
 }
 
-void MoqiTextService::createCandidateWindow(Ime::EditSession* session) {
+void TextService::createCandidateWindow(Ime::EditSession* session) {
 	if (!candidateWindow_) {
 		candidateWindow_ = new Ime::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
 		candidateWindow_->Release();  // decrease ref count caused by new
@@ -243,7 +243,7 @@ void MoqiTextService::createCandidateWindow(Ime::EditSession* session) {
 	}
 }
 
-void MoqiTextService::updateCandidates(Ime::EditSession* session) {
+void TextService::updateCandidates(Ime::EditSession* session) {
 	createCandidateWindow(session);
 	candidateWindow_->clear();
 
@@ -292,7 +292,7 @@ void MoqiTextService::updateCandidates(Ime::EditSession* session) {
 	}
 }
 
-void MoqiTextService::updateCandidatesWindow(Ime::EditSession* session) {
+void TextService::updateCandidatesWindow(Ime::EditSession* session) {
     if (candidateWindow_) {
         RECT textRect;
         // get the position of composition area from TSF
@@ -303,7 +303,7 @@ void MoqiTextService::updateCandidatesWindow(Ime::EditSession* session) {
     }
 }
 
-void MoqiTextService::refreshCandidates() {
+void TextService::refreshCandidates() {
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
@@ -313,15 +313,15 @@ void MoqiTextService::refreshCandidates() {
 }
 
 // show candidate list window
-void MoqiTextService::showCandidates(Ime::EditSession* session) {
+void TextService::showCandidates(Ime::EditSession* session) {
 	// TODO: implement ITfCandidateListUIElement interface to support UI less mode
 	// Great reference: http://msdn.microsoft.com/en-us/library/windows/desktop/aa966970(v=vs.85).aspx
 
 	// NOTE: in Windows 8 store apps, candidate window should be owned by
-	// composition window, which can be returned by Ime::TextService::compositionWindow().
+	// composition window, which can be returned by TextService::compositionWindow().
 	// Otherwise, the candidate window cannot be shown.
 	// Ime::CandidateWindow handles this internally. If you create your own
-	// candidate window, you need to call Ime::TextService::isImmersive() to check
+	// candidate window, you need to call TextService::isImmersive() to check
 	// if we're in a Windows store app. If isImmersive() returns true,
 	// The candidate window created should be a child window of the composition window.
 	// Please see Ime::CandidateWindow::CandidateWindow() for an example.
@@ -330,7 +330,7 @@ void MoqiTextService::showCandidates(Ime::EditSession* session) {
 }
 
 // hide candidate list window
-void MoqiTextService::hideCandidates() {
+void TextService::hideCandidates() {
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
@@ -346,7 +346,7 @@ void MoqiTextService::hideCandidates() {
 }
 
 // message window
-void MoqiTextService::showMessage(Ime::EditSession* session, std::wstring message, int duration) {
+void TextService::showMessage(Ime::EditSession* session, std::wstring message, int duration) {
 	// remove previous message if there's any
 	hideMessage();
 	// FIXME: reuse the window whenever possible
@@ -365,10 +365,10 @@ void MoqiTextService::showMessage(Ime::EditSession* session, std::wstring messag
 	messageWindow_->move(x, y);
 	messageWindow_->show();
 
-	messageTimerId_ = ::SetTimer(messageWindow_->hwnd(), 1, duration * 1000, (TIMERPROC)MoqiTextService::onMessageTimeout);
+	messageTimerId_ = ::SetTimer(messageWindow_->hwnd(), 1, duration * 1000, (TIMERPROC)TextService::onMessageTimeout);
 }
 
-void MoqiTextService::updateMessageWindow(Ime::EditSession* session) {
+void TextService::updateMessageWindow(Ime::EditSession* session) {
     if (messageWindow_) {
         RECT textRect;
         // get the position of composition area from TSF
@@ -379,7 +379,7 @@ void MoqiTextService::updateMessageWindow(Ime::EditSession* session) {
     }
 }
 
-void MoqiTextService::hideMessage() {
+void TextService::hideMessage() {
 	if(messageTimerId_) {
 		::KillTimer(messageWindow_->hwnd(), messageTimerId_);
 		messageTimerId_ = 0;
@@ -390,25 +390,25 @@ void MoqiTextService::hideMessage() {
 }
 
 // called when the message window timeout
-void MoqiTextService::onMessageTimeout() {
+void TextService::onMessageTimeout() {
 	hideMessage();
 }
 
 // static
-void CALLBACK MoqiTextService::onMessageTimeout(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+void CALLBACK TextService::onMessageTimeout(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
 	Ime::MessageWindow* messageWindow = (Ime::MessageWindow*)Ime::Window::fromHwnd(hwnd);
 	assert(messageWindow);
 	if(messageWindow) {
-		MoqiTextService* pThis = (MoqiIME::MoqiTextService*)messageWindow->textService();
+		TextService* pThis = (Moqi::TextService*)messageWindow->textService();
 		pThis->onMessageTimeout();
 	}
 }
 
 
-void MoqiTextService::updateLangButtons() {
+void TextService::updateLangButtons() {
 }
 
-int MoqiTextService::candFontHeight() {
+int TextService::candFontHeight() {
 	int candFontHeight_ = candFontSize_;
 	HDC hdc = GetDC(NULL);
 	if (hdc)
@@ -419,7 +419,7 @@ int MoqiTextService::candFontHeight() {
 	return candFontHeight_;
 }
 
-void MoqiTextService::closeClient() {
+void TextService::closeClient() {
 	// deactive currently active language profile
 	if (client_) {
 		// disconnect from the server
@@ -431,4 +431,4 @@ void MoqiTextService::closeClient() {
 	}
 }
 
-} // namespace MoqiIME
+} // namespace Moqi

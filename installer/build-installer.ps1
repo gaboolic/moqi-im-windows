@@ -36,7 +36,7 @@ if (-not (Test-Path -LiteralPath $x64Root)) {
 }
 
 $requiredPaths = @(
-    (Join-Path $win32Root 'MoqLauncher.exe'),
+    (Join-Path $win32Root 'MoqiLauncher.exe'),
     (Join-Path $win32Root 'MoqiTextService.dll'),
     (Join-Path $win32Root 'backends.json'),
     (Join-Path $x64Root 'MoqiTextService.dll')
@@ -64,7 +64,8 @@ foreach ($c in $candidates) {
     if ($c -eq 'ISCC.exe') {
         $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
         if ($cmd) { $iscc = $cmd.Path; break }
-    } elseif (Test-Path -LiteralPath $c) {
+    }
+    elseif (Test-Path -LiteralPath $c) {
         $iscc = $c
         break
     }

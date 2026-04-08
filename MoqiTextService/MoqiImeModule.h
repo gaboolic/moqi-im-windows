@@ -17,20 +17,20 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef MOQI_IME_MODULE_H
-#define MOQI_IME_MODULE_H
+#ifndef NODE_IME_MODULE_H
+#define NODE_IME_MODULE_H
 
 #include <LibIME2/src/ImeModule.h>
 #include <string>
 #include <vector>
 #include <json/json.h>
 
-namespace MoqiIME {
+namespace Moqi {
 
-class MoqiImeModule : public Ime::ImeModule {
+class ImeModule : public Ime::ImeModule {
 public:
-	MoqiImeModule(HMODULE module);
-	virtual ~MoqiImeModule(void);
+	ImeModule(HMODULE module);
+	virtual ~ImeModule(void);
 
 	virtual Ime::TextService* createTextService();
 
@@ -57,6 +57,6 @@ private:
 	std::vector<std::wstring> backendDirs_;
 };
 
-} // namespace MoqiIME
+}
 
 #endif

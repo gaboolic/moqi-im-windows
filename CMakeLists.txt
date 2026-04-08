@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.21)
 # Satisfy older FetchContent deps (e.g. jsoncpp) under CMake 4.x; avoids fragile -D on command line.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
+# Explicitly control the MSVC runtime before project() so generated VS projects
+# keep the legacy PIME behavior: /MDd for Debug, /MD for RelWithDebInfo,
+# and /MT for Release/MinSizeRel.
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+endif()
+set(CMAKE_MSVC_RUNTIME_LIBRARY
+    "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DLL>")
+
 # Override default c/c++ flags to keep MSVC release builds self-contained.
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flag_overrides.cmake")
 set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_flag_overrides.cmake")
@@ -52,18 +61,14 @@ set(LIBUV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LIBUV_BUILD_BENCH OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
-    jsoncpp
-    GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
-    GIT_TAG master
-)
-
-FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.x
+    GIT_TAG v1.2.1
 )
 
-FetchContent_MakeAvailable(jsoncpp spdlog)
+FetchContent_MakeAvailable(spdlog)
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/jsoncpp")
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/libIME2")
 add_subdirectory("${PROJECT_SOURCE_DIR}/libuv")

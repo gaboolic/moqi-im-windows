@@ -9,17 +9,16 @@
 
 #include <json/json.h>
 #include "../libIME2/src/Utils.h"
-#include "TsfLog.h"
 
 
-MoqiIME::MoqiImeModule* g_imeModule = NULL;
+Moqi::ImeModule* g_imeModule = NULL;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
 	switch (ul_reason_for_call) {
 	case DLL_PROCESS_ATTACH:
 		::DisableThreadLibraryCalls(hModule); // disable DllMain calls due to new thread creation
 		//::MessageBox(0, L"X!", 0, 0);
-		g_imeModule = new MoqiIME::MoqiImeModule(hModule);
+		g_imeModule = new Moqi::ImeModule(hModule);
 		break;
 	case DLL_PROCESS_DETACH:
 		if(g_imeModule) {
@@ -36,7 +35,6 @@ STDAPI DllCanUnloadNow(void) {
 }
 
 STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppvObj) {
-	MoqiIME::tsfLog(L"DllGetClassObject clsid=" + MoqiIME::tsfGuidToString(rclsid) + L" iid=" + MoqiIME::tsfGuidToString(riid));
 	return g_imeModule->getClassObject(rclsid, riid, ppvObj);
 }
 
@@ -80,7 +78,6 @@ static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::s
 }
 
 STDAPI DllRegisterServer(void) {
-	MoqiIME::tsfLog(L"DllRegisterServer begin");
 	int iconIndex = 0; // use classic icon
 	if(::IsWindows8OrGreater()) {
 		iconIndex = 1; // use Windows 8 style IME icon
@@ -117,7 +114,5 @@ STDAPI DllRegisterServer(void) {
 			::FindClose(hFind);
 		}
 	}
-	auto hr = g_imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
-	MoqiIME::tsfLog(L"DllRegisterServer end hr=" + std::to_wstring(hr) + L" profiles=" + std::to_wstring(langProfiles.size()));
-	return hr;
+	return g_imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
 }

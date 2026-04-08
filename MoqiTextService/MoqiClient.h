@@ -17,8 +17,8 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef _MOQI_CLIENT_H_
-#define _MOQI_CLIENT_H_
+#ifndef _Moqi_CLIENT_H_
+#define _Moqi_CLIENT_H_
 #define NDEBUG
 #include <libIME2/src/TextService.h>
 #include <libIME2/src/KeyEvent.h>
@@ -29,17 +29,17 @@
 #include <string>
 #include <json/json.h>
 
-namespace MoqiIME {
+namespace Moqi {
 
-class MoqiTextService;
+class TextService;
 
-class MoqiClient
+class Client
 {
 public:
 	// create a client connection to the input method server
 	// guid is the GUID of the language profile
-	MoqiClient(MoqiTextService* service, REFIID langProfileGuid);
-	~MoqiClient(void);
+	Client(TextService* service, REFIID langProfileGuid);
+	~Client(void);
 
 	const std::string guid() const {
 		return guid_;
@@ -60,10 +60,10 @@ public:
 	bool onCommand(UINT id, Ime::TextService::CommandType type);
 
 	// called when a language bar button needs a menu
-	bool onMenu(MoqiLangBarButton* btn, ITfMenu* pMenu);
+	bool onMenu(LangBarButton* btn, ITfMenu* pMenu);
 
 	// called when a language bar button needs a menu
-	HMENU onMenu(MoqiLangBarButton* btn);
+	HMENU onMenu(LangBarButton* btn);
 
 	// called when a compartment value is changed
 	void onCompartmentChanged(const GUID& key);
@@ -107,15 +107,15 @@ private:
     void updateStatus(Json::Value& msg, Ime::EditSession* session = nullptr);
 
 private:
-	MoqiTextService* textService_;
+	TextService* textService_;
 	std::string guid_;
 	HANDLE pipe_;
-	std::unordered_map<std::string, Ime::ComPtr<MoqiIME::MoqiLangBarButton>> buttons_; // map buttons to string IDs
+	std::unordered_map<std::string, Ime::ComPtr<Moqi::LangBarButton>> buttons_; // map buttons to string IDs
 	unsigned int nextSeqNum_;
 	bool isActivated_;
     bool shouldWaitConnection_;
 };
 
-} // namespace MoqiIME
+}
 
-#endif // _MOQI_CLIENT_H_
+#endif // _Moqi_CLIENT_H_

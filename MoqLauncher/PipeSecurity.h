@@ -5,7 +5,7 @@
 
 #include <memory>
 
-namespace MoqiIME {
+namespace Moqi {
 
 
 class PipeSecurityAttributes {
@@ -25,4 +25,4 @@ private:
     SECURITY_ATTRIBUTES securityAttributes_;
 };
 
-} // namespace MoqiIME
+} // namespace Moqi

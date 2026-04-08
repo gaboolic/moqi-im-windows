@@ -46,12 +46,12 @@ Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
 [Run]
-Filename: "{autopf32}\MoqiIM\MoqLauncher.exe"; Description: "Launch MoqLauncher"; Flags: nowait postinstall skipifsilent
+Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Description: "Launch MoqiLauncher"; Flags: nowait postinstall skipifsilent
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
-  ValueType: string; ValueName: "MoqLauncher"; \
-  ValueData: """{autopf32}\MoqiIM\MoqLauncher.exe"""; \
+  ValueType: string; ValueName: "MoqiLauncher"; \
+  ValueData: """{autopf32}\MoqiIM\MoqiLauncher.exe"""; \
   Flags: uninsdeletevalue
 
 [InstallDelete]
@@ -120,7 +120,7 @@ end;
 
 procedure StopMoqiProcesses;
 begin
-  TryKillProcessImage('MoqLauncher.exe');
+  TryKillProcessImage('MoqiLauncher.exe');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

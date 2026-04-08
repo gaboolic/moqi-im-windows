@@ -28,14 +28,14 @@
 #include <json/json.h>
 #include "../libIME2/src/Utils.h"
 
-namespace MoqiIME {
+namespace Moqi {
 
-// CLSID of Moqi Text Service (must not collide with other IMEs)
+// CLSID of Moqi Text Service (must stay in sync with installer/registration cleanup)
 // {8F204C91-2D7A-4B3E-9E1F-6A5C0D8B2E7F}
-const GUID g_textServiceClsid =
-{ 0x8f204c91, 0x2d7a, 0x4b3e, { 0x9e, 0x1f, 0x6a, 0x5c, 0xd, 0x8b, 0x2e, 0x7f } };
+const GUID g_textServiceClsid = 
+{ 0x8f204c91, 0x2d7a, 0x4b3e, { 0x9e, 0x1f, 0x6a, 0x5c, 0x0d, 0x8b, 0x2e, 0x7f } };
 
-MoqiImeModule::MoqiImeModule(HMODULE module):
+ImeModule::ImeModule(HMODULE module):
 	Ime::ImeModule(module, g_textServiceClsid) {
 	wchar_t path[MAX_PATH];
 	HRESULT result;
@@ -63,16 +63,16 @@ MoqiImeModule::MoqiImeModule(HMODULE module):
 	}
 }
 
-MoqiImeModule::~MoqiImeModule(void) {
+ImeModule::~ImeModule(void) {
 }
 
 // virtual
-Ime::TextService* MoqiImeModule::createTextService() {
-	MoqiTextService* service = new MoqiIME::MoqiTextService(this);
+Ime::TextService* ImeModule::createTextService() {
+	TextService* service = new Moqi::TextService(this);
 	return service;
 }
 
-bool MoqiImeModule::loadImeInfo(const std::string& guid, std::wstring& filePath, Json::Value& content) {
+bool ImeModule::loadImeInfo(const std::string& guid, std::wstring& filePath, Json::Value& content) {
 	bool found = false;
 	// find the input method module
 	for (const auto backendDir : backendDirs_) {
@@ -114,7 +114,7 @@ bool MoqiImeModule::loadImeInfo(const std::string& guid, std::wstring& filePath,
 }
 
 // virtual
-bool MoqiImeModule::onConfigure(HWND hwndParent, LANGID langid, REFGUID rguidProfile) {
+bool ImeModule::onConfigure(HWND hwndParent, LANGID langid, REFGUID rguidProfile) {
 	// FIXME: this is inefficient. Should we cache known modules?
 	LPOLESTR pGuidStr = NULL;
 	if (FAILED(::StringFromCLSID(rguidProfile, &pGuidStr)))
@@ -165,4 +165,4 @@ bool MoqiImeModule::onConfigure(HWND hwndParent, LANGID langid, REFGUID rguidPro
 }
 
 
-} // namespace MoqiIME
+} // namespace Moqi

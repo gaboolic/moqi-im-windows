@@ -36,7 +36,7 @@
 
 #include "UvPipe.h"
 
-namespace MoqiIME {
+namespace Moqi {
 
 class PipeServer;
 class PipeClient;
@@ -97,6 +97,6 @@ private:
 	std::string workingDir_;
 };
 
-} // namespace MoqiIME
+} // namespace Moqi
 
 #endif // _BACKEND_SERVER_H_

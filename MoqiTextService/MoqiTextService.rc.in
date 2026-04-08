@@ -72,13 +72,13 @@ BEGIN
     BEGIN
         BLOCK "040404b0"
         BEGIN
-            VALUE "CompanyName", "Moqi IM"
-            VALUE "FileDescription", "Moqi Text Service"
+            VALUE "CompanyName", "Moqi"
+            VALUE "FileDescription", "Moqi"
             VALUE "FileVersion", "@MOQI_VERSION_MAJOR@.@MOQI_VERSION_MINOR@.@MOQI_VERSION_PATCH@"
             VALUE "InternalName", "MoqiTextService.dll"
-            VALUE "LegalCopyright", "Copyright (C) Moqi IM contributors"
+            VALUE "LegalCopyright", "Copyright (C) 2013-2016 Moqi developers"
             VALUE "OriginalFilename", "MoqiTextService.dll"
-            VALUE "ProductName", "Moqi IM"
+            VALUE "ProductName", "Moqi"
             VALUE "ProductVersion", "@MOQI_VERSION_MAJOR@.@MOQI_VERSION_MINOR@.@MOQI_VERSION_PATCH@"
         END
     END

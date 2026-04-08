@@ -11,6 +11,7 @@ configure_file("MoqiTextService.rc.in" "MoqiTextService.rc" @ONLY)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
+    ${jsoncpp_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -25,16 +26,12 @@ add_library(MoqiTextService SHARED
     MoqiClient.h
     MoqiLangBarButton.cpp
     MoqiLangBarButton.h
-    TsfLog.cpp
-    TsfLog.h
     DllEntry.cpp
     # resources
     ${CMAKE_CURRENT_BINARY_DIR}/MoqiTextService.rc
 )
 
-set_target_properties(MoqiTextService PROPERTIES OUTPUT_NAME "MoqiTextService")
-
 target_link_libraries(MoqiTextService
     libIME2_static
-    jsoncpp_static
+    jsoncpp_lib_static
 )

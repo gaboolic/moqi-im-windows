@@ -19,26 +19,26 @@
   CMake generator (default: Visual Studio 17 2022).
 #>
 param(
-    [string] $RepoRoot = "",
-    [string] $Win32BuildDir = "",
-    [string] $X64BuildDir = "",
-    [string] $Configuration = "Release",
-    [string] $Generator = "Visual Studio 17 2022"
+  [string] $RepoRoot = "",
+  [string] $Win32BuildDir = "",
+  [string] $X64BuildDir = "",
+  [string] $Configuration = "Release",
+  [string] $Generator = "Visual Studio 17 2022"
 )
 
 $ErrorActionPreference = "Stop"
 
 function Invoke-Step {
-    param(
-        [string] $FilePath,
-        [string[]] $ArgumentList
-    )
+  param(
+    [string] $FilePath,
+    [string[]] $ArgumentList
+  )
 
-    Write-Host ">> $FilePath $($ArgumentList -join ' ')"
-    & $FilePath @ArgumentList
-    if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code ${LASTEXITCODE}: $FilePath"
-    }
+  Write-Host ">> $FilePath $($ArgumentList -join ' ')"
+  & $FilePath @ArgumentList
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $FilePath"
+  }
 }
 
 $scriptRepoRoot = Join-Path $PSScriptRoot ".."
@@ -51,26 +51,26 @@ $Win32BuildDir = [System.IO.Path]::GetFullPath($Win32BuildDir)
 $X64BuildDir = [System.IO.Path]::GetFullPath($X64BuildDir)
 
 Invoke-Step -FilePath "cmake" -ArgumentList @(
-    "-S", $RepoRoot,
-    "-B", $Win32BuildDir,
-    "-G", $Generator,
-    "-A", "Win32"
+  "-S", $RepoRoot,
+  "-B", $Win32BuildDir,
+  "-G", $Generator,
+  "-A", "Win32"
 )
 Invoke-Step -FilePath "cmake" -ArgumentList @(
-    "--build", $Win32BuildDir,
-    "--config", $Configuration
+  "--build", $Win32BuildDir,
+  "--config", $Configuration
 )
 
 Invoke-Step -FilePath "cmake" -ArgumentList @(
-    "-S", $RepoRoot,
-    "-B", $X64BuildDir,
-    "-G", $Generator,
-    "-A", "x64"
+  "-S", $RepoRoot,
+  "-B", $X64BuildDir,
+  "-G", $Generator,
+  "-A", "x64"
 )
 Invoke-Step -FilePath "cmake" -ArgumentList @(
-    "--build", $X64BuildDir,
-    "--config", $Configuration,
-    "--target", "MoqiTextService"
+  "--build", $X64BuildDir,
+  "--config", $Configuration,
+  "--target", "MoqiTextService"
 )
 
 Write-Host "OK: Win32 $Configuration (full solution), x64 $Configuration (MoqiTextService)."

@@ -29,20 +29,20 @@ static const GUID _GUID_LBI_INPUTMODE =
 
 static const char WINDOWS_MODE_ICON_ID[] = "windows-mode-icon";
 
-namespace MoqiIME {
+namespace Moqi {
 
 // static
-std::unordered_map<std::wstring, HICON> MoqiLangBarButton::iconCache_; // cache loaded icons
+std::unordered_map<std::wstring, HICON> LangBarButton::iconCache_; // cache loaded icons
 
-MoqiLangBarButton::MoqiLangBarButton(MoqiTextService* service, const std::string& id, const GUID& guid, UINT commandId, const wchar_t* text, DWORD style):
+LangBarButton::LangBarButton(TextService* service, const std::string& id, const GUID& guid, UINT commandId, const wchar_t* text, DWORD style):
 	Ime::LangBarButton(service, guid, commandId, text, style),
 	id_(id) {
 }
 
-MoqiLangBarButton::~MoqiLangBarButton() {
+LangBarButton::~LangBarButton() {
 }
 
-MoqiLangBarButton* MoqiLangBarButton::fromJson(MoqiTextService* service, const Json::Value& info) {
+LangBarButton* LangBarButton::fromJson(TextService* service, const Json::Value& info) {
 	if (info.isObject()) {
 		std::string id = info["id"].asString();
 
@@ -60,7 +60,7 @@ MoqiLangBarButton* MoqiLangBarButton::fromJson(MoqiTextService* service, const J
 			CoCreateGuid(&guid);
 		}
 
-		MoqiLangBarButton* langBtn = new MoqiLangBarButton(service, id, guid, 0, NULL, style);
+		LangBarButton* langBtn = new LangBarButton(service, id, guid, 0, NULL, style);
 		if (langBtn != nullptr) {
 			langBtn->updateFromJson(info);
 			return langBtn;
@@ -69,7 +69,7 @@ MoqiLangBarButton* MoqiLangBarButton::fromJson(MoqiTextService* service, const J
 	return nullptr;
 }
 
-void MoqiLangBarButton::setIconFile(std::wstring filePath) {
+void LangBarButton::setIconFile(std::wstring filePath) {
     if (filePath != iconFile_) {
         iconFile_ = std::move(filePath);
 
@@ -88,7 +88,7 @@ void MoqiLangBarButton::setIconFile(std::wstring filePath) {
     }
 }
 
-void MoqiLangBarButton::updateFromJson(const Json::Value& info) {
+void LangBarButton::updateFromJson(const Json::Value& info) {
 	const Json::Value& iconValue = info["icon"];
 	if (iconValue.isString()) {
         setIconFile(utf8ToUtf16(iconValue.asCString()));
@@ -138,17 +138,17 @@ void MoqiLangBarButton::updateFromJson(const Json::Value& info) {
 }
 
 
-void MoqiLangBarButton::clearIconCache() {
+void LangBarButton::clearIconCache() {
 	for (auto it = iconCache_.begin(); it != iconCache_.end(); ++it) {
 		DestroyIcon(it->second);
 	}
 	iconCache_.clear();
 }
 
-STDMETHODIMP MoqiLangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *prcArea) {
+STDMETHODIMP LangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *prcArea) {
 	// special handling for right click on windows 8 mode icon
 	if (id_ == WINDOWS_MODE_ICON_ID && click == TF_LBI_CLK_RIGHT) {
-		MoqiTextService* service = static_cast<MoqiTextService*>(textService());
+		TextService* service = static_cast<TextService*>(textService());
 		// check if we need to show a popup menu
 		HMENU popupMenu = service->onMenu(this);
 		if (popupMenu != NULL) {
@@ -156,7 +156,7 @@ STDMETHODIMP MoqiLangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *
 			window.create(HWND_DESKTOP, 0);
 			UINT ret = ::TrackPopupMenu(popupMenu, TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTALIGN | TPM_BOTTOMALIGN, pt.x, pt.y, 0, window.hwnd(), NULL);
 			if (ret > 0)
-				service->onCommand(ret, MoqiTextService::COMMAND_MENU);
+				service->onCommand(ret, TextService::COMMAND_MENU);
 			::DestroyMenu(popupMenu);
 			return S_OK;
 		}
@@ -164,12 +164,12 @@ STDMETHODIMP MoqiLangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *
 	return Ime::LangBarButton::OnClick(click, pt, prcArea);
 }
 
-STDMETHODIMP MoqiLangBarButton::InitMenu(ITfMenu *pMenu) {
-	MoqiTextService* service = static_cast<MoqiTextService*>(textService());
+STDMETHODIMP LangBarButton::InitMenu(ITfMenu *pMenu) {
+	TextService* service = static_cast<TextService*>(textService());
 	if (service && service->onMenu(this, pMenu)) {
 		return S_OK;
 	}
 	return Ime::LangBarButton::InitMenu(pMenu);
 }
 
-} // namespace MoqiIME
+} // namespace Moqi

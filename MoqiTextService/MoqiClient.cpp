@@ -23,794 +23,784 @@
 #include <json/json.h>
 
 #include "MoqiTextService.h"
-#include <VersionHelpers.h> // Provided by Windows SDK >= 8.1
-#include <Winnls.h> // for IS_HIGH_SURROGATE() macro for checking UTF16 surrogate pairs
-#include <algorithm>
-#include <cctype>
 #include <cstdlib>
 #include <ctime>
-#include <fstream>
 #include <memory>
+#include <fstream>
+#include <cctype>
+#include <algorithm>
+#include <Winnls.h>  // for IS_HIGH_SURROGATE() macro for checking UTF16 surrogate pairs
+#include <VersionHelpers.h>  // Provided by Windows SDK >= 8.1
 
 using namespace std;
 
-namespace MoqiIME {
+namespace Moqi {
 
-static std::string uuidToString(const UUID &uuid) {
-  std::string result;
-  LPOLESTR buf = nullptr;
-  if (SUCCEEDED(::StringFromCLSID(uuid, &buf))) {
-    result = utf16ToUtf8(buf);
-    ::CoTaskMemFree(buf);
-    // convert GUID to lwoer case
-    transform(result.begin(), result.end(), result.begin(), tolower);
-  }
-  return result;
+static std::string uuidToString(const UUID& uuid) {
+    std::string result;
+    LPOLESTR buf = nullptr;
+    if (SUCCEEDED(::StringFromCLSID(uuid, &buf))) {
+        result = utf16ToUtf8(buf);
+        ::CoTaskMemFree(buf);
+        // convert GUID to lwoer case
+        transform(result.begin(), result.end(), result.begin(), tolower);
+    }
+    return result;
 }
 
-bool uuidFromString(const char *uuidStr, UUID &result) {
-  std::wstring utf16UuidStr = utf8ToUtf16(uuidStr);
-  return SUCCEEDED(CLSIDFromString(utf16UuidStr.c_str(), &result));
+bool uuidFromString(const char* uuidStr, UUID& result) {
+    std::wstring utf16UuidStr = utf8ToUtf16(uuidStr);
+    return SUCCEEDED(CLSIDFromString(utf16UuidStr.c_str(), &result));
 }
 
-MoqiClient::MoqiClient(MoqiTextService *service, REFIID langProfileGuid)
-    : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
-      isActivated_(false), guid_{uuidToString(langProfileGuid)},
-      shouldWaitConnection_{true} {
+
+Client::Client(TextService* service, REFIID langProfileGuid):
+	textService_(service),
+	pipe_(INVALID_HANDLE_VALUE),
+	nextSeqNum_(0),
+	isActivated_(false),
+    guid_{uuidToString(langProfileGuid)},
+    shouldWaitConnection_{true} {
 }
 
-MoqiClient::~MoqiClient(void) {
-  closeRpcConnection();
-  resetTextServiceState();
-  MoqiLangBarButton::clearIconCache();
+Client::~Client(void) {
+	closeRpcConnection();
+    resetTextServiceState();
+	LangBarButton::clearIconCache();
 }
 
 // pack a keyEvent object into a json value
-// static
-void MoqiClient::addKeyEventToRpcRequest(Json::Value &request,
-                                         Ime::KeyEvent &keyEvent) {
-  request["charCode"] = keyEvent.charCode();
-  request["keyCode"] = keyEvent.keyCode();
-  request["repeatCount"] = keyEvent.repeatCount();
-  request["scanCode"] = keyEvent.scanCode();
-  request["isExtended"] = keyEvent.isExtended();
-  Json::Value keyStates(Json::arrayValue);
-  const BYTE *states = keyEvent.keyStates();
-  for (int i = 0; i < 256; ++i) {
-    keyStates.append(states[i]);
-  }
-  request["keyStates"] = keyStates;
+//static
+void Client::addKeyEventToRpcRequest(Json::Value& request, Ime::KeyEvent& keyEvent) {
+	request["charCode"] = keyEvent.charCode();
+	request["keyCode"] = keyEvent.keyCode();
+	request["repeatCount"] = keyEvent.repeatCount();
+	request["scanCode"] = keyEvent.scanCode();
+	request["isExtended"] = keyEvent.isExtended();
+	Json::Value keyStates(Json::arrayValue);
+	const BYTE* states = keyEvent.keyStates();
+	for(int i = 0; i < 256; ++i) {
+		keyStates.append(states[i]);
+	}
+	request["keyStates"] = keyStates;
 }
 
-bool MoqiClient::handleRpcResponse(Json::Value &msg,
-                                   Ime::EditSession *session) {
-  bool success = msg.get("success", false).asBool();
-  if (success) {
-    updateStatus(msg, session);
-  }
-  return success;
+bool Client::handleRpcResponse(Json::Value& msg, Ime::EditSession* session) {
+	bool success = msg.get("success", false).asBool();
+	if (success) {
+		updateStatus(msg, session);
+	}
+	return success;
 }
 
-void MoqiClient::updateUI(const Json::Value &data) {
-  for (auto it = data.begin(); it != data.end(); ++it) {
-    const char *name = it.memberName();
-    const Json::Value &value = *it;
-    if (value.isString() && strcmp(name, "candFontName") == 0) {
-      wstring fontName = utf8ToUtf16(value.asCString());
-      textService_->setCandFontName(fontName);
-    } else if (value.isInt() && strcmp(name, "candFontSize") == 0) {
-      textService_->setCandFontSize(value.asInt());
-    } else if (value.isInt() && strcmp(name, "candPerRow") == 0) {
-      textService_->setCandPerRow(value.asInt());
-    } else if (value.isBool() && strcmp(name, "candUseCursor") == 0) {
-      textService_->setCandUseCursor(value.asBool());
-    }
-  }
+void Client::updateUI(const Json::Value& data) {
+	for (auto it = data.begin(); it != data.end(); ++it) {
+		const char* name = it.memberName();
+		const Json::Value& value = *it;
+		if (value.isString() && strcmp(name, "candFontName") == 0) {
+			wstring fontName = utf8ToUtf16(value.asCString());
+			textService_->setCandFontName(fontName);
+		}
+		else if (value.isInt() && strcmp(name, "candFontSize") == 0) {
+			textService_->setCandFontSize(value.asInt());
+		}
+		else if (value.isInt() && strcmp(name, "candPerRow") == 0) {
+			textService_->setCandPerRow(value.asInt());
+		}
+		else if (value.isBool() && strcmp(name, "candUseCursor") == 0) {
+			textService_->setCandUseCursor(value.asBool());
+		}
+	}
 }
 
-void MoqiClient::updateSelectionKeys(Json::Value &msg) {
-  // set sel keys before update candidates
-  const auto &setSelKeysVal = msg["setSelKeys"];
-  if (setSelKeysVal.isString()) {
-    // keys used to select candidates
-    std::wstring selKeys = utf8ToUtf16(setSelKeysVal.asCString());
-    textService_->setSelKeys(selKeys);
-  }
+void Client::updateSelectionKeys(Json::Value& msg) {
+    // set sel keys before update candidates
+    const auto& setSelKeysVal = msg["setSelKeys"];
+    if (setSelKeysVal.isString()) {
+        // keys used to select candidates
+        std::wstring selKeys = utf8ToUtf16(setSelKeysVal.asCString());
+        textService_->setSelKeys(selKeys);
+    }
 }
 
-void MoqiClient::updateMessageWindow(Json::Value &msg,
-                                     Ime::EditSession *session,
-                                     bool &endComposition) {
-  const auto &showMessageVal = msg["showMessage"];
-  if (showMessageVal.isObject()) {
-    const Json::Value &message = showMessageVal["message"];
-    const Json::Value &duration = showMessageVal["duration"];
-    if (message.isString() && duration.isInt()) {
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-        endComposition = true;
-      }
-      textService_->showMessage(session, utf8ToUtf16(message.asCString()),
-                                duration.asInt());
-    }
-  }
-
-  // hide message
-  const auto &hideMessageVal = msg["hideMessage"];
-  if (hideMessageVal.isBool() && hideMessageVal.asBool()) {
-    textService_->hideMessage();
-  }
-}
-
-void MoqiClient::updateCommitString(Json::Value &msg,
-                                    Ime::EditSession *session) {
-  // handle comosition and commit strings
-  const auto &commitStringVal = msg["commitString"];
-  if (commitStringVal.isString()) {
-    std::wstring commitString = utf8ToUtf16(commitStringVal.asCString());
-    if (!commitString.empty()) {
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-      }
-      textService_->setCompositionString(session, commitString.c_str(),
-                                         commitString.length());
-      // FIXME: update the position of candidate and message window when the
-      // composition string is changed.
-      if (textService_->candidateWindow_ != nullptr) {
-        textService_->updateCandidatesWindow(session);
-      }
-      if (textService_->messageWindow_ != nullptr) {
-        textService_->updateMessageWindow(session);
-      }
-      textService_->endComposition(session->context());
-    }
-  }
-}
-
-void MoqiClient::updateComposition(Json::Value &msg, Ime::EditSession *session,
-                                   bool &endComposition) {
-  const auto &compositionStringVal = msg["compositionString"];
-  bool emptyComposition = false;
-  bool hasCompositionString = false;
-  std::wstring compositionString;
-  if (compositionStringVal.isString()) {
-    // composition buffer
-    compositionString = utf8ToUtf16(compositionStringVal.asCString());
-    hasCompositionString = true;
-    if (compositionString.empty()) {
-      emptyComposition = true;
-      if (textService_->isComposing() && !textService_->showingCandidates()) {
-        // when the composition buffer is empty and we are not showing the
-        // candidate list, end composition.
-        textService_->setCompositionString(session, L"", 0);
-        endComposition = true;
-      }
-    } else {
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-      }
-      textService_->setCompositionString(session, compositionString.c_str(),
-                                         compositionString.length());
-    }
-    // FIXME: update the position of candidate and message window when the
-    // composition string is changed.
-    if (textService_->candidateWindow_ != nullptr) {
-      textService_->updateCandidatesWindow(session);
-    }
-    if (textService_->messageWindow_ != nullptr) {
-      textService_->updateMessageWindow(session);
-    }
-  }
-
-  const auto &compositionCursorVal = msg["compositionCursor"];
-  if (compositionCursorVal.isInt()) {
-    // composition cursor
-    if (!emptyComposition) {
-      int compositionCursor = compositionCursorVal.asInt();
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-      }
-      // Fixes incorrect UTF-16
-      if (!hasCompositionString)
-        compositionString = textService_->compositionString(session);
-      int fixedCursorPos = 0;
-      for (int i = 0; i < compositionCursor; ++i) {
-        ++fixedCursorPos;
-        if (IS_HIGH_SURROGATE(
-                compositionString[i])) // this is the first part of a UTF16
-                                       // surrogate pair (Windows uses UTF16-LE)
-          ++fixedCursorPos;
-      }
-      textService_->setCompositionCursor(session, fixedCursorPos);
-    }
-  }
-  if (endComposition) {
-    textService_->endComposition(session->context());
-  }
-}
-
-void MoqiClient::updateLanguageButtons(Json::Value &msg) {
-  // language buttons
-  const auto &addButtonVal = msg["addButton"];
-  if (addButtonVal.isArray()) {
-    for (const auto &btn : addButtonVal) {
-      // FIXME: when to clear the id <=> button map??
-      auto langBtn = Ime::ComPtr<MoqiIME::MoqiLangBarButton>::takeover(
-          MoqiIME::MoqiLangBarButton::fromJson(textService_, btn));
-      if (langBtn != nullptr) {
-        buttons_.emplace(langBtn->id(), langBtn); // insert into the map
-        textService_->addButton(langBtn);
-      }
-    }
-  }
-
-  const auto &removeButtonVal = msg["removeButton"];
-  if (removeButtonVal.isArray()) {
-    // FIXME: handle windows-mode-icon
-    for (const auto &btn : removeButtonVal) {
-      if (btn.isString()) {
-        string id = btn.asString();
-        auto map_it = buttons_.find(id);
-        if (map_it != buttons_.end()) {
-          textService_->removeButton(map_it->second);
-          buttons_.erase(map_it); // remove from the map
+void Client::updateMessageWindow(Json::Value& msg, Ime::EditSession* session, bool& endComposition) {
+    const auto& showMessageVal = msg["showMessage"];
+    if (showMessageVal.isObject()) {
+        const Json::Value& message = showMessageVal["message"];
+        const Json::Value& duration = showMessageVal["duration"];
+        if (message.isString() && duration.isInt()) {
+            if (!textService_->isComposing()) {
+                textService_->startComposition(session->context());
+                endComposition = true;
+            }
+            textService_->showMessage(session, utf8ToUtf16(message.asCString()), duration.asInt());
         }
-      }
     }
-  }
-  const auto &changeButtonVal = msg["changeButton"];
-  if (changeButtonVal.isArray()) {
-    // FIXME: handle windows-mode-icon
-    for (const auto &btn : changeButtonVal) {
-      if (btn.isObject()) {
-        string id = btn["id"].asString();
-        auto map_it = buttons_.find(id);
-        if (map_it != buttons_.end()) {
-          map_it->second->updateFromJson(btn);
+
+    // hide message
+    const auto& hideMessageVal = msg["hideMessage"];
+    if (hideMessageVal.isBool() && hideMessageVal.asBool()) {
+        textService_->hideMessage();
+    }
+}
+
+void Client::updateCommitString(Json::Value& msg, Ime::EditSession* session) {
+    // handle comosition and commit strings
+    const auto& commitStringVal = msg["commitString"];
+    if (commitStringVal.isString()) {
+        std::wstring commitString = utf8ToUtf16(commitStringVal.asCString());
+        if (!commitString.empty()) {
+            if (!textService_->isComposing()) {
+                textService_->startComposition(session->context());
+            }
+            textService_->setCompositionString(session, commitString.c_str(), commitString.length());
+            // FIXME: update the position of candidate and message window when the composition string is changed.
+            if (textService_->candidateWindow_ != nullptr) {
+                textService_->updateCandidatesWindow(session);
+            }
+            if (textService_->messageWindow_ != nullptr) {
+                textService_->updateMessageWindow(session);
+            }
+            textService_->endComposition(session->context());
         }
-      }
     }
-  }
 }
 
-void MoqiClient::updatePreservedKeys(Json::Value &msg) {
-  const auto &addPreservedKeyVal = msg["addPreservedKey"];
-  if (addPreservedKeyVal.isArray()) {
-    // preserved keys
-    for (auto &key : addPreservedKeyVal) {
-      if (key.isObject()) {
-        UINT keyCode = key["keyCode"].asUInt();
-        UINT modifiers = key["modifiers"].asUInt();
-        UUID guid = {0};
-        if (uuidFromString(key["guid"].asCString(), guid)) {
-          textService_->addPreservedKey(keyCode, modifiers, guid);
+void Client::updateComposition(Json::Value& msg, Ime::EditSession* session, bool& endComposition) {
+    const auto& compositionStringVal = msg["compositionString"];
+    bool emptyComposition = false;
+    bool hasCompositionString = false;
+    std::wstring compositionString;
+    if (compositionStringVal.isString()) {
+        // composition buffer
+        compositionString = utf8ToUtf16(compositionStringVal.asCString());
+        hasCompositionString = true;
+        if (compositionString.empty()) {
+            emptyComposition = true;
+            if (textService_->isComposing() && !textService_->showingCandidates()) {
+                // when the composition buffer is empty and we are not showing the candidate list, end composition.
+                textService_->setCompositionString(session, L"", 0);
+                endComposition = true;
+            }
         }
-      }
-    }
-  }
-
-  const auto &removePreservedKeyVal = msg["removePreservedKey"];
-  if (removePreservedKeyVal.isArray()) {
-    for (auto &item : removePreservedKeyVal) {
-      if (item.isString()) {
-        UUID guid = {0};
-        if (uuidFromString(item.asCString(), guid)) {
-          textService_->removePreservedKey(guid);
+        else {
+            if (!textService_->isComposing()) {
+                textService_->startComposition(session->context());
+            }
+            textService_->setCompositionString(session, compositionString.c_str(), compositionString.length());
         }
-      }
+        // FIXME: update the position of candidate and message window when the composition string is changed.
+        if (textService_->candidateWindow_ != nullptr) {
+            textService_->updateCandidatesWindow(session);
+        }
+        if (textService_->messageWindow_ != nullptr) {
+            textService_->updateMessageWindow(session);
+        }
     }
-  }
+
+    const auto& compositionCursorVal = msg["compositionCursor"];
+    if (compositionCursorVal.isInt()) {
+        // composition cursor
+        if (!emptyComposition) {
+            int compositionCursor = compositionCursorVal.asInt();
+            if (!textService_->isComposing()) {
+                textService_->startComposition(session->context());
+            }
+            // NOTE:
+            // This fixes Moqi bug #166: incorrect handling of UTF-16 surrogate pairs.
+            // The TSF API unfortunately treat a UTF-16 surrogate pair as two characters while
+            // they actually represent one unicode character only. To workaround this TSF bug,
+            // we get the composition string, and try to move the cursor twice when a UTF-16
+            // surrogate pair is found.
+            if (!hasCompositionString)
+                compositionString = textService_->compositionString(session);
+            int fixedCursorPos = 0;
+            for (int i = 0; i < compositionCursor; ++i) {
+                ++fixedCursorPos;
+                if (IS_HIGH_SURROGATE(compositionString[i])) // this is the first part of a UTF16 surrogate pair (Windows uses UTF16-LE)
+                    ++fixedCursorPos;
+            }
+            textService_->setCompositionCursor(session, fixedCursorPos);
+        }
+    }
+    if (endComposition) {
+        textService_->endComposition(session->context());
+    }
 }
 
-void MoqiClient::updateKeyboardStatus(Json::Value &msg) {
-  const auto &openKeyboardVal = msg["openKeyboard"];
-  if (openKeyboardVal.isBool()) {
-    textService_->setKeyboardOpen(openKeyboardVal.asBool());
-  }
+void Client::updateLanguageButtons(Json::Value& msg) {
+    // QQ/Chromium process switches have been crashing inside TSF/UI teardown.
+    // Disable dynamic language-bar button sync for now to keep typing stable.
+    (void)msg;
+    return;
+
+    // language buttons
+    const auto& addButtonVal = msg["addButton"];
+    if (addButtonVal.isArray()) {
+        for (const auto& btn : addButtonVal) {
+            // FIXME: when to clear the id <=> button map??
+            auto langBtn = Ime::ComPtr<Moqi::LangBarButton>::takeover(Moqi::LangBarButton::fromJson(textService_, btn));
+            if (langBtn != nullptr) {
+                buttons_.emplace(langBtn->id(), langBtn); // insert into the map
+                textService_->addButton(langBtn);
+            }
+        }
+    }
+
+    const auto& removeButtonVal = msg["removeButton"];
+    if (removeButtonVal.isArray()) {
+        // FIXME: handle windows-mode-icon
+        for (const auto& btn : removeButtonVal) {
+            if (btn.isString()) {
+                string id = btn.asString();
+                auto map_it = buttons_.find(id);
+                if (map_it != buttons_.end()) {
+                    textService_->removeButton(map_it->second);
+                    buttons_.erase(map_it); // remove from the map
+                }
+            }
+        }
+    }
+    const auto& changeButtonVal = msg["changeButton"];
+    if (changeButtonVal.isArray()) {
+        // FIXME: handle windows-mode-icon
+        for (const auto& btn : changeButtonVal) {
+            if (btn.isObject()) {
+                string id = btn["id"].asString();
+                auto map_it = buttons_.find(id);
+                if (map_it != buttons_.end()) {
+                    map_it->second->updateFromJson(btn);
+                }
+            }
+        }
+    }
 }
 
-void MoqiClient::updateStatus(Json::Value &msg, Ime::EditSession *session) {
-  // We need to handle ordering of some types of the requests.
-  // For example, setCompositionCursor() should happen after
-  // setCompositionCursor().
-  updateSelectionKeys(msg);
+void Client::updatePreservedKeys(Json::Value& msg) {
+    const auto& addPreservedKeyVal = msg["addPreservedKey"];
+    if (addPreservedKeyVal.isArray()) {
+        // preserved keys
+        for (auto& key : addPreservedKeyVal) {
+            if (key.isObject()) {
+                UINT keyCode = key["keyCode"].asUInt();
+                UINT modifiers = key["modifiers"].asUInt();
+                UUID guid = { 0 };
+                if (uuidFromString(key["guid"].asCString(), guid)) {
+                    textService_->addPreservedKey(keyCode, modifiers, guid);
+                }
+            }
+        }
+    }
 
-  // show message
-  bool endComposition = false;
-  updateMessageWindow(msg, session, endComposition);
-
-  if (session != nullptr) { // if an edit session is available
-    updateCandidateList(msg, session);
-
-    updateCommitString(msg, session);
-
-    updateComposition(msg, session, endComposition);
-  }
-
-  updateLanguageButtons(msg);
-
-  // preserved keys
-  updatePreservedKeys(msg);
-
-  // keyboard status
-  updateKeyboardStatus(msg);
-
-  // other configurations
-  const auto &customizeUIVal = msg["customizeUI"];
-  if (customizeUIVal.isObject()) {
-    // customize the UI
-    updateUI(customizeUIVal);
-  }
+    const auto& removePreservedKeyVal = msg["removePreservedKey"];
+    if (removePreservedKeyVal.isArray()) {
+        for (auto& item : removePreservedKeyVal) {
+            if (item.isString()) {
+                UUID guid = { 0 };
+                if (uuidFromString(item.asCString(), guid)) {
+                    textService_->removePreservedKey(guid);
+                }
+            }
+        }
+    }
 }
 
-void MoqiClient::updateCandidateList(Json::Value &msg,
-                                     Ime::EditSession *session) {
-  // handle candidate list
-  const auto &showCandidatesVal = msg["showCandidates"];
-  if (showCandidatesVal.isBool()) {
-    if (showCandidatesVal.asBool()) {
-      // start composition if we are not composing.
-      // this is required to get correctly position the candidate window
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-      }
-      textService_->showCandidates(session);
-    } else {
-      textService_->hideCandidates();
+void Client::updateKeyboardStatus(Json::Value& msg) {
+    const auto& openKeyboardVal = msg["openKeyboard"];
+    if (openKeyboardVal.isBool()) {
+        textService_->setKeyboardOpen(openKeyboardVal.asBool());
     }
-  }
+}
 
-  const auto &candidateListVal = msg["candidateList"];
-  if (candidateListVal.isArray()) {
-    // handle candidates
-    // FIXME: directly access private member is dirty!!!
-    vector<wstring> &candidates = textService_->candidates_;
-    candidates.clear();
-    for (const auto &candidate : candidateListVal) {
-      candidates.emplace_back(utf8ToUtf16(candidate.asCString()));
-    }
-    textService_->updateCandidates(session);
-    if (!showCandidatesVal.asBool()) {
-      textService_->hideCandidates();
-    }
-  }
+void Client::updateStatus(Json::Value& msg, Ime::EditSession* session) {
+	// We need to handle ordering of some types of the requests.
+	// For example, setCompositionCursor() should happen after setCompositionCursor().
+    updateSelectionKeys(msg);
 
-  const auto &candidateCursorVal = msg["candidateCursor"];
-  if (candidateCursorVal.isInt()) {
-    if (textService_->candidateWindow_ != nullptr) {
-      textService_->candidateWindow_->setCurrentSel(candidateCursorVal.asInt());
-      textService_->refreshCandidates();
+	// show message
+    bool endComposition = false;
+    updateMessageWindow(msg, session, endComposition);
+
+	if (session != nullptr) { // if an edit session is available
+        updateCandidateList(msg, session);
+
+        updateCommitString(msg, session);
+
+        updateComposition(msg, session, endComposition);
+
+	}
+
+    updateLanguageButtons(msg);
+
+	// preserved keys
+    updatePreservedKeys(msg);
+
+	// keyboard status
+    updateKeyboardStatus(msg);
+
+	// other configurations
+	const auto& customizeUIVal = msg["customizeUI"];
+	if (customizeUIVal.isObject()) {
+		// customize the UI
+		updateUI(customizeUIVal);
+	}
+}
+
+void Client::updateCandidateList(Json::Value& msg, Ime::EditSession* session) {
+    // handle candidate list
+    const auto& showCandidatesVal = msg["showCandidates"];
+    if (showCandidatesVal.isBool()) {
+        if (showCandidatesVal.asBool()) {
+            // start composition if we are not composing.
+            // this is required to get correctly position the candidate window
+            if (!textService_->isComposing()) {
+                textService_->startComposition(session->context());
+            }
+            textService_->showCandidates(session);
+        }
+        else {
+            textService_->hideCandidates();
+        }
     }
-  }
+
+    const auto& candidateListVal = msg["candidateList"];
+    if (candidateListVal.isArray()) {
+        // handle candidates
+        // FIXME: directly access private member is dirty!!!
+        vector<wstring>& candidates = textService_->candidates_;
+        candidates.clear();
+        for (const auto& candidate : candidateListVal) {
+            candidates.emplace_back(utf8ToUtf16(candidate.asCString()));
+        }
+        textService_->updateCandidates(session);
+        if (!showCandidatesVal.asBool()) {
+            textService_->hideCandidates();
+        }
+    }
+
+    const auto& candidateCursorVal = msg["candidateCursor"];
+    if (candidateCursorVal.isInt()) {
+        if (textService_->candidateWindow_ != nullptr) {
+            textService_->candidateWindow_->setCurrentSel(candidateCursorVal.asInt());
+            textService_->refreshCandidates();
+        }
+    }
 }
 
 // handlers for the text service
-void MoqiClient::onActivate() {
-  Json::Value req = createRpcRequest("onActivate");
-  req["isKeyboardOpen"] = textService_->isKeyboardOpened();
+void Client::onActivate() {
+    Json::Value req = createRpcRequest("onActivate");
+	req["isKeyboardOpen"] = textService_->isKeyboardOpened();
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-  }
-  isActivated_ = true;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+	}
+	isActivated_ = true;
 }
 
-void MoqiClient::onDeactivate() {
-  Json::Value req = createRpcRequest("onDeactivate");
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-  }
-  MoqiLangBarButton::clearIconCache();
-  isActivated_ = false;
+void Client::onDeactivate() {
+    Json::Value req = createRpcRequest("onDeactivate");
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+	}
+	LangBarButton::clearIconCache();
+	isActivated_ = false;
 }
 
-bool MoqiClient::filterKeyDown(Ime::KeyEvent &keyEvent) {
-  Json::Value req = createRpcRequest("filterKeyDown");
-  addKeyEventToRpcRequest(req, keyEvent);
+bool Client::filterKeyDown(Ime::KeyEvent& keyEvent) {
+    Json::Value req = createRpcRequest("filterKeyDown");
+	addKeyEventToRpcRequest(req, keyEvent);
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-    return ret["return"].asBool();
-  }
-  return false;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+		return ret["return"].asBool();
+	}
+	return false;
 }
 
-bool MoqiClient::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
-  Json::Value req = createRpcRequest("onKeyDown");
-  addKeyEventToRpcRequest(req, keyEvent);
+bool Client::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+    Json::Value req = createRpcRequest("onKeyDown");
+	addKeyEventToRpcRequest(req, keyEvent);
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret, session)) {
-    return ret["return"].asBool();
-  }
-  return false;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret, session)) {
+		return ret["return"].asBool();
+	}
+	return false;
 }
 
-bool MoqiClient::filterKeyUp(Ime::KeyEvent &keyEvent) {
-  Json::Value req = createRpcRequest("filterKeyUp");
-  addKeyEventToRpcRequest(req, keyEvent);
+bool Client::filterKeyUp(Ime::KeyEvent& keyEvent) {
+    Json::Value req = createRpcRequest("filterKeyUp");
+	addKeyEventToRpcRequest(req, keyEvent);
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-    return ret["return"].asBool();
-  }
-  return false;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+		return ret["return"].asBool();
+	}
+	return false;
 }
 
-bool MoqiClient::onKeyUp(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
-  Json::Value req = createRpcRequest("onKeyUp");
-  addKeyEventToRpcRequest(req, keyEvent);
+bool Client::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
+    Json::Value req = createRpcRequest("onKeyUp");
+	addKeyEventToRpcRequest(req, keyEvent);
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret, session)) {
-    return ret["return"].asBool();
-  }
-  return false;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret, session)) {
+		return ret["return"].asBool();
+	}
+	return false;
 }
 
-bool MoqiClient::onPreservedKey(const GUID &guid) {
-  auto guidStr = uuidToString(guid);
-  if (!guidStr.empty()) {
-    Json::Value req = createRpcRequest("onPreservedKey");
-    req["guid"] = std::move(guidStr);
+bool Client::onPreservedKey(const GUID& guid) {
+    auto guidStr = uuidToString(guid);
+	if (!guidStr.empty()) {
+        Json::Value req = createRpcRequest("onPreservedKey");
+        req["guid"] = std::move(guidStr);
 
-    Json::Value ret;
-    callRpcMethod(req, ret);
-    if (handleRpcResponse(ret)) {
-      return ret["return"].asBool();
-    }
-  }
-  return false;
+		Json::Value ret;
+		callRpcMethod(req, ret);
+		if (handleRpcResponse(ret)) {
+			return ret["return"].asBool();
+		}
+	}
+	return false;
 }
 
-bool MoqiClient::onCommand(UINT id, Ime::TextService::CommandType type) {
-  Json::Value req = createRpcRequest("onCommand");
-  req["id"] = id;
-  req["type"] = type;
+bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
+    Json::Value req = createRpcRequest("onCommand");
+	req["id"] = id;
+	req["type"] = type;
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-    return ret["return"].asBool();
-  }
-  return false;
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+		return ret["return"].asBool();
+	}
+	return false;
 }
 
-bool MoqiClient::sendOnMenu(std::string button_id, Json::Value &result) {
-  Json::Value req = createRpcRequest("onMenu");
-  req["id"] = button_id;
+bool Client::sendOnMenu(std::string button_id, Json::Value& result) {
+    Json::Value req = createRpcRequest("onMenu");
+	req["id"] = button_id;
 
-  callRpcMethod(req, result);
-  if (handleRpcResponse(result)) {
-    return true;
-  }
-  return false;
+	callRpcMethod(req, result);
+	if (handleRpcResponse(result)) {
+		return true;
+	}
+	return false;
 }
 
-static bool menuFromJson(ITfMenu *pMenu, const Json::Value &menuInfo) {
-  if (pMenu != nullptr && menuInfo.isArray()) {
-    for (const auto &item : menuInfo) {
-      UINT id = item.get("id", 0).asUInt();
-      std::wstring text = utf8ToUtf16(item.get("text", "").asCString());
+static bool menuFromJson(ITfMenu* pMenu, const Json::Value& menuInfo) {
+	if (pMenu != nullptr && menuInfo.isArray()) {
+		for (const auto& item: menuInfo) {
+			UINT id = item.get("id", 0).asUInt();
+			std::wstring text = utf8ToUtf16(item.get("text", "").asCString());
+			
+			DWORD flags = 0;
+			Json::Value submenuInfo;
+			ITfMenu* submenu = nullptr;
+			if (id == 0 && text.empty())
+				flags = TF_LBMENUF_SEPARATOR;
+			else {
+				if (item.get("checked", false).asBool())
+					flags |= TF_LBMENUF_CHECKED;
+				if (!item.get("enabled", true).asBool())
+					flags |= TF_LBMENUF_GRAYED;
 
-      DWORD flags = 0;
-      Json::Value submenuInfo;
-      ITfMenu *submenu = nullptr;
-      if (id == 0 && text.empty())
-        flags = TF_LBMENUF_SEPARATOR;
-      else {
-        if (item.get("checked", false).asBool())
-          flags |= TF_LBMENUF_CHECKED;
-        if (!item.get("enabled", true).asBool())
-          flags |= TF_LBMENUF_GRAYED;
-
-        submenuInfo =
-            item["submenu"]; // FIXME: this is a deep copy. too bad! :-(
-        if (submenuInfo.isArray()) {
-          flags |= TF_LBMENUF_SUBMENU;
-        }
-      }
-      pMenu->AddMenuItem(id, flags, NULL, NULL, text.c_str(), text.length(),
-                         flags & TF_LBMENUF_SUBMENU ? &submenu : nullptr);
-      if (submenu != nullptr && submenuInfo.isArray()) {
-        menuFromJson(submenu, submenuInfo);
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-// called when a language bar button needs a menu
-// virtual
-bool MoqiClient::onMenu(MoqiLangBarButton *btn, ITfMenu *pMenu) {
-  Json::Value result;
-  if (sendOnMenu(btn->id(), result)) {
-    Json::Value &menuInfo = result["return"];
-    return menuFromJson(pMenu, menuInfo);
-  }
-  return false;
-}
-
-static HMENU menuFromJson(const Json::Value &menuInfo) {
-  if (menuInfo.isArray()) {
-    HMENU menu = ::CreatePopupMenu();
-    for (const auto &item : menuInfo) {
-      UINT id = item.get("id", 0).asUInt();
-      std::wstring text = utf8ToUtf16(item.get("text", "").asCString());
-
-      UINT flags = MF_STRING;
-      if (id == 0 && text.empty())
-        flags = MF_SEPARATOR;
-      else {
-        if (item.get("checked", false).asBool())
-          flags |= MF_CHECKED;
-        if (!item.get("enabled", true).asBool())
-          flags |= MF_GRAYED;
-
-        const Json::Value &subMenuValue = item.get("submenu", Json::nullValue);
-        if (subMenuValue.isArray()) {
-          HMENU submenu = menuFromJson(subMenuValue);
-          flags |= MF_POPUP;
-          id = UINT_PTR(submenu);
-        }
-      }
-      AppendMenu(menu, flags, id, text.c_str());
-    }
-    return menu;
-  }
-  return NULL;
+				submenuInfo = item["submenu"];  // FIXME: this is a deep copy. too bad! :-(
+				if (submenuInfo.isArray()) {
+					flags |= TF_LBMENUF_SUBMENU;
+				}
+			}
+			pMenu->AddMenuItem(id, flags, NULL, NULL, text.c_str(), text.length(), flags & TF_LBMENUF_SUBMENU ? &submenu : nullptr);
+			if (submenu != nullptr && submenuInfo.isArray()) {
+				menuFromJson(submenu, submenuInfo);
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 // called when a language bar button needs a menu
 // virtual
-HMENU MoqiClient::onMenu(MoqiLangBarButton *btn) {
-  Json::Value result;
-  if (sendOnMenu(btn->id(), result)) {
-    Json::Value &menuInfo = result["return"];
-    return menuFromJson(menuInfo);
-  }
-  return NULL;
+bool Client::onMenu(LangBarButton* btn, ITfMenu* pMenu) {
+	Json::Value result;
+	if(sendOnMenu(btn->id(), result)) {
+		Json::Value& menuInfo = result["return"];
+		return menuFromJson(pMenu, menuInfo);
+	}
+	return false;
+}
+
+static HMENU menuFromJson(const Json::Value& menuInfo) {
+	if (menuInfo.isArray()) {
+		HMENU menu = ::CreatePopupMenu();
+		for (const auto& item: menuInfo) {
+			UINT id = item.get("id", 0).asUInt();
+			std::wstring text = utf8ToUtf16(item.get("text", "").asCString());
+
+			UINT flags = MF_STRING;
+			if (id == 0 && text.empty())
+				flags = MF_SEPARATOR;
+			else {
+				if (item.get("checked", false).asBool())
+					flags |= MF_CHECKED;
+				if (!item.get("enabled", true).asBool())
+					flags |= MF_GRAYED;
+
+				const Json::Value& subMenuValue = item.get("submenu", Json::nullValue);
+				if (subMenuValue.isArray()) {
+					HMENU submenu = menuFromJson(subMenuValue);
+					flags |= MF_POPUP;
+					id = UINT_PTR(submenu);
+				}
+			}
+			AppendMenu(menu, flags, id, text.c_str());
+		}
+		return menu;
+	}
+	return NULL;
+}
+
+// called when a language bar button needs a menu
+// virtual
+HMENU Client::onMenu(LangBarButton* btn) {
+	Json::Value result;
+	if (sendOnMenu(btn->id(), result)) {
+		Json::Value& menuInfo = result["return"];
+		return menuFromJson(menuInfo);
+	}
+	return NULL;
 }
 
 // called when a compartment value is changed
-void MoqiClient::onCompartmentChanged(const GUID &key) {
-  auto guidStr = uuidToString(key);
-  if (!guidStr.empty()) {
-    Json::Value req = createRpcRequest("onCompartmentChanged");
-    req["guid"] = std::move(guidStr);
+void Client::onCompartmentChanged(const GUID& key) {
+    auto guidStr = uuidToString(key);
+	if (!guidStr.empty()) {
+        Json::Value req = createRpcRequest("onCompartmentChanged");
+        req["guid"] = std::move(guidStr);
 
-    Json::Value ret;
-    callRpcMethod(req, ret);
-    if (handleRpcResponse(ret)) {
-    }
-  }
+		Json::Value ret;
+		callRpcMethod(req, ret);
+		if (handleRpcResponse(ret)) {
+		}
+	}
 }
 
 // called when the keyboard is opened or closed
-void MoqiClient::onKeyboardStatusChanged(bool opened) {
-  Json::Value req = createRpcRequest("onKeyboardStatusChanged");
-  req["opened"] = opened;
+void Client::onKeyboardStatusChanged(bool opened) {
+    Json::Value req = createRpcRequest("onKeyboardStatusChanged");
+	req["opened"] = opened;
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-  }
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+	}
 }
 
 // called just before current composition is terminated for doing cleanup.
-void MoqiClient::onCompositionTerminated(bool forced) {
-  Json::Value req = createRpcRequest("onCompositionTerminated");
-  req["forced"] = forced;
+void Client::onCompositionTerminated(bool forced) {
+    Json::Value req = createRpcRequest("onCompositionTerminated");
+	req["forced"] = forced;
 
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-  }
+	Json::Value ret;
+	callRpcMethod(req, ret);
+	if (handleRpcResponse(ret)) {
+	}
 }
 
-bool MoqiClient::init() {
-  Json::Value req = createRpcRequest("init");
-  req["id"] = guid_.c_str(); // language profile guid
-  req["isWindows8Above"] = ::IsWindows8OrGreater();
-  req["isMetroApp"] = textService_->isMetroApp();
-  req["isUiLess"] = textService_->isUiLess();
-  req["isConsole"] = textService_->isConsole();
+bool Client::init() {
+    Json::Value req = createRpcRequest("init");
+	req["id"] = guid_.c_str();  // language profile guid
+	req["isWindows8Above"] = ::IsWindows8OrGreater();
+	req["isMetroApp"] = textService_->isMetroApp();
+	req["isUiLess"] = textService_->isUiLess();
+	req["isConsole"] = textService_->isConsole();
 
-  Json::Value ret;
-  return callRpcMethod(req, ret) && handleRpcResponse(ret);
+	Json::Value ret;
+    return callRpcMethod(req, ret) && handleRpcResponse(ret);
 }
 
-Json::Value MoqiClient::createRpcRequest(const char *methodName) {
-  Json::Value request;
-  request["method"] = methodName;
 
-  // TODO: add other environment info?
-  return request;
+Json::Value Client::createRpcRequest(const char* methodName) {
+    Json::Value request;
+    request["method"] = methodName;
+
+    // TODO: add other environment info?
+    return request;
 }
 
-bool MoqiClient::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
-                             std::string &serializedReply) {
-  char buf[1024];
-  DWORD rlen = 0;
-  bool hasMoreData = false;
-  if (!TransactNamedPipe(pipe, (void *)serializedRequest.data(),
-                         serializedRequest.size(), buf, sizeof(buf), &rlen,
-                         NULL)) {
-    if (GetLastError() == ERROR_MORE_DATA) {
-      hasMoreData = true;
-    } else { // unknown error
-      return false;
-    }
-  }
-  serializedReply.append(buf, rlen);
-
-  while (hasMoreData) {
-    if (ReadFile(pipe, buf, sizeof(buf), &rlen, NULL)) {
-      hasMoreData = false;
-    } else if (::GetLastError() != ERROR_MORE_DATA) { // unknown error
-      return false;
+bool Client::callRpcPipe(HANDLE pipe, const std::string& serializedRequest, std::string& serializedReply) {
+	char buf[1024];
+	DWORD rlen = 0;
+    bool hasMoreData = false;
+    if (!TransactNamedPipe(pipe, (void*)serializedRequest.data(), serializedRequest.size(), buf, sizeof(buf), &rlen, NULL)) {
+        if (GetLastError() == ERROR_MORE_DATA) {
+            hasMoreData = true;
+        }
+        else {  // unknown error
+            return false;
+        }
     }
     serializedReply.append(buf, rlen);
-  }
-  return true;
+
+    while (hasMoreData) {
+        if (ReadFile(pipe, buf, sizeof(buf), &rlen, NULL)) {
+            hasMoreData = false;
+        }
+        else if (::GetLastError() != ERROR_MORE_DATA) {  // unknown error
+            return false;
+        }
+        serializedReply.append(buf, rlen);
+    }
+	return true;
 }
 
 // send the request to the server
 // a sequence number will be added to the req object automatically.
-bool MoqiClient::callRpcMethod(Json::Value &request, Json::Value &response) {
-  if (shouldWaitConnection_ && !waitForRpcConnection()) {
-    return false;
-  }
+bool Client::callRpcMethod(Json::Value& request, Json::Value & response) {
+    if (shouldWaitConnection_ && !waitForRpcConnection()) {
+        return false;
+    }
 
-  // Add a sequence number for the request.
-  auto seqNum = nextSeqNum_++;
-  request["seqNum"] = seqNum;
+    // Add a sequence number for the request.
+    auto seqNum = nextSeqNum_++;
+    request["seqNum"] = seqNum;
 
-  Json::FastWriter writer;
-  std::string serializedRequest =
-      writer.write(request); // convert the json object to string
+	Json::FastWriter writer;
+	std::string serializedRequest = writer.write(request); // convert the json object to string
 
-  std::string serializedResponse;
-  bool success = false;
-  if (callRpcPipe(pipe_, serializedRequest, serializedResponse)) {
-    Json::Reader reader;
-    success = reader.parse(serializedResponse, response);
-    if (success) {
-      if (response["seqNum"].asUInt() != seqNum) // sequence number mismatch
+    std::string serializedResponse;
+    bool success = false;
+    if (callRpcPipe(pipe_, serializedRequest, serializedResponse)) {
+		Json::Reader reader;
+		success = reader.parse(serializedResponse, response);
+		if (success) {
+			if (response["seqNum"].asUInt() != seqNum) // sequence number mismatch
+				success = false;
+		}
+	}
+    else {
         success = false;
     }
-  } else {
-    success = false;
-  }
 
-  if (!success) {            // fail to send the request to the server
-    closeRpcConnection();    // close the pipe connection since it's broken
-    resetTextServiceState(); // since we lost the connection, the state is
-                             // unknonw so we reset.
-  }
-  return success;
+	if(!success) { // fail to send the request to the server
+		closeRpcConnection(); // close the pipe connection since it's broken
+        resetTextServiceState();  // since we lost the connection, the state is unknonw so we reset.
+	}
+	return success;
 }
 
-bool MoqiClient::isPipeCreatedByMoqiServer(HANDLE pipe) {
-  // security check: make sure that we're connecting to the correct server
-  ULONG serverPid;
-  if (GetNamedPipeServerProcessId(pipe, &serverPid)) {
-    // FIXME: check the command line of the server?
-    // See this:
-    // http://www.codeproject.com/Articles/19685/Get-Process-Info-with-NtQueryInformationProcess
-    // Too bad! Undocumented Windows internal API might be needed here. :-(
-  }
-  return true;
+bool Client::isPipeCreatedByMoqiServer(HANDLE pipe) {
+    // security check: make sure that we're connecting to the correct server
+    ULONG serverPid;
+    if (GetNamedPipeServerProcessId(pipe, &serverPid)) {
+        // FIXME: check the command line of the server?
+        // See this: http://www.codeproject.com/Articles/19685/Get-Process-Info-with-NtQueryInformationProcess
+        // Too bad! Undocumented Windows internal API might be needed here. :-(
+    }
+    return true;
 }
 
 // establish a connection to the specified pipe and returns its handle
 // static
-HANDLE MoqiClient::connectPipe(const wchar_t *pipeName, int timeoutMs) {
-  HANDLE pipe = INVALID_HANDLE_VALUE;
-  if (WaitNamedPipe(pipeName, timeoutMs)) {
-    pipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                      OPEN_EXISTING, 0, NULL);
-  }
+HANDLE Client::connectPipe(const wchar_t* pipeName, int timeoutMs) {
+    HANDLE pipe = INVALID_HANDLE_VALUE;
+    if (WaitNamedPipe(pipeName, timeoutMs)) {
+        pipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    }
 
-  if (pipe != INVALID_HANDLE_VALUE) {
-    DWORD mode = PIPE_READMODE_MESSAGE;
-    // The pipe is connected; change to message-read mode.
-    if (!isPipeCreatedByMoqiServer(pipe)) {
-      DisconnectNamedPipe(pipe);
-      CloseHandle(pipe);
-      pipe = INVALID_HANDLE_VALUE;
+    if (pipe != INVALID_HANDLE_VALUE) {
+        DWORD mode = PIPE_READMODE_MESSAGE;
+        // The pipe is connected; change to message-read mode.
+        if (!isPipeCreatedByMoqiServer(pipe) || !::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
+            DisconnectNamedPipe(pipe);
+            CloseHandle(pipe);
+            pipe = INVALID_HANDLE_VALUE;
+        }
     }
-    else if (!::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
-      DisconnectNamedPipe(pipe);
-      CloseHandle(pipe);
-      pipe = INVALID_HANDLE_VALUE;
-    }
-  }
-  return pipe;
+	return pipe;
 }
 
-// Ensure that we're connected to the Moqi IME backend server
+
+// Ensure that we're connected to the Moqi input method server
 // If we are already connected, the method simply returns true;
 // otherwise, it tries to establish the connection.
-bool MoqiClient::waitForRpcConnection() {
-  if (pipe_ != INVALID_HANDLE_VALUE) {
-    return true;
-  }
-
-  wstring serverPipeName = getPipeName(L"Launcher");
-  for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 5;
-       ++attempt) {
-    // try to connect to the server
-    pipe_ = connectPipe(serverPipeName.c_str(), 30000);
-  }
-
-  if (pipe_ != INVALID_HANDLE_VALUE) {
-    // send initialization info to the server for hand-shake.
-    shouldWaitConnection_ =
-        false; // prevent recursive call of waitForRpcConnection
-    if (!init()) {
-      closeRpcConnection();
-      shouldWaitConnection_ = true;
-      return false;
+bool Client::waitForRpcConnection() {
+    if (pipe_ != INVALID_HANDLE_VALUE) {
+        return true;
     }
 
-    if (isActivated_) {
-      // we lost connection while being activated previously
-      // re-initialize the whole text service.
-      // activate the text service again.
-      onActivate();
+	wstring serverPipeName = getPipeName(L"Launcher");
+    for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 5; ++attempt) {
+		// try to connect to the server
+		pipe_ = connectPipe(serverPipeName.c_str(), 30000);
+	}
+
+    if (pipe_ != INVALID_HANDLE_VALUE) {
+        // send initialization info to the server for hand-shake.
+        shouldWaitConnection_ = false;  // prevent recursive call of waitForRpcConnection
+        if (!init()) {
+            closeRpcConnection();
+            shouldWaitConnection_ = true;
+            return false;
+        }
+
+        if (isActivated_) {
+            // we lost connection while being activated previously
+            // re-initialize the whole text service.
+            // activate the text service again.
+            onActivate();
+        }
+        shouldWaitConnection_ = true;
     }
-    shouldWaitConnection_ = true;
-  }
-  // if init() or onActivate() RPC fails, the pipe_ might have been closed.
-  return pipe_ != INVALID_HANDLE_VALUE;
+    // if init() or onActivate() RPC fails, the pipe_ might have been closed.
+    return pipe_ != INVALID_HANDLE_VALUE;
 }
 
-void MoqiClient::resetTextServiceState() {
-  // we lost connection while being activated previously
-  // re-initialize the whole text service.
+void Client::resetTextServiceState() {
+    // we lost connection while being activated previously
+    // re-initialize the whole text service.
 
-  // cleanup for the previous instance.
-  // remove all buttons
+    // cleanup for the previous instance.
+    // remove all buttons
 
-  // some language bar buttons are not unregistered properly
-  if (!buttons_.empty()) {
-    for (auto &item : buttons_) {
-      textService_->removeButton(item.second);
+    // some language bar buttons are not unregistered properly
+    if (!buttons_.empty()) {
+        buttons_.clear();
     }
-    buttons_.clear();
-  }
 }
 
-void MoqiClient::closeRpcConnection() {
-  if (pipe_ != INVALID_HANDLE_VALUE) {
-    DisconnectNamedPipe(pipe_);
-    CloseHandle(pipe_);
-    pipe_ = INVALID_HANDLE_VALUE;
-  }
+void Client::closeRpcConnection() {
+	if (pipe_ != INVALID_HANDLE_VALUE) {
+		DisconnectNamedPipe(pipe_);
+		CloseHandle(pipe_);
+		pipe_ = INVALID_HANDLE_VALUE;
+	}
 }
 
-wstring MoqiClient::getPipeName(const wchar_t *base_name) {
-  wstring pipeName = L"\\\\.\\pipe\\";
-  DWORD len = 0;
-  ::GetUserNameW(NULL, &len); // get the required size of the buffer
-  if (len <= 0)
-    return wstring();
-  // add username to the pipe path so it won't clash with the other users' pipes
-  unique_ptr<wchar_t[]> username(new wchar_t[len]);
-  if (!::GetUserNameW(username.get(), &len))
-    return wstring();
-  pipeName += username.get();
-  pipeName += L"\\MoqiIM\\";
-  pipeName += base_name;
-  return pipeName;
+wstring Client::getPipeName(const wchar_t* base_name) {
+	wstring pipeName = L"\\\\.\\pipe\\";
+	DWORD len = 0;
+	::GetUserNameW(NULL, &len); // get the required size of the buffer
+	if (len <= 0)
+		return false;
+	// add username to the pipe path so it won't clash with the other users' pipes
+	unique_ptr<wchar_t[]> username(new wchar_t[len]);
+	if (!::GetUserNameW(username.get(), &len))
+		return false;
+	pipeName += username.get();
+	pipeName += L"\\MoqiIM\\";
+	pipeName += base_name;
+	return pipeName;
 }
 
-} // namespace MoqiIME
+
+} // namespace Moqi

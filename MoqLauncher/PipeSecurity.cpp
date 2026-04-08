@@ -10,7 +10,7 @@
 #define PROCESS_ALL_ACCESS_HEX  TEXT("0x1fffff")  // hex string of PROCESS_ALL_ACCESS
 
 
-namespace MoqiIME {
+namespace Moqi {
 
 static std::wstring sidToStr(PSID sid) {
     std::wstring sidStr;
@@ -162,4 +162,4 @@ PipeSecurityAttributes::~PipeSecurityAttributes() {
     }
 }
 
-} // namespace MoqiIME
+} // namespace Moqi

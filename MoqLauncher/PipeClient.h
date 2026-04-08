@@ -17,13 +17,12 @@
 //	Boston, MA  02110-1301, USA.
 //
 
-#ifndef _MOQI_PIPE_CLIENT_H_
-#define _MOQI_PIPE_CLIENT_H_
+#ifndef _Moqi_PIPE_CLIENT_H_
+#define _Moqi_PIPE_CLIENT_H_
 
 #include <Windows.h>
 #include <memory>
 #include <cstdint>
-#include <string>
 #include "BackendServer.h"
 
 #include <spdlog/spdlog.h>
@@ -31,7 +30,7 @@
 #include <UvPipe.h>
 
 
-namespace MoqiIME {
+namespace Moqi {
 
 class PipeServer;
 class BackendServer;
@@ -87,6 +86,6 @@ private:
 	std::unique_ptr<uv_timer_t> waitResponseTimer_;
 };
 
-} // namespace MoqiIME
+} // namespace Moqi
 
-#endif // _MOQI_PIPE_CLIENT_H_
+#endif // _Moqi_PIPE_CLIENT_H_

@@ -70,13 +70,22 @@ function Resolve-ArtifactPath {
         [string] $Label
     )
 
-    foreach ($candidate in $Candidates) {
+    $existingCandidates = foreach ($candidate in $Candidates) {
         if (Test-Path -LiteralPath $candidate) {
-            return [System.IO.Path]::GetFullPath($candidate)
+            Get-Item -LiteralPath $candidate
         }
     }
 
-    throw "$Label not found. Checked: $($Candidates -join ', ')"
+    if (-not $existingCandidates) {
+        throw "$Label not found. Checked: $($Candidates -join ', ')"
+    }
+
+    $selected = $existingCandidates |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
+
+    Write-Host ("Using {0}: {1} ({2})" -f $Label, $selected.FullName, $selected.LastWriteTime)
+    return $selected.FullName
 }
 
 function Resolve-MoqiImeSource {
@@ -118,7 +127,7 @@ function Copy-MoqiImeRuntime {
     New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
 
     $directories = Get-ChildItem -Path $SourceRoot -Recurse -Force -Directory |
-        Where-Object { $_.FullName -notmatch '[\\/]\.git(?:[\\/]|$)' }
+    Where-Object { $_.FullName -notmatch '[\\/]\.git(?:[\\/]|$)' }
     foreach ($directory in $directories) {
         $relativePath = $directory.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
         $targetDir = Join-Path $DestinationRoot $relativePath
@@ -165,12 +174,12 @@ if (-not (Test-Path -LiteralPath $backends)) {
 }
 Copy-Item -LiteralPath $backends -Destination (Join-Path $stageWin32Root "backends.json") -Force
 
-$launcher = Resolve-ArtifactPath -Label "MoqLauncher.exe" -Candidates @(
-    (Join-Path $Win32BuildDir "MoqLauncher.exe"),
-    (Join-Path $Win32BuildDir "Release\MoqLauncher.exe"),
-    (Join-Path $Win32BuildDir "MoqLauncher\Release\MoqLauncher.exe")
+$launcher = Resolve-ArtifactPath -Label "MoqiLauncher.exe" -Candidates @(
+    (Join-Path $Win32BuildDir "MoqiLauncher.exe"),
+    (Join-Path $Win32BuildDir "Release\MoqiLauncher.exe"),
+    (Join-Path $Win32BuildDir "MoqLauncher\Release\MoqiLauncher.exe")
 )
-Copy-IfExists -Source $launcher -Destination (Join-Path $stageWin32Root "MoqLauncher.exe")
+Copy-IfExists -Source $launcher -Destination (Join-Path $stageWin32Root "MoqiLauncher.exe")
 
 $dll32 = Resolve-ArtifactPath -Label "Win32 MoqiTextService.dll" -Candidates @(
     (Join-Path $Win32BuildDir "MoqiTextService.dll"),
@@ -192,7 +201,8 @@ if (-not $SkipMoqiImeCopy) {
     }
     $imeDest = Join-Path $stageWin32Root "moqi-ime"
     Copy-MoqiImeRuntime -SourceRoot $MoqiImeSource -DestinationRoot $imeDest
-} else {
+}
+else {
     Write-Warning "Skipped copying moqi-ime backend; ensure the final installer payload is sufficient for your deployment."
 }
 

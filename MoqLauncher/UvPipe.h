@@ -25,6 +25,7 @@
 #include <string>
 #include <functional>
 
+// Define this flag to use a patched libuv to support Windows named pipe with security attributes.
 #ifdef HAVE_UV_NAMED_PIPE
 #include <Windows.h>
 #endif
@@ -40,7 +41,8 @@ public:
 
 #ifdef HAVE_UV_NAMED_PIPE
     // NOTE: When sa is not null, Pipe does not take ownership of the object.
-    // The caller must ensure the pointer stays valid for the pipe lifetime.
+    // The caller is responsible for making sure the memory buffer remain valid
+    // throughout the life-span of the Pipe object.
     Pipe(DWORD pipeMode, SECURITY_ATTRIBUTES* sa, uv_loop_t* loop = uv_default_loop()) {
         uv_pipe_init_windows_named_pipe(loop, &pipe_, 0, pipeMode, sa);
         pipe_.data = this;
