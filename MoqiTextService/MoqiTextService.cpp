@@ -27,10 +27,34 @@
 #include "resource.h"
 #include <Shellapi.h>
 #include <sys/stat.h>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
 namespace Moqi {
+
+namespace {
+
+void appendCandidateWindowLog(const std::wstring& message) {
+	const wchar_t* localAppData = _wgetenv(L"LOCALAPPDATA");
+	if (!localAppData || !*localAppData) {
+		return;
+	}
+
+	std::wstring logDir = std::wstring(localAppData) + L"\\MoqiIM\\Log";
+	::CreateDirectoryW((std::wstring(localAppData) + L"\\MoqiIM").c_str(), nullptr);
+	::CreateDirectoryW(logDir.c_str(), nullptr);
+	std::wstring logPath = logDir + L"\\candidate-window.log";
+
+	std::wofstream stream(logPath, std::ios::app);
+	if (!stream.is_open()) {
+		return;
+	}
+	stream << message << L"\n";
+}
+
+}
 
 TextService::TextService(ImeModule* module):
 	Ime::TextService(module),
@@ -42,10 +66,15 @@ TextService::TextService(ImeModule* module):
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	updateFont_(false),
-	candPerRow_(10),
+	candPerRow_(1),
 	selKeys_(L"1234567890"),
-	candUseCursor_(false),
-	candFontSize_(12) {
+	candUseCursor_(true),
+	candFontSize_(16),
+	candBackgroundColor_(RGB(255, 255, 255)),
+	candHighlightColor_(RGB(198, 221, 249)),
+	candTextColor_(RGB(0, 0, 0)),
+	candHighlightTextColor_(RGB(0, 0, 0)),
+	inlinePreedit_(true) {
 
 	// font for candidate and mesasge windows
 	font_ = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -64,9 +93,7 @@ TextService::~TextService(void) {
 	if(popupMenu_)
 		::DestroyMenu(popupMenu_);
 
-	if (candidateWindow_) {
-		hideCandidates();
-	}
+	destroyCandidateWindow();
 
 	if(messageWindow_)
 		hideMessage();
@@ -228,19 +255,54 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 
 void TextService::createCandidateWindow(Ime::EditSession* session) {
 	if (!candidateWindow_) {
-		candidateWindow_ = new Ime::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
+		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
+		candidateWindow_ = new Moqi::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
 		candidateWindow_->Release();  // decrease ref count caused by new
 
 		candidateWindow_->setFont(font_);
+		candidateWindow_->setBackgroundColor(candBackgroundColor_);
+		candidateWindow_->setHighlightColor(candHighlightColor_);
+		candidateWindow_->setTextColor(candTextColor_);
+		candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
+		candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
 			BOOL pbShow = false;
 			if (validCandidateListElementId_ =
 				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
-				candidateWindow_->Show(pbShow);
+				std::wostringstream log;
+				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
+					<< L" elementId=" << candidateListElementId_;
+				appendCandidateWindowLog(log.str());
+				candidateWindow_->Show(TRUE);
+			}
+			else {
+				appendCandidateWindowLog(L"[TextService::createCandidateWindow] BeginUIElement failed");
 			}
 		}
+		else {
+			appendCandidateWindowLog(L"[TextService::createCandidateWindow] elementMgr unavailable");
+		}
 	}
+}
+
+void TextService::destroyCandidateWindow() {
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->EndUIElement(candidateListElementId_);
+		}
+		candidateListElementId_ = 0;
+		validCandidateListElementId_ = false;
+	}
+	if (candidateWindow_) {
+		candidateWindow_->setPreeditText(L"");
+		candidateWindow_->Show(FALSE);
+		candidateWindow_ = nullptr;
+		appendCandidateWindowLog(L"[TextService::destroyCandidateWindow] destroyed");
+	}
+	showingCandidates_ = false;
+	candidatePreedit_.clear();
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
@@ -267,6 +329,11 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 
 	candidateWindow_->setUseCursor(candUseCursor_);
 	candidateWindow_->setCandPerRow(candPerRow_);
+	candidateWindow_->setBackgroundColor(candBackgroundColor_);
+	candidateWindow_->setHighlightColor(candHighlightColor_);
+	candidateWindow_->setTextColor(candTextColor_);
+	candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
+	candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 
 	// the items in the candidate list should not exist the
 	// number of available keys used to select them.
@@ -312,6 +379,12 @@ void TextService::refreshCandidates() {
 	}
 }
 
+void TextService::setCandidateCursor(int cursor) {
+	if (candidateWindow_) {
+		candidateWindow_->setCurrentSel(cursor);
+	}
+}
+
 // show candidate list window
 void TextService::showCandidates(Ime::EditSession* session) {
 	// TODO: implement ITfCandidateListUIElement interface to support UI less mode
@@ -326,23 +399,21 @@ void TextService::showCandidates(Ime::EditSession* session) {
 	// The candidate window created should be a child window of the composition window.
 	// Please see Ime::CandidateWindow::CandidateWindow() for an example.
 	createCandidateWindow(session);
+	if (candidateWindow_) {
+		candidateWindow_->Show(TRUE);
+	}
 	showingCandidates_ = true;
 }
 
 // hide candidate list window
 void TextService::hideCandidates() {
-	if (validCandidateListElementId_) {
-		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
-		if (elementMgr) {
-			elementMgr->EndUIElement(candidateListElementId_);
-			candidateListElementId_ = 0;
-			validCandidateListElementId_ = false;
-		}
-	}
 	if (candidateWindow_) {
-		candidateWindow_ = nullptr;
+		candidateWindow_->setPreeditText(L"");
+		candidateWindow_->Show(FALSE);
+		candidateWindow_->clear();
 	}
 	showingCandidates_ = false;
+	appendCandidateWindowLog(L"[TextService::hideCandidates] hidden");
 }
 
 // message window
@@ -413,7 +484,8 @@ int TextService::candFontHeight() {
 	HDC hdc = GetDC(NULL);
 	if (hdc)
 	{
-		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+		// Match fcitx5-windows: treat configured size as px at 96 DPI.
+		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 96);
 		ReleaseDC(NULL, hdc);
 	}
 	return candFontHeight_;
@@ -427,7 +499,7 @@ void TextService::closeClient() {
 		client_ = nullptr;
 		// detroy UI resources
 		hideMessage();
-		hideCandidates();
+		destroyCandidateWindow();
 	}
 }
 

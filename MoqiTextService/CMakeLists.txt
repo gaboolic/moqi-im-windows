@@ -22,6 +22,8 @@ add_library(MoqiTextService SHARED
     MoqiTextService.cpp
     MoqiTextService.def
     MoqiTextService.h
+    MoqiCandidateWindow.cpp
+    MoqiCandidateWindow.h
     MoqiClient.cpp
     MoqiClient.h
     MoqiLangBarButton.cpp

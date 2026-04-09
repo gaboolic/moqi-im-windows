@@ -53,6 +53,23 @@ bool uuidFromString(const char *uuidStr, UUID &result) {
   return SUCCEEDED(CLSIDFromString(utf16UuidStr.c_str(), &result));
 }
 
+bool parseHexColor(const std::string &text, COLORREF &result) {
+  std::string value = text;
+  if (!value.empty() && value.front() == '#') {
+    value.erase(value.begin());
+  }
+  if (value.size() != 6) {
+    return false;
+  }
+  char *end = nullptr;
+  const unsigned long rgb = std::strtoul(value.c_str(), &end, 16);
+  if (end == nullptr || *end != '\0') {
+    return false;
+  }
+  result = RGB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
+  return true;
+}
+
 Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
@@ -102,6 +119,28 @@ void Client::updateUI(const Json::Value &data) {
       textService_->setCandPerRow(value.asInt());
     } else if (value.isBool() && strcmp(name, "candUseCursor") == 0) {
       textService_->setCandUseCursor(value.asBool());
+    } else if (value.isBool() && strcmp(name, "inlinePreedit") == 0) {
+      textService_->setInlinePreedit(value.asBool());
+    } else if (value.isString() && strcmp(name, "candBackgroundColor") == 0) {
+      COLORREF color = textService_->candBackgroundColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandBackgroundColor(color);
+      }
+    } else if (value.isString() && strcmp(name, "candHighlightColor") == 0) {
+      COLORREF color = textService_->candHighlightColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandHighlightColor(color);
+      }
+    } else if (value.isString() && strcmp(name, "candTextColor") == 0) {
+      COLORREF color = textService_->candTextColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandTextColor(color);
+      }
+    } else if (value.isString() && strcmp(name, "candHighlightTextColor") == 0) {
+      COLORREF color = textService_->candHighlightTextColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandHighlightTextColor(color);
+      }
     }
   }
 }
@@ -152,7 +191,7 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
                                          commitString.length());
       // FIXME: update the position of candidate and message window when the
       // composition string is changed.
-      if (textService_->candidateWindow_ != nullptr) {
+      if (textService_->hasCandidateWindow()) {
         textService_->updateCandidatesWindow(session);
       }
       if (textService_->messageWindow_ != nullptr) {
@@ -173,35 +212,64 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
     // composition buffer
     compositionString = utf8ToUtf16(compositionStringVal.asCString());
     hasCompositionString = true;
-    if (compositionString.empty()) {
-      emptyComposition = true;
-      if (textService_->isComposing() && !textService_->showingCandidates()) {
-        // when the composition buffer is empty and we are not showing the
-        // candidate list, end composition.
+    textService_->setCandidatePreedit(compositionString);
+    if (!textService_->inlinePreedit()) {
+      emptyComposition = compositionString.empty();
+      if (!compositionString.empty()) {
+        if (!textService_->isComposing()) {
+          textService_->startComposition(session->context());
+        }
+        // Keep the TSF composition alive for key routing/anchor positioning,
+        // but leave it visually empty because the preedit is rendered
+        // externally in the candidate window.
+        textService_->setCompositionString(session, L"", 0);
+        textService_->showCandidates(session);
+        textService_->updateCandidates(session);
+      }
+      if (textService_->hasCandidateWindow()) {
+        textService_->refreshCandidates();
+        textService_->updateCandidatesWindow(session);
+      }
+      if (textService_->messageWindow_ != nullptr) {
+        textService_->updateMessageWindow(session);
+      }
+      if (compositionString.empty() && textService_->isComposing() &&
+          !textService_->showingCandidates()) {
         textService_->setCompositionString(session, L"", 0);
         endComposition = true;
       }
     } else {
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
+      if (compositionString.empty()) {
+        textService_->setCandidatePreedit(L"");
+        emptyComposition = true;
+        if (textService_->isComposing() && !textService_->showingCandidates()) {
+          // when the composition buffer is empty and we are not showing the
+          // candidate list, end composition.
+          textService_->setCompositionString(session, L"", 0);
+          endComposition = true;
+        }
+      } else {
+        if (!textService_->isComposing()) {
+          textService_->startComposition(session->context());
+        }
+        textService_->setCompositionString(session, compositionString.c_str(),
+                                           compositionString.length());
       }
-      textService_->setCompositionString(session, compositionString.c_str(),
-                                         compositionString.length());
-    }
-    // FIXME: update the position of candidate and message window when the
-    // composition string is changed.
-    if (textService_->candidateWindow_ != nullptr) {
-      textService_->updateCandidatesWindow(session);
-    }
-    if (textService_->messageWindow_ != nullptr) {
-      textService_->updateMessageWindow(session);
+      // FIXME: update the position of candidate and message window when the
+      // composition string is changed.
+      if (textService_->hasCandidateWindow()) {
+        textService_->updateCandidatesWindow(session);
+      }
+      if (textService_->messageWindow_ != nullptr) {
+        textService_->updateMessageWindow(session);
+      }
     }
   }
 
   const auto &compositionCursorVal = msg["compositionCursor"];
   if (compositionCursorVal.isInt()) {
     // composition cursor
-    if (!emptyComposition) {
+    if (textService_->inlinePreedit() && !emptyComposition) {
       int compositionCursor = compositionCursorVal.asInt();
       if (!textService_->isComposing()) {
         textService_->startComposition(session->context());
@@ -318,6 +386,10 @@ void Client::updateStatus(Json::Value &msg, Ime::EditSession *session) {
 
   // show message
   bool endComposition = false;
+  const auto &customizeUIVal = msg["customizeUI"];
+  if (customizeUIVal.isObject()) {
+    updateUI(customizeUIVal);
+  }
   updateMessageWindow(msg, session, endComposition);
 
   if (session != nullptr) { // if an edit session is available
@@ -336,12 +408,6 @@ void Client::updateStatus(Json::Value &msg, Ime::EditSession *session) {
   // keyboard status
   updateKeyboardStatus(msg);
 
-  // other configurations
-  const auto &customizeUIVal = msg["customizeUI"];
-  if (customizeUIVal.isObject()) {
-    // customize the UI
-    updateUI(customizeUIVal);
-  }
 }
 
 void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
@@ -377,8 +443,8 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 
   const auto &candidateCursorVal = msg["candidateCursor"];
   if (candidateCursorVal.isInt()) {
-    if (textService_->candidateWindow_ != nullptr) {
-      textService_->candidateWindow_->setCurrentSel(candidateCursorVal.asInt());
+    if (textService_->hasCandidateWindow()) {
+      textService_->setCandidateCursor(candidateCursorVal.asInt());
       textService_->refreshCandidates();
     }
   }
