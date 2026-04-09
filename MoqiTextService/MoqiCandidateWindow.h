@@ -41,6 +41,10 @@ public:
     void setCandPerRow(int n);
     void setCurrentSel(int sel);
     void setUseCursor(bool use);
+    void setPreeditText(std::wstring text);
+    void setBackgroundColor(COLORREF color);
+    void setHighlightColor(COLORREF color);
+    void setTextColor(COLORREF color);
     void recalculateSize() override;
 
 protected:
@@ -68,6 +72,13 @@ private:
     int borderWidth_;
     int borderRadius_;
     int minWidth_;
+    int preeditHeight_;
+    int preeditGap_;
+    int contentTop_;
+    COLORREF backgroundColor_;
+    COLORREF highlightColor_;
+    COLORREF textColor_;
+    std::wstring preedit_;
     std::vector<wchar_t> selKeys_;
     std::vector<std::wstring> items_;
     int currentSel_;

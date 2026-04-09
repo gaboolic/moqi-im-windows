@@ -17,6 +17,7 @@ namespace {
 
 constexpr COLORREF kWindowBackground = RGB(255, 255, 255);
 constexpr COLORREF kWindowBorder = RGB(150, 150, 150);
+constexpr COLORREF kDividerColor = RGB(220, 220, 220);
 constexpr COLORREF kItemText = RGB(0, 0, 0);
 constexpr COLORREF kItemAuxText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
@@ -60,6 +61,12 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       borderWidth_(1),
       borderRadius_(4),
       minWidth_(200),
+      preeditHeight_(0),
+      preeditGap_(8),
+      contentTop_(0),
+      backgroundColor_(kWindowBackground),
+      highlightColor_(kSelectedBackground),
+      textColor_(kItemText),
       currentSel_(0),
       useCursor_(false) {
     margin_ = 0;
@@ -231,11 +238,50 @@ void CandidateWindow::setUseCursor(bool use) {
     }
 }
 
+void CandidateWindow::setPreeditText(std::wstring text) {
+    if (preedit_ != text) {
+        preedit_ = std::move(text);
+        recalculateSize();
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setBackgroundColor(COLORREF color) {
+    if (backgroundColor_ != color) {
+        backgroundColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setHighlightColor(COLORREF color) {
+    if (highlightColor_ != color) {
+        highlightColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setTextColor(COLORREF color) {
+    if (textColor_ != color) {
+        textColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
 void CandidateWindow::recalculateSize() {
-    if (items_.empty()) {
+    if (items_.empty() && preedit_.empty()) {
         selKeyWidth_ = 0;
         textWidth_ = 0;
         itemHeight_ = 0;
+        preeditHeight_ = 0;
+        contentTop_ = borderWidth_ + padY_;
         resize(padX_ * 2 + borderWidth_ * 2, padY_ * 2 + borderWidth_ * 2);
         applyWindowShape();
         return;
@@ -249,6 +295,7 @@ void CandidateWindow::recalculateSize() {
     selKeyWidth_ = 0;
     textWidth_ = 0;
     itemHeight_ = 0;
+    preeditHeight_ = 0;
 
     HGDIOBJ oldFont = ::SelectObject(hdc, font_);
     TEXTMETRICW metrics = {};
@@ -265,19 +312,36 @@ void CandidateWindow::recalculateSize() {
         textWidth_ = (std::max)(textWidth_, static_cast<int>(candidateSize.cx));
         itemHeight_ = (std::max)(itemHeight_, (std::max)(static_cast<int>(candidateSize.cy), static_cast<int>(selKeySize.cy)));
     }
+    if (!preedit_.empty()) {
+        SIZE preeditSize = {};
+        ::GetTextExtentPoint32W(hdc, preedit_.c_str(), static_cast<int>(preedit_.length()), &preeditSize);
+        textWidth_ = (std::max)(textWidth_, static_cast<int>(preeditSize.cx));
+        preeditHeight_ = static_cast<int>(preeditSize.cy);
+    }
     ::GetTextMetricsW(hdc, &metrics);
     ::SelectObject(hdc, oldFont);
     ::ReleaseDC(hwnd(), hdc);
 
     const int itemsPerRow = (std::max)(1, candPerRow_);
     itemHeight_ = (std::max)(itemHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading + 2));
+    preeditHeight_ = preedit_.empty()
+                         ? 0
+                         : (std::max)(preeditHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading));
 
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_;
     const int columns = (std::min)(itemsPerRow, static_cast<int>(items_.size()));
     const int rows = (static_cast<int>(items_.size()) + itemsPerRow - 1) / itemsPerRow;
-    const int contentWidth = columns * itemWidth + (std::max)(0, columns - 1) * colSpacing_;
+    const int candidateContentWidth = columns * itemWidth + (std::max)(0, columns - 1) * colSpacing_;
+    const int contentWidth = (std::max)(candidateContentWidth, textWidth_);
     const int width = (std::max)(minWidth_, padX_ * 2 + contentWidth) + borderWidth_ * 2;
-    const int height = padY_ * 2 + rows * itemHeight_ + (std::max)(0, rows - 1) * rowSpacing_ + borderWidth_ * 2;
+    int contentHeight = rows * itemHeight_ + (std::max)(0, rows - 1) * rowSpacing_;
+    if (!preedit_.empty()) {
+        contentTop_ = borderWidth_ + padY_ + preeditHeight_ + preeditGap_;
+        contentHeight += preeditHeight_ + preeditGap_;
+    } else {
+        contentTop_ = borderWidth_ + padY_;
+    }
+    const int height = padY_ * 2 + contentHeight + borderWidth_ * 2;
     resize(width, height);
     applyWindowShape();
 
@@ -324,7 +388,7 @@ void CandidateWindow::onPaint() {
     HGDIOBJ oldFont = ::SelectObject(memdc, font_);
     ::SetBkMode(memdc, TRANSPARENT);
 
-    HBRUSH backgroundBrush = ::CreateSolidBrush(kWindowBackground);
+    HBRUSH backgroundBrush = ::CreateSolidBrush(backgroundColor_);
     HBRUSH borderBrush = ::CreateSolidBrush(kWindowBorder);
     HRGN windowRgn = ::CreateRoundRectRgn(
         rc.left, rc.top, rc.right + 1, rc.bottom + 1,
@@ -333,9 +397,29 @@ void CandidateWindow::onPaint() {
     ::FillRgn(memdc, windowRgn, backgroundBrush);
     ::FrameRgn(memdc, windowRgn, borderBrush, borderWidth_, borderWidth_);
 
+    int y = borderWidth_ + padY_;
+    if (!preedit_.empty()) {
+        RECT preeditRc = {
+            borderWidth_ + padX_,
+            y,
+            rc.right - borderWidth_ - padX_,
+            y + preeditHeight_};
+        ::SetTextColor(memdc, textColor_);
+        ::DrawTextW(memdc, preedit_.c_str(), static_cast<int>(preedit_.length()), &preeditRc,
+                    DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+
+        const int dividerY = preeditRc.bottom + preeditGap_ / 2;
+        HPEN dividerPen = ::CreatePen(PS_SOLID, 1, kDividerColor);
+        HGDIOBJ oldPen = ::SelectObject(memdc, dividerPen);
+        ::MoveToEx(memdc, borderWidth_ + padX_, dividerY, nullptr);
+        ::LineTo(memdc, rc.right - borderWidth_ - padX_, dividerY);
+        ::SelectObject(memdc, oldPen);
+        ::DeleteObject(dividerPen);
+    }
+
     int col = 0;
     int x = borderWidth_ + padX_;
-    int y = borderWidth_ + padY_;
+    y = contentTop_;
     for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
         paintItem(memdc, i, x, y);
         ++col;
@@ -370,9 +454,9 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     RECT textRc = itemRc;
     textRc.left += selKeyWidth_ + labelGap_;
 
-    const COLORREF bgColor = selected ? kSelectedBackground : kWindowBackground;
-    const COLORREF textColor = selected ? kSelectedText : kItemText;
-    const COLORREF selColor = selected ? kSelectedAuxText : kItemAuxText;
+    const COLORREF bgColor = selected ? highlightColor_ : backgroundColor_;
+    const COLORREF textColor = selected ? textColor_ : textColor_;
+    const COLORREF selColor = selected ? textColor_ : textColor_;
 
     if (selected) {
         if (candPerRow_ == 1) {
@@ -402,7 +486,7 @@ void CandidateWindow::itemRect(int index, RECT& rect) const {
     const int row = index / candPerRow_;
     const int col = index % candPerRow_;
     rect.left = borderWidth_ + padX_ + col * (selKeyWidth_ + labelGap_ + textWidth_ + colSpacing_);
-    rect.top = borderWidth_ + padY_ + row * (itemHeight_ + rowSpacing_);
+    rect.top = contentTop_ + row * (itemHeight_ + rowSpacing_);
     rect.right = rect.left + selKeyWidth_ + labelGap_ + textWidth_;
     rect.bottom = rect.top + itemHeight_;
 }

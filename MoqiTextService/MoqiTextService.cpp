@@ -69,7 +69,11 @@ TextService::TextService(ImeModule* module):
 	candPerRow_(1),
 	selKeys_(L"1234567890"),
 	candUseCursor_(true),
-	candFontSize_(16) {
+	candFontSize_(16),
+	candBackgroundColor_(RGB(255, 255, 255)),
+	candHighlightColor_(RGB(198, 221, 249)),
+	candTextColor_(RGB(0, 0, 0)),
+	inlinePreedit_(true) {
 
 	// font for candidate and mesasge windows
 	font_ = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -255,6 +259,10 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		candidateWindow_->Release();  // decrease ref count caused by new
 
 		candidateWindow_->setFont(font_);
+		candidateWindow_->setBackgroundColor(candBackgroundColor_);
+		candidateWindow_->setHighlightColor(candHighlightColor_);
+		candidateWindow_->setTextColor(candTextColor_);
+		candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
 			BOOL pbShow = false;
@@ -286,11 +294,13 @@ void TextService::destroyCandidateWindow() {
 		validCandidateListElementId_ = false;
 	}
 	if (candidateWindow_) {
+		candidateWindow_->setPreeditText(L"");
 		candidateWindow_->Show(FALSE);
 		candidateWindow_ = nullptr;
 		appendCandidateWindowLog(L"[TextService::destroyCandidateWindow] destroyed");
 	}
 	showingCandidates_ = false;
+	candidatePreedit_.clear();
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
@@ -317,6 +327,10 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 
 	candidateWindow_->setUseCursor(candUseCursor_);
 	candidateWindow_->setCandPerRow(candPerRow_);
+	candidateWindow_->setBackgroundColor(candBackgroundColor_);
+	candidateWindow_->setHighlightColor(candHighlightColor_);
+	candidateWindow_->setTextColor(candTextColor_);
+	candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 
 	// the items in the candidate list should not exist the
 	// number of available keys used to select them.
@@ -391,6 +405,7 @@ void TextService::showCandidates(Ime::EditSession* session) {
 // hide candidate list window
 void TextService::hideCandidates() {
 	if (candidateWindow_) {
+		candidateWindow_->setPreeditText(L"");
 		candidateWindow_->Show(FALSE);
 		candidateWindow_->clear();
 	}

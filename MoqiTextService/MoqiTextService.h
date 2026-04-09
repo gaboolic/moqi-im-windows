@@ -118,6 +118,61 @@ public:
 		updateFont_ = true;
 	}
 
+	COLORREF candBackgroundColor() const {
+		return candBackgroundColor_;
+	}
+
+	void setCandBackgroundColor(COLORREF color) {
+		candBackgroundColor_ = color;
+		if (candidateWindow_) {
+			candidateWindow_->setBackgroundColor(color);
+		}
+	}
+
+	COLORREF candHighlightColor() const {
+		return candHighlightColor_;
+	}
+
+	void setCandHighlightColor(COLORREF color) {
+		candHighlightColor_ = color;
+		if (candidateWindow_) {
+			candidateWindow_->setHighlightColor(color);
+		}
+	}
+
+	COLORREF candTextColor() const {
+		return candTextColor_;
+	}
+
+	void setCandTextColor(COLORREF color) {
+		candTextColor_ = color;
+		if (candidateWindow_) {
+			candidateWindow_->setTextColor(color);
+		}
+	}
+
+	bool inlinePreedit() const {
+		return inlinePreedit_;
+	}
+
+	void setInlinePreedit(bool inlinePreedit) {
+		inlinePreedit_ = inlinePreedit;
+		if (candidateWindow_) {
+			candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
+		}
+	}
+
+	const std::wstring& candidatePreedit() const {
+		return candidatePreedit_;
+	}
+
+	void setCandidatePreedit(std::wstring preedit) {
+		candidatePreedit_ = preedit;
+		if (candidateWindow_) {
+			candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
+		}
+	}
+
 	bool showingCandidates() {
 		return showingCandidates_;
 	}
@@ -168,6 +223,11 @@ private:
 	bool candUseCursor_;
 	std::wstring candFontName_;
 	int candFontSize_;
+	COLORREF candBackgroundColor_;
+	COLORREF candHighlightColor_;
+	COLORREF candTextColor_;
+	bool inlinePreedit_;
+	std::wstring candidatePreedit_;
 
 	HMENU popupMenu_;
 
