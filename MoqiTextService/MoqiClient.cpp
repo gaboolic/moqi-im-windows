@@ -215,11 +215,14 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
     textService_->setCandidatePreedit(compositionString);
     if (!textService_->inlinePreedit()) {
       emptyComposition = compositionString.empty();
-      if (textService_->isComposing()) {
-        textService_->setCompositionString(session, L"", 0);
-        endComposition = true;
-      }
       if (!compositionString.empty()) {
+        if (!textService_->isComposing()) {
+          textService_->startComposition(session->context());
+        }
+        // Keep the TSF composition alive for key routing/anchor positioning,
+        // but leave it visually empty because the preedit is rendered
+        // externally in the candidate window.
+        textService_->setCompositionString(session, L"", 0);
         textService_->showCandidates(session);
         textService_->updateCandidates(session);
       }
@@ -230,7 +233,9 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
       if (textService_->messageWindow_ != nullptr) {
         textService_->updateMessageWindow(session);
       }
-      if (compositionString.empty() && !textService_->showingCandidates()) {
+      if (compositionString.empty() && textService_->isComposing() &&
+          !textService_->showingCandidates()) {
+        textService_->setCompositionString(session, L"", 0);
         endComposition = true;
       }
     } else {
