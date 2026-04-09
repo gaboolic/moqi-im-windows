@@ -6,6 +6,45 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 项目 TSF 层核心依赖：[`libIME2`](https://github.com/EasyIME/libIME2)。
 
+核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。
+
+## 特色功能
+- 托盘切换输入法状态
+- 主题皮肤修改
+- 原生ai功能 编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
+
+```
+{
+  "api": {
+    "base_url": "",
+    "api_key": "",
+    "model": ""
+  },
+  "actions": [
+    {
+      "name": "写好评",
+      "hotkey": "Ctrl+Shift+G",
+      "prompt": "请围绕“{{candidate_1}}”生成最多 3 条适合直接发布的中文好评，每条 20 字左右。"
+    },
+    {
+      "name": "优化整句",
+      "hotkey": "Ctrl+Shift+O",
+      "prompt": "上一句是：{{previous_commit}}\n原始输入拼音是：{{composition}}\n前三个候选词：\n{{candidates_top3}}\n请严格遵循原始输入拼音来选字，只能在符合这串拼音的候选范围内优化整句，不要凭空改成不匹配拼音的字词。只输出 1 条最通顺、最自然的整句候选，不要解释。"
+    },
+    {
+      "name": "中译英",
+      "hotkey": "Ctrl+Shift+E",
+      "prompt": "请把当前中文内容翻译成自然、地道的英文。 “{{candidate_1}}” 只输出 1 条英文翻译，不要解释。"
+    },
+    {
+      "name": "问答",
+      "hotkey": "Ctrl+Shift+Q",
+      "prompt": "用户询问： “{{candidate_1}}” 只输出 1 条答案，不要解释。"
+    }
+  ]
+}
+```
+
 ## 运行架构
 
 ```
