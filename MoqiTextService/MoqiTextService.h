@@ -151,6 +151,17 @@ public:
 		}
 	}
 
+	COLORREF candHighlightTextColor() const {
+		return candHighlightTextColor_;
+	}
+
+	void setCandHighlightTextColor(COLORREF color) {
+		candHighlightTextColor_ = color;
+		if (candidateWindow_) {
+			candidateWindow_->setHighlightTextColor(color);
+		}
+	}
+
 	bool inlinePreedit() const {
 		return inlinePreedit_;
 	}
@@ -226,6 +237,7 @@ private:
 	COLORREF candBackgroundColor_;
 	COLORREF candHighlightColor_;
 	COLORREF candTextColor_;
+	COLORREF candHighlightTextColor_;
 	bool inlinePreedit_;
 	std::wstring candidatePreedit_;
 

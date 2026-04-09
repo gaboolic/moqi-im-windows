@@ -45,6 +45,7 @@ public:
     void setBackgroundColor(COLORREF color);
     void setHighlightColor(COLORREF color);
     void setTextColor(COLORREF color);
+    void setHighlightTextColor(COLORREF color);
     void recalculateSize() override;
 
 protected:
@@ -78,6 +79,7 @@ private:
     COLORREF backgroundColor_;
     COLORREF highlightColor_;
     COLORREF textColor_;
+    COLORREF highlightTextColor_;
     std::wstring preedit_;
     std::vector<wchar_t> selKeys_;
     std::vector<std::wstring> items_;

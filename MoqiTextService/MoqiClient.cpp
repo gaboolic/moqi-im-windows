@@ -136,6 +136,11 @@ void Client::updateUI(const Json::Value &data) {
       if (parseHexColor(value.asCString(), color)) {
         textService_->setCandTextColor(color);
       }
+    } else if (value.isString() && strcmp(name, "candHighlightTextColor") == 0) {
+      COLORREF color = textService_->candHighlightTextColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandHighlightTextColor(color);
+      }
     }
   }
 }

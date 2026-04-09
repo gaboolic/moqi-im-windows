@@ -73,6 +73,7 @@ TextService::TextService(ImeModule* module):
 	candBackgroundColor_(RGB(255, 255, 255)),
 	candHighlightColor_(RGB(198, 221, 249)),
 	candTextColor_(RGB(0, 0, 0)),
+	candHighlightTextColor_(RGB(0, 0, 0)),
 	inlinePreedit_(true) {
 
 	// font for candidate and mesasge windows
@@ -262,6 +263,7 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		candidateWindow_->setBackgroundColor(candBackgroundColor_);
 		candidateWindow_->setHighlightColor(candHighlightColor_);
 		candidateWindow_->setTextColor(candTextColor_);
+		candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
 		candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
@@ -330,6 +332,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	candidateWindow_->setBackgroundColor(candBackgroundColor_);
 	candidateWindow_->setHighlightColor(candHighlightColor_);
 	candidateWindow_->setTextColor(candTextColor_);
+	candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
 	candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
 
 	// the items in the candidate list should not exist the

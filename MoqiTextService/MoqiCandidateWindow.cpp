@@ -67,6 +67,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       backgroundColor_(kWindowBackground),
       highlightColor_(kSelectedBackground),
       textColor_(kItemText),
+      highlightTextColor_(kSelectedText),
       currentSel_(0),
       useCursor_(false) {
     margin_ = 0;
@@ -275,6 +276,15 @@ void CandidateWindow::setTextColor(COLORREF color) {
     }
 }
 
+void CandidateWindow::setHighlightTextColor(COLORREF color) {
+    if (highlightTextColor_ != color) {
+        highlightTextColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
 void CandidateWindow::recalculateSize() {
     if (items_.empty() && preedit_.empty()) {
         selKeyWidth_ = 0;
@@ -455,8 +465,8 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     textRc.left += selKeyWidth_ + labelGap_;
 
     const COLORREF bgColor = selected ? highlightColor_ : backgroundColor_;
-    const COLORREF textColor = selected ? textColor_ : textColor_;
-    const COLORREF selColor = selected ? textColor_ : textColor_;
+    const COLORREF textColor = selected ? highlightTextColor_ : textColor_;
+    const COLORREF selColor = selected ? highlightTextColor_ : textColor_;
 
     if (selected) {
         if (candPerRow_ == 1) {
