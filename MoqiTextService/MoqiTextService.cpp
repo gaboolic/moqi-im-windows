@@ -66,10 +66,10 @@ TextService::TextService(ImeModule* module):
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	updateFont_(false),
-	candPerRow_(10),
+	candPerRow_(1),
 	selKeys_(L"1234567890"),
-	candUseCursor_(false),
-	candFontSize_(12) {
+	candUseCursor_(true),
+	candFontSize_(16) {
 
 	// font for candidate and mesasge windows
 	font_ = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -466,7 +466,8 @@ int TextService::candFontHeight() {
 	HDC hdc = GetDC(NULL);
 	if (hdc)
 	{
-		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+		// Match fcitx5-windows: treat configured size as px at 96 DPI.
+		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 96);
 		ReleaseDC(NULL, hdc);
 	}
 	return candFontHeight_;

@@ -52,6 +52,7 @@ private:
     void onPaint();
     void paintItem(HDC hdc, int index, int x, int y);
     void itemRect(int index, RECT& rect) const;
+    void applyWindowShape();
 
 private:
     BOOL shown_;
@@ -61,6 +62,12 @@ private:
     int candPerRow_;
     int colSpacing_;
     int rowSpacing_;
+    int padX_;
+    int padY_;
+    int labelGap_;
+    int borderWidth_;
+    int borderRadius_;
+    int minWidth_;
     std::vector<wchar_t> selKeys_;
     std::vector<std::wstring> items_;
     int currentSel_;

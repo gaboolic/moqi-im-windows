@@ -73,6 +73,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/jsoncpp")
 add_subdirectory("${PROJECT_SOURCE_DIR}/libIME2")
 add_subdirectory("${PROJECT_SOURCE_DIR}/libuv")
 add_subdirectory("${PROJECT_SOURCE_DIR}/MoqiTextService")
+add_subdirectory("${PROJECT_SOURCE_DIR}/Preview")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_subdirectory("${PROJECT_SOURCE_DIR}/MoqLauncher")
