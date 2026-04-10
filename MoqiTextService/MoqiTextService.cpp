@@ -189,6 +189,11 @@ bool shouldForceUiLessForProcess(const std::wstring& imagePath) {
 	return false;
 }
 
+bool shouldEnableDummyAnchorCompatForProcess(const std::wstring& imagePath) {
+	(void)imagePath;
+	return false;
+}
+
 }
 
 TextService::TextService(ImeModule* module):
@@ -201,6 +206,7 @@ TextService::TextService(ImeModule* module):
 	shouldShowCandidateWindowUI_(true),
 	manualUiLessOverride_(false),
 	autoUiLessOverride_(shouldForceUiLessForProcess(currentProcessPath())),
+	autoDummyAnchorCompat_(shouldEnableDummyAnchorCompatForProcess(currentProcessPath())),
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	updateFont_(false),
@@ -251,6 +257,9 @@ void TextService::onActivate() {
 	    << L" is_ui_less=" << boolText(isUiLess())
 	    << L" effective_ui_less=" << boolText(effectiveUiLess())
 	    << L" auto_ui_less=" << boolText(autoUiLessOverride_)
+	    << L" inline_preedit=" << boolText(inlinePreedit_)
+	    << L" effective_inline_preedit=" << boolText(effectiveInlinePreedit())
+	    << L" dummy_anchor_compat=" << boolText(autoDummyAnchorCompat_)
 	    << L" manual_ui_less=" << boolText(manualUiLessOverride_)
 	    << L" " << foregroundWindowSummary();
 	logDebug(log.str());
