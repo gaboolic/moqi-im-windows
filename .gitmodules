@@ -3,7 +3,7 @@
 	url = https://github.com/EasyIME/libuv
 [submodule "libIME2"]
 	path = libIME2
-	url = https://github.com/EasyIME/libIME2.git
+	url = https://github.com/gaboolic/libIME2.git
 [submodule "jsoncpp"]
 	path = jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
