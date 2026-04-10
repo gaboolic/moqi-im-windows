@@ -103,7 +103,7 @@ Windows 侧的职责主要是：
 
 - `MoqiTextService`：TSF 文本服务，产出 `MoqiTextService.dll`
 - `MoqLauncher`：后端启动器与消息转发器，产出 `MoqiLauncher.exe`
-- `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`EasyIME/libIME2`](https://github.com/EasyIME/libIME2)
+- `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`gaboolic/libIME2`](https://github.com/gaboolic/libIME2)
 - `libuv`：Launcher 的事件循环与进程/管道依赖
 - `backends.json`：后端清单，定义后端名称、启动命令和工作目录
 - `scripts/build.ps1`：CMake 构建脚本

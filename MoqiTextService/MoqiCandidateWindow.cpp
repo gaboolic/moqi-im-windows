@@ -4,6 +4,7 @@
 
 #include "MoqiCandidateWindow.h"
 
+#include <LibIME2/src/DebugLogConfig.h>
 #include <LibIME2/src/DrawUtils.h>
 #include <LibIME2/src/EditSession.h>
 #include <LibIME2/src/TextService.h>
@@ -25,6 +26,10 @@ constexpr COLORREF kSelectedText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedAuxText = RGB(0, 0, 0);
 
 void appendCandidateWindowLog(const std::wstring& message) {
+    if (!Ime::isDebugLoggingEnabled()) {
+        return;
+    }
+
     const wchar_t* localAppData = _wgetenv(L"LOCALAPPDATA");
     if (!localAppData || !*localAppData) {
         return;
