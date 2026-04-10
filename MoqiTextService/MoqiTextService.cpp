@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <string>
 #include <algorithm>
+#include <libIME2/src/DebugLogConfig.h>
 #include <libIME2/src/ComPtr.h>
 #include <libIME2/src/Utils.h>
 #include <libIME2/src/LangBarButton.h>
@@ -44,6 +45,10 @@ const GUID kToggleUiLessOverrideGuid = {
 };
 
 void appendCandidateWindowLog(const std::wstring& message) {
+	if (!Ime::isDebugLoggingEnabled()) {
+		return;
+	}
+
 	const wchar_t* localAppData = _wgetenv(L"LOCALAPPDATA");
 	if (!localAppData || !*localAppData) {
 		return;
@@ -62,6 +67,10 @@ void appendCandidateWindowLog(const std::wstring& message) {
 }
 
 void appendTsfDebugLog(const std::wstring& message) {
+	if (!Ime::isDebugLoggingEnabled()) {
+		return;
+	}
+
 	const wchar_t* localAppData = _wgetenv(L"LOCALAPPDATA");
 	if (!localAppData || !*localAppData) {
 		return;
@@ -543,7 +552,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 
 	RECT textRect;
 	// get the position of composition area from TSF
-	if (selectionRect(session, &textRect)) {
+	if (inputRect(session, &textRect)) {
 		// FIXME: where should we put the candidate window?
 		candidateWindow_->move(textRect.left, textRect.bottom);
 	}
@@ -560,7 +569,7 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
     if (candidateWindow_) {
         RECT textRect;
         // get the position of composition area from TSF
-        if (selectionRect(session, &textRect)) {
+        if (inputRect(session, &textRect)) {
             // FIXME: where should we put the candidate window?
             candidateWindow_->move(textRect.left, textRect.bottom);
         }
@@ -627,7 +636,7 @@ void TextService::showMessage(Ime::EditSession* session, std::wstring message, i
 	int x = 0, y = 0;
 	if(isComposing()) {
 		RECT rc;
-		if(selectionRect(session, &rc)) {
+		if(inputRect(session, &rc)) {
 			x = rc.left;
 			y = rc.bottom;
 		}
@@ -642,7 +651,7 @@ void TextService::updateMessageWindow(Ime::EditSession* session) {
     if (messageWindow_) {
         RECT textRect;
         // get the position of composition area from TSF
-        if (selectionRect(session, &textRect)) {
+        if (inputRect(session, &textRect)) {
             // FIXME: where should we put the message window?
             messageWindow_->move(textRect.left, textRect.bottom);
         }
