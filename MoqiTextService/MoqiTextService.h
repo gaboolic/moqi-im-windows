@@ -42,6 +42,10 @@ public:
 	virtual void onDeactivate();
 
 	virtual void onFocus();
+	virtual void onSetFocus() override;
+	virtual void onKillFocus() override;
+	virtual void onSetThreadFocus() override;
+	virtual void onKillThreadFocus() override;
 
 	virtual bool filterKeyDown(Ime::KeyEvent& keyEvent);
 	virtual bool onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session);
@@ -166,10 +170,18 @@ public:
 		return inlinePreedit_;
 	}
 
+	bool effectiveUiLess() const {
+		return isUiLess() || autoUiLessOverride_ || manualUiLessOverride_;
+	}
+
+	bool effectiveInlinePreedit() const {
+		return effectiveUiLess() || inlinePreedit_;
+	}
+
 	void setInlinePreedit(bool inlinePreedit) {
 		inlinePreedit_ = inlinePreedit;
 		if (candidateWindow_) {
-			candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
+			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		}
 	}
 
@@ -180,7 +192,7 @@ public:
 	void setCandidatePreedit(std::wstring preedit) {
 		candidatePreedit_ = preedit;
 		if (candidateWindow_) {
-			candidateWindow_->setPreeditText(inlinePreedit_ ? L"" : candidatePreedit_);
+			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		}
 	}
 
@@ -216,12 +228,16 @@ private:
 	void createCandidateWindow(Ime::EditSession* session);
 	void destroyCandidateWindow();
 	int candFontHeight();
+	void applyUiLessOverrideState();
 
 	void closeClient();
 
 private:
 	bool validCandidateListElementId_;
 	DWORD candidateListElementId_;
+	bool shouldShowCandidateWindowUI_;
+	bool manualUiLessOverride_;
+	bool autoUiLessOverride_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
 	std::vector<std::wstring> candidates_; // current candidate list

@@ -213,7 +213,7 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
     compositionString = utf8ToUtf16(compositionStringVal.asCString());
     hasCompositionString = true;
     textService_->setCandidatePreedit(compositionString);
-    if (!textService_->inlinePreedit()) {
+    if (!textService_->effectiveInlinePreedit()) {
       emptyComposition = compositionString.empty();
       if (!compositionString.empty()) {
         if (!textService_->isComposing()) {
@@ -269,7 +269,7 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
   const auto &compositionCursorVal = msg["compositionCursor"];
   if (compositionCursorVal.isInt()) {
     // composition cursor
-    if (textService_->inlinePreedit() && !emptyComposition) {
+    if (textService_->effectiveInlinePreedit() && !emptyComposition) {
       int compositionCursor = compositionCursorVal.asInt();
       if (!textService_->isComposing()) {
         textService_->startComposition(session->context());
@@ -686,7 +686,7 @@ bool Client::init() {
   req["id"] = guid_.c_str(); // language profile guid
   req["isWindows8Above"] = ::IsWindows8OrGreater();
   req["isMetroApp"] = textService_->isMetroApp();
-  req["isUiLess"] = textService_->isUiLess();
+  req["isUiLess"] = textService_->effectiveUiLess();
   req["isConsole"] = textService_->isConsole();
 
   Json::Value ret;
