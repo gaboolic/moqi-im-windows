@@ -29,6 +29,7 @@
 #include "resource.h"
 #include <Shellapi.h>
 #include <sys/stat.h>
+#include <cstdlib>
 #include <cwctype>
 #include <fstream>
 #include <sstream>
@@ -174,24 +175,38 @@ std::wstring keyEventSummary(const Ime::KeyEvent& keyEvent) {
 	return stream.str();
 }
 
-bool shouldForceUiLessForProcess(const std::wstring& imagePath) {
-	const std::wstring lowerPath = toLowerCopy(imagePath);
-	const std::wstring lowerBaseName = processBaseName(lowerPath);
-	if (lowerBaseName == L"war3.exe" || lowerBaseName == L"minecraft.windows.exe") {
-		return true;
-	}
-	if ((lowerBaseName == L"javaw.exe" || lowerBaseName == L"java.exe") &&
-		(lowerPath.find(L"minecraft") != std::wstring::npos ||
-		 lowerPath.find(L".minecraft") != std::wstring::npos ||
-		 lowerPath.find(L"mojang") != std::wstring::npos)) {
-		return true;
-	}
-	return false;
-}
-
 bool shouldEnableDummyAnchorCompatForProcess(const std::wstring& imagePath) {
 	(void)imagePath;
 	return false;
+}
+
+bool isNearlyFullscreenRect(const RECT& windowRect, const RECT& monitorRect) {
+	const int tolerance = 2;
+	return std::abs(windowRect.left - monitorRect.left) <= tolerance &&
+		std::abs(windowRect.top - monitorRect.top) <= tolerance &&
+		std::abs(windowRect.right - monitorRect.right) <= tolerance &&
+		std::abs(windowRect.bottom - monitorRect.bottom) <= tolerance;
+}
+
+bool shouldTreatForegroundWindowAsUiLess() {
+	HWND hwnd = ::GetForegroundWindow();
+	if (!hwnd || ::IsIconic(hwnd)) {
+		return false;
+	}
+
+	RECT windowRect{};
+	if (!::GetWindowRect(hwnd, &windowRect)) {
+		return false;
+	}
+
+	MONITORINFO monitorInfo{};
+	monitorInfo.cbSize = sizeof(monitorInfo);
+	const HMONITOR monitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+	if (!monitor || !::GetMonitorInfoW(monitor, &monitorInfo)) {
+		return false;
+	}
+
+	return isNearlyFullscreenRect(windowRect, monitorInfo.rcMonitor);
 }
 
 }
@@ -205,7 +220,6 @@ TextService::TextService(ImeModule* module):
 	candidateListElementId_(0),
 	shouldShowCandidateWindowUI_(true),
 	manualUiLessOverride_(false),
-	autoUiLessOverride_(shouldForceUiLessForProcess(currentProcessPath())),
 	autoDummyAnchorCompat_(shouldEnableDummyAnchorCompatForProcess(currentProcessPath())),
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
@@ -255,8 +269,8 @@ void TextService::onActivate() {
 	    << L" flags=0x" << std::hex << activateFlags() << std::dec
 	    << L" keyboard_open=" << boolText(isKeyboardOpened())
 	    << L" is_ui_less=" << boolText(isUiLess())
+	    << L" fullscreen_ui_less=" << boolText(shouldTreatForegroundWindowAsUiLess())
 	    << L" effective_ui_less=" << boolText(effectiveUiLess())
-	    << L" auto_ui_less=" << boolText(autoUiLessOverride_)
 	    << L" inline_preedit=" << boolText(inlinePreedit_)
 	    << L" effective_inline_preedit=" << boolText(effectiveInlinePreedit())
 	    << L" dummy_anchor_compat=" << boolText(autoDummyAnchorCompat_)
@@ -267,6 +281,18 @@ void TextService::onActivate() {
 	// we do nothing when the whole text service is activated.
 	// Instead, we do the actual initilization for each language profile when it is activated.
 	// In Moqi, we create different client connections for different language profiles.
+}
+
+bool TextService::effectiveUiLess() const {
+	return shouldTreatForegroundWindowAsUiLess() || manualUiLessOverride_;
+}
+
+bool TextService::shouldShowOwnedPopupUi() const {
+	return !isUiLess() && !shouldTreatForegroundWindowAsUiLess() && !manualUiLessOverride_;
+}
+
+bool TextService::shouldAdvertiseCandidateUi() const {
+	return !shouldTreatForegroundWindowAsUiLess() && !manualUiLessOverride_;
 }
 
 // virtual
@@ -463,7 +489,7 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 void TextService::createCandidateWindow(Ime::EditSession* session) {
 	if (!candidateWindow_) {
 		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
-		shouldShowCandidateWindowUI_ = !effectiveUiLess();
+		shouldShowCandidateWindowUI_ = shouldShowOwnedPopupUi();
 		candidateWindow_ = new Moqi::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
 		candidateWindow_->Release();  // decrease ref count caused by new
 
@@ -475,10 +501,10 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
-			BOOL pbShow = shouldShowCandidateWindowUI_ ? TRUE : FALSE;
+			BOOL pbShow = shouldAdvertiseCandidateUi() ? TRUE : FALSE;
 			if (validCandidateListElementId_ =
 				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
-				shouldShowCandidateWindowUI_ = !effectiveUiLess() && pbShow != FALSE;
+				shouldShowCandidateWindowUI_ = shouldShowOwnedPopupUi() && pbShow != FALSE;
 				std::wostringstream log;
 				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
 					<< L" elementId=" << candidateListElementId_;
@@ -493,7 +519,7 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		}
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
 		if (!shouldShowCandidateWindowUI_) {
-			appendCandidateWindowLog(L"[TextService::createCandidateWindow] candidate window suppressed by UI-less host");
+			appendCandidateWindowLog(L"[TextService::createCandidateWindow] candidate window suppressed by host-managed UI");
 		}
 	}
 }
@@ -630,7 +656,7 @@ void TextService::hideCandidates() {
 
 // message window
 void TextService::showMessage(Ime::EditSession* session, std::wstring message, int duration) {
-	if (effectiveUiLess()) {
+	if (!shouldShowOwnedPopupUi()) {
 		hideMessage();
 		return;
 	}
@@ -709,12 +735,12 @@ int TextService::candFontHeight() {
 }
 
 void TextService::applyUiLessOverrideState() {
-	shouldShowCandidateWindowUI_ = !effectiveUiLess();
+	shouldShowCandidateWindowUI_ = shouldShowOwnedPopupUi();
 	if (candidateWindow_) {
 		candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
 	}
-	if (effectiveUiLess()) {
+	if (!shouldShowOwnedPopupUi()) {
 		hideMessage();
 	}
 	refreshCandidates();

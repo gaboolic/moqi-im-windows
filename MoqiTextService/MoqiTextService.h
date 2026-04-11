@@ -170,9 +170,11 @@ public:
 		return inlinePreedit_;
 	}
 
-	bool effectiveUiLess() const {
-		return isUiLess() || autoUiLessOverride_ || manualUiLessOverride_;
-	}
+	bool effectiveUiLess() const;
+
+	bool shouldShowOwnedPopupUi() const;
+
+	bool shouldAdvertiseCandidateUi() const;
 
 	bool effectiveInlinePreedit() const {
 		return effectiveUiLess() || inlinePreedit_;
@@ -249,7 +251,6 @@ private:
 	DWORD candidateListElementId_;
 	bool shouldShowCandidateWindowUI_;
 	bool manualUiLessOverride_;
-	bool autoUiLessOverride_;
 	bool autoDummyAnchorCompat_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
