@@ -180,6 +180,9 @@ bool shouldForceUiLessForProcess(const std::wstring& imagePath) {
 	if (lowerBaseName == L"war3.exe" || lowerBaseName == L"minecraft.windows.exe") {
 		return true;
 	}
+	if (lowerBaseName == L"steamwebhelper.exe") {
+		return true;
+	}
 	if ((lowerBaseName == L"javaw.exe" || lowerBaseName == L"java.exe") &&
 		(lowerPath.find(L"minecraft") != std::wstring::npos ||
 		 lowerPath.find(L".minecraft") != std::wstring::npos ||
@@ -219,7 +222,7 @@ TextService::TextService(ImeModule* module):
 	candTextColor_(RGB(0, 0, 0)),
 	candHighlightTextColor_(RGB(0, 0, 0)),
 	inlinePreedit_(true) {
-	addPreservedKey('G', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
+	addPreservedKey('P', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
 	shouldShowCandidateWindowUI_ = !effectiveUiLess();
 
 	// font for candidate and mesasge windows
