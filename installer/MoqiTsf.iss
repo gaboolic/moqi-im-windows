@@ -38,8 +38,9 @@ DisableWelcomePage=no
 Name: "chinesesimplified"; MessagesFile: ".\Inno-Setup-Chinese-Simplified-Translation\ChineseSimplified.isl"
 
 [Files]
-Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#StageDir}\x64\MoqiIM\*"; DestDir: "{autopf64}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "MoqiTextService.dll"
+Source: "{#StageDir}\win32\MoqiIM\MoqiTextService.dll"; DestDir: "{syswow64}"; DestName: "MoqiTextService.dll"; Flags: ignoreversion
+Source: "{#StageDir}\x64\MoqiIM\MoqiTextService.dll"; DestDir: "{sys}"; DestName: "MoqiTextService.dll"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
@@ -56,31 +57,36 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
 
 [InstallDelete]
 Type: filesandordirs; Name: "{autopf32}\MoqiIM\moqi-ime"
+Type: files; Name: "{autopf32}\MoqiIM\MoqiTextService.dll"
+Type: files; Name: "{autopf64}\MoqiIM\MoqiTextService.dll"
+
+[UninstallDelete]
+Type: files; Name: "{syswow64}\MoqiTextService.dll"
+Type: files; Name: "{sys}\MoqiTextService.dll"
 
 [UninstallRun]
 Filename: "{syswow64}\regsvr32.exe"; \
-  Parameters: "/u /s ""{autopf32}\MoqiIM\MoqiTextService.dll"""; \
-  WorkingDir: "{autopf32}\MoqiIM"; \
+  Parameters: "/u /s ""{syswow64}\MoqiTextService.dll"""; \
+  WorkingDir: "{syswow64}"; \
   RunOnceId: "MoqiTsfUnreg32"; \
   Flags: runhidden waituntilterminated; \
   Check: Win32ImeDllExists
 Filename: "{sys}\regsvr32.exe"; \
-  Parameters: "/u /s ""{autopf64}\MoqiIM\MoqiTextService.dll"""; \
-  WorkingDir: "{autopf64}\MoqiIM"; \
+  Parameters: "/u /s ""{sys}\MoqiTextService.dll"""; \
+  WorkingDir: "{sys}"; \
   RunOnceId: "MoqiTsfUnreg64"; \
   Flags: runhidden waituntilterminated; \
   Check: X64ImeDllExists
 
 [Code]
-
 function GetWin32ImeDll: string;
 begin
-  Result := ExpandConstant('{autopf32}\MoqiIM\MoqiTextService.dll');
+  Result := ExpandConstant('{syswow64}\MoqiTextService.dll');
 end;
 
 function GetX64ImeDll: string;
 begin
-  Result := ExpandConstant('{autopf64}\MoqiIM\MoqiTextService.dll');
+  Result := ExpandConstant('{sys}\MoqiTextService.dll');
 end;
 
 function Win32ImeDllExists: Boolean;

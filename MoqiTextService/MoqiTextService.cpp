@@ -117,6 +117,33 @@ std::wstring processBaseName(const std::wstring& imagePath) {
 	return pos == std::wstring::npos ? imagePath : imagePath.substr(pos + 1);
 }
 
+std::wstring processPathForPid(DWORD pid) {
+	if (pid == 0) {
+		return L"";
+	}
+
+	HANDLE processHandle = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+	if (!processHandle) {
+		return L"";
+	}
+
+	std::wstring buffer(MAX_PATH, L'\0');
+	DWORD len = static_cast<DWORD>(buffer.size());
+	while (!::QueryFullProcessImageNameW(processHandle, 0, &buffer[0], &len)) {
+		const DWORD error = ::GetLastError();
+		if (error != ERROR_INSUFFICIENT_BUFFER) {
+			::CloseHandle(processHandle);
+			return L"";
+		}
+		buffer.resize(buffer.size() * 2);
+		len = static_cast<DWORD>(buffer.size());
+	}
+
+	::CloseHandle(processHandle);
+	buffer.resize(len);
+	return buffer;
+}
+
 std::wstring boolText(bool value) {
 	return value ? L"true" : L"false";
 }
@@ -157,9 +184,11 @@ std::wstring foregroundWindowSummary() {
 	HWND hwnd = ::GetForegroundWindow();
 	DWORD pid = 0;
 	const DWORD tid = hwnd ? ::GetWindowThreadProcessId(hwnd, &pid) : 0;
+	const std::wstring fgExe = processBaseName(processPathForPid(pid));
 	std::wostringstream stream;
 	stream << L"fg_hwnd=0x" << std::hex << reinterpret_cast<UINT_PTR>(hwnd) << std::dec
 	       << L" fg_pid=" << pid
+	       << L" fg_exe=" << (fgExe.empty() ? L"<unknown>" : fgExe)
 	       << L" fg_tid=" << tid;
 	return stream.str();
 }
@@ -189,6 +218,25 @@ bool shouldForceUiLessForProcess(const std::wstring& imagePath) {
 	return false;
 }
 
+bool shouldEnableDummyAnchorCompatForProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"steamwebhelper.exe" ||
+	       lowerBaseName == L"steam.exe" ||
+	       lowerBaseName == L"gameoverlayui.exe" ||
+	       lowerBaseName == L"cs2.exe" ||
+	       lowerBaseName == L"csgo.exe";
+}
+
+bool shouldDisableInlinePreeditForProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"cs2.exe" || lowerBaseName == L"csgo.exe";
+}
+
+bool shouldDisableTsfCandidateUiForProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"cs2.exe" || lowerBaseName == L"csgo.exe";
+}
+
 }
 
 TextService::TextService(ImeModule* module):
@@ -201,6 +249,9 @@ TextService::TextService(ImeModule* module):
 	shouldShowCandidateWindowUI_(true),
 	manualUiLessOverride_(false),
 	autoUiLessOverride_(shouldForceUiLessForProcess(currentProcessPath())),
+	autoDummyAnchorCompat_(shouldEnableDummyAnchorCompatForProcess(currentProcessPath())),
+	autoInlinePreeditDisabled_(shouldDisableInlinePreeditForProcess(currentProcessPath())),
+	autoDisableTsfCandidateUi_(shouldDisableTsfCandidateUiForProcess(currentProcessPath())),
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	updateFont_(false),
@@ -213,7 +264,7 @@ TextService::TextService(ImeModule* module):
 	candTextColor_(RGB(0, 0, 0)),
 	candHighlightTextColor_(RGB(0, 0, 0)),
 	inlinePreedit_(true) {
-	addPreservedKey('G', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
+	addPreservedKey('P', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
 	shouldShowCandidateWindowUI_ = !effectiveUiLess();
 
 	// font for candidate and mesasge windows
@@ -251,6 +302,11 @@ void TextService::onActivate() {
 	    << L" is_ui_less=" << boolText(isUiLess())
 	    << L" effective_ui_less=" << boolText(effectiveUiLess())
 	    << L" auto_ui_less=" << boolText(autoUiLessOverride_)
+	    << L" inline_preedit=" << boolText(inlinePreedit_)
+	    << L" effective_inline_preedit=" << boolText(effectiveInlinePreedit())
+	    << L" auto_inline_preedit_disabled=" << boolText(autoInlinePreeditDisabled_)
+	    << L" auto_disable_tsf_candidate_ui=" << boolText(autoDisableTsfCandidateUi_)
+	    << L" dummy_anchor_compat=" << boolText(autoDummyAnchorCompat_)
 	    << L" manual_ui_less=" << boolText(manualUiLessOverride_)
 	    << L" " << foregroundWindowSummary();
 	logDebug(log.str());
@@ -452,6 +508,10 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 }
 
 void TextService::createCandidateWindow(Ime::EditSession* session) {
+	if (!tsfCandidateUiEnabled()) {
+		appendCandidateWindowLog(L"[TextService::createCandidateWindow] skipped by process policy");
+		return;
+	}
 	if (!candidateWindow_) {
 		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
 		shouldShowCandidateWindowUI_ = !effectiveUiLess();
@@ -509,6 +569,10 @@ void TextService::destroyCandidateWindow() {
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
+	if (!tsfCandidateUiEnabled()) {
+		appendCandidateWindowLog(L"[TextService::updateCandidates] skipped by process policy");
+		return;
+	}
 	createCandidateWindow(session);
 	if (!candidateWindow_) {
 		return;
@@ -566,6 +630,9 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 }
 
 void TextService::updateCandidatesWindow(Ime::EditSession* session) {
+    if (!tsfCandidateUiEnabled()) {
+        return;
+    }
     if (candidateWindow_) {
         RECT textRect;
         // get the position of composition area from TSF
@@ -577,6 +644,9 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
 }
 
 void TextService::refreshCandidates() {
+	if (!tsfCandidateUiEnabled()) {
+		return;
+	}
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
@@ -586,6 +656,9 @@ void TextService::refreshCandidates() {
 }
 
 void TextService::setCandidateCursor(int cursor) {
+	if (!tsfCandidateUiEnabled()) {
+		return;
+	}
 	if (candidateWindow_) {
 		candidateWindow_->setCurrentSel(cursor);
 	}
@@ -593,6 +666,11 @@ void TextService::setCandidateCursor(int cursor) {
 
 // show candidate list window
 void TextService::showCandidates(Ime::EditSession* session) {
+	if (!tsfCandidateUiEnabled()) {
+		showingCandidates_ = true;
+		appendCandidateWindowLog(L"[TextService::showCandidates] skipped by process policy");
+		return;
+	}
 	// NOTE: in Windows 8 store apps, candidate window should be owned by
 	// composition window, which can be returned by TextService::compositionWindow().
 	// Otherwise, the candidate window cannot be shown.
@@ -610,6 +688,11 @@ void TextService::showCandidates(Ime::EditSession* session) {
 
 // hide candidate list window
 void TextService::hideCandidates() {
+	if (!tsfCandidateUiEnabled()) {
+		showingCandidates_ = false;
+		appendCandidateWindowLog(L"[TextService::hideCandidates] skipped by process policy");
+		return;
+	}
 	if (candidateWindow_) {
 		candidateWindow_->setPreeditText(L"");
 		candidateWindow_->Show(FALSE);
@@ -701,6 +784,11 @@ int TextService::candFontHeight() {
 
 void TextService::applyUiLessOverrideState() {
 	shouldShowCandidateWindowUI_ = !effectiveUiLess();
+	if (!tsfCandidateUiEnabled()) {
+		destroyCandidateWindow();
+		hideMessage();
+		return;
+	}
 	if (candidateWindow_) {
 		candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
