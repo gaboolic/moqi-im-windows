@@ -35,6 +35,8 @@
 #include <spdlog/spdlog.h>
 
 #include "UvPipe.h"
+#include "../proto/moqi.pb.h"
+#include "../proto/ProtoFraming.h"
 
 namespace Moqi {
 
@@ -63,7 +65,7 @@ public:
 
 	std::shared_ptr<spdlog::logger>& logger();
 
-	void handleClientMessage(PipeClient* client, const char* readBuf, size_t len);
+	void handleClientMessage(PipeClient* client, const moqi::protocol::ClientRequest& request);
 
 private:
     uv::Pipe* createStdinPipe();
@@ -89,7 +91,7 @@ private:
 	uv::Pipe* stdinPipe_;
     uv::Pipe* stdoutPipe_;
     uv::Pipe* stderrPipe_;
-	std::stringstream stdoutReadBuf_;
+    Proto::FrameBuffer stdoutFrameBuf_;
 
 	// command to launch the server process
 	std::string command_;

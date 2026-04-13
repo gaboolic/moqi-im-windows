@@ -14,12 +14,16 @@
 
 .PARAMETER Generator
   CMake generator for moqi-im-windows (default: Visual Studio 17 2022).
+
+.PARAMETER ProtobufSourceDir
+  Optional local protobuf source tree forwarded to scripts\build.ps1.
 #>
 param(
     [string] $RepoRoot = "",
     [string] $MoqiImeRoot = "",
     [string] $Configuration = "Release",
-    [string] $Generator = "Visual Studio 17 2022"
+    [string] $Generator = "Visual Studio 17 2022",
+    [string] $ProtobufSourceDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +64,30 @@ $windowsBuildScript = Join-Path $RepoRoot "scripts\build.ps1"
 $windowsInstallScript = Join-Path $RepoRoot "scripts\install.ps1"
 $moqiImeRuntimeDir = Join-Path $MoqiImeRoot "scripts\build\moqi-ime"
 
+if (-not $ProtobufSourceDir) {
+    $candidatePaths = @(
+        (Join-Path $RepoRoot "third_party\protobuf")
+    )
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $cacheRoot = Join-Path $env:USERPROFILE ".cache\moqi-protobuf"
+        $candidatePaths += @(
+            (Join-Path $cacheRoot "protobuf-29.5"),
+            (Join-Path $cacheRoot "protobuf-34.1")
+        )
+    }
+
+    foreach ($candidate in $candidatePaths) {
+        if (Test-Path -LiteralPath (Join-Path $candidate "CMakeLists.txt")) {
+            $ProtobufSourceDir = [System.IO.Path]::GetFullPath($candidate)
+            break
+        }
+    }
+}
+
+if ($ProtobufSourceDir) {
+    Write-Host "[INFO] Using local protobuf source: $ProtobufSourceDir"
+}
+
 foreach ($path in @($moqiImeBuildScript, $windowsBuildScript, $windowsInstallScript)) {
     if (-not (Test-Path -LiteralPath $path)) {
         throw "Required script not found: $path"
@@ -79,14 +107,18 @@ if (-not (Test-Path -LiteralPath (Join-Path $moqiImeRuntimeDir "server.exe"))) {
 }
 
 Write-Host "== Step 2/3: Build moqi-im-windows binaries =="
-Invoke-Step -FilePath "powershell.exe" -ArgumentList @(
+ $windowsBuildArgs = @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-File", "`"$windowsBuildScript`"",
     "-RepoRoot", "`"$RepoRoot`"",
     "-Configuration", $Configuration,
     "-Generator", "`"$Generator`""
-) -WorkingDirectory $RepoRoot
+)
+if ($ProtobufSourceDir) {
+    $windowsBuildArgs += @("-ProtobufSourceDir", "`"$ProtobufSourceDir`"")
+}
+Invoke-Step -FilePath "powershell.exe" -ArgumentList $windowsBuildArgs -WorkingDirectory $RepoRoot
 
 Write-Host "== Step 3/3: Build installer package =="
 Invoke-Step -FilePath "powershell.exe" -ArgumentList @(

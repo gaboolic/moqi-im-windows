@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <string>
 #include <json/json.h>
+#include "../proto/moqi.pb.h"
 
 namespace Moqi {
 
@@ -78,8 +79,8 @@ private:
     static std::wstring getPipeName(const wchar_t* base_name);
     HANDLE connectPipe(const wchar_t* pipeName, int timeoutMs);
 
-    Json::Value createRpcRequest(const char* methodName);
-	bool callRpcMethod(Json::Value& request, Json::Value& response);
+    moqi::protocol::ClientRequest createRpcRequest(const char* methodName);
+	bool callRpcMethod(moqi::protocol::ClientRequest& request, Json::Value& response);
 
     bool isPipeCreatedByMoqiServer(HANDLE pipe);
     bool waitForRpcConnection();
@@ -89,7 +90,7 @@ private:
 	bool init();
     void resetTextServiceState();
 
-	void addKeyEventToRpcRequest(Json::Value& request, Ime::KeyEvent& keyEvent);
+	void addKeyEventToRpcRequest(moqi::protocol::ClientRequest& request, Ime::KeyEvent& keyEvent);
     bool sendOnMenu(std::string button_id, Json::Value& result);
 
     bool handleRpcResponse(Json::Value& msg, Ime::EditSession* session = nullptr);

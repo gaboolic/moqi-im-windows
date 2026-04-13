@@ -19,6 +19,8 @@
 
 #include "MoqiClient.h"
 #include "libIME2/src/Utils.h"
+#include "../proto/ProtoFraming.h"
+#include "../proto/moqi.pb.h"
 #include <algorithm>
 #include <json/json.h>
 
@@ -35,6 +37,195 @@
 using namespace std;
 
 namespace Moqi {
+
+static moqi::protocol::Method methodNameToProto(const char *methodName) {
+  if (strcmp(methodName, "init") == 0)
+    return moqi::protocol::METHOD_INIT;
+  if (strcmp(methodName, "onActivate") == 0)
+    return moqi::protocol::METHOD_ON_ACTIVATE;
+  if (strcmp(methodName, "onDeactivate") == 0)
+    return moqi::protocol::METHOD_ON_DEACTIVATE;
+  if (strcmp(methodName, "filterKeyDown") == 0)
+    return moqi::protocol::METHOD_FILTER_KEY_DOWN;
+  if (strcmp(methodName, "onKeyDown") == 0)
+    return moqi::protocol::METHOD_ON_KEY_DOWN;
+  if (strcmp(methodName, "filterKeyUp") == 0)
+    return moqi::protocol::METHOD_FILTER_KEY_UP;
+  if (strcmp(methodName, "onKeyUp") == 0)
+    return moqi::protocol::METHOD_ON_KEY_UP;
+  if (strcmp(methodName, "onPreservedKey") == 0)
+    return moqi::protocol::METHOD_ON_PRESERVED_KEY;
+  if (strcmp(methodName, "onCommand") == 0)
+    return moqi::protocol::METHOD_ON_COMMAND;
+  if (strcmp(methodName, "onMenu") == 0)
+    return moqi::protocol::METHOD_ON_MENU;
+  if (strcmp(methodName, "onCompartmentChanged") == 0)
+    return moqi::protocol::METHOD_ON_COMPARTMENT_CHANGED;
+  if (strcmp(methodName, "onKeyboardStatusChanged") == 0)
+    return moqi::protocol::METHOD_ON_KEYBOARD_STATUS_CHANGED;
+  if (strcmp(methodName, "onCompositionTerminated") == 0)
+    return moqi::protocol::METHOD_ON_COMPOSITION_TERMINATED;
+  return moqi::protocol::METHOD_UNSPECIFIED;
+}
+
+static Json::Value menuItemsToJson(
+    const google::protobuf::RepeatedPtrField<moqi::protocol::MenuItem> &items) {
+  Json::Value result(Json::arrayValue);
+  for (const auto &item : items) {
+    Json::Value jsonItem;
+    if (item.separator()) {
+      jsonItem["id"] = 0;
+      jsonItem["text"] = "";
+    } else {
+      jsonItem["id"] = item.id();
+      jsonItem["text"] = item.text();
+      jsonItem["checked"] = item.checked();
+      jsonItem["enabled"] = item.enabled();
+    }
+    if (!item.submenu().empty()) {
+      jsonItem["submenu"] = menuItemsToJson(item.submenu());
+    }
+    result.append(jsonItem);
+  }
+  return result;
+}
+
+static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
+  Json::Value result;
+  if (ui.has_cand_font_name())
+    result["candFontName"] = ui.cand_font_name();
+  if (ui.has_cand_font_size())
+    result["candFontSize"] = ui.cand_font_size();
+  if (ui.has_cand_per_row())
+    result["candPerRow"] = ui.cand_per_row();
+  if (ui.has_cand_use_cursor())
+    result["candUseCursor"] = ui.cand_use_cursor();
+  if (ui.has_inline_preedit())
+    result["inlinePreedit"] = ui.inline_preedit();
+  if (ui.has_cand_background_color())
+    result["candBackgroundColor"] = ui.cand_background_color();
+  if (ui.has_cand_highlight_color())
+    result["candHighlightColor"] = ui.cand_highlight_color();
+  if (ui.has_cand_text_color())
+    result["candTextColor"] = ui.cand_text_color();
+  if (ui.has_cand_highlight_text_color())
+    result["candHighlightTextColor"] = ui.cand_highlight_text_color();
+  return result;
+}
+
+static Json::Value buttonInfoToJson(const moqi::protocol::ButtonInfo &button) {
+  Json::Value result;
+  result["id"] = button.id();
+  if (!button.icon().empty())
+    result["icon"] = button.icon();
+  if (!button.text().empty())
+    result["text"] = button.text();
+  if (!button.tooltip().empty())
+    result["tooltip"] = button.tooltip();
+  if (button.command_id() != 0)
+    result["commandId"] = button.command_id();
+  switch (button.type()) {
+  case moqi::protocol::BUTTON_TYPE_BUTTON:
+    result["type"] = "button";
+    break;
+  case moqi::protocol::BUTTON_TYPE_TOGGLE:
+    result["type"] = "toggle";
+    break;
+  case moqi::protocol::BUTTON_TYPE_MENU:
+    result["type"] = "menu";
+    break;
+  default:
+    break;
+  }
+  result["enable"] = button.enable();
+  result["toggled"] = button.toggled();
+  if (button.has_style())
+    result["style"] = button.style();
+  return result;
+}
+
+static Json::Value responseToJson(const moqi::protocol::ServerResponse &response) {
+  Json::Value result;
+  result["success"] = response.success();
+  result["seqNum"] = response.seq_num();
+  result["return"] = response.return_value();
+  result["compositionString"] = response.composition_string();
+  result["showCandidates"] = response.show_candidates();
+  result["cursorPos"] = response.cursor_pos();
+  result["compositionCursor"] = response.composition_cursor();
+  result["candidateCursor"] = response.candidate_cursor();
+  result["selStart"] = response.sel_start();
+  result["selEnd"] = response.sel_end();
+
+  Json::Value candidateList(Json::arrayValue);
+  for (const auto &candidate : response.candidate_list()) {
+    candidateList.append(candidate);
+  }
+  result["candidateList"] = candidateList;
+
+  if (!response.menu_items().empty()) {
+    result["return"] = menuItemsToJson(response.menu_items());
+  }
+  if (!response.commit_string().empty())
+    result["commitString"] = response.commit_string();
+  if (!response.set_sel_keys().empty())
+    result["setSelKeys"] = response.set_sel_keys();
+  if (response.has_customize_ui())
+    result["customizeUI"] = customizeUiToJson(response.customize_ui());
+  if (response.has_show_message()) {
+    Json::Value message;
+    message["message"] = response.show_message().message();
+    message["duration"] = response.show_message().duration();
+    result["showMessage"] = message;
+  }
+  if (response.hide_message())
+    result["hideMessage"] = true;
+  if (response.open_keyboard())
+    result["openKeyboard"] = true;
+
+  if (!response.add_button().empty()) {
+    Json::Value addButtons(Json::arrayValue);
+    for (const auto &button : response.add_button()) {
+      addButtons.append(buttonInfoToJson(button));
+    }
+    result["addButton"] = addButtons;
+  }
+  if (!response.remove_button().empty()) {
+    Json::Value removeButtons(Json::arrayValue);
+    for (const auto &buttonId : response.remove_button()) {
+      removeButtons.append(buttonId);
+    }
+    result["removeButton"] = removeButtons;
+  }
+  if (!response.change_button().empty()) {
+    Json::Value changeButtons(Json::arrayValue);
+    for (const auto &button : response.change_button()) {
+      changeButtons.append(buttonInfoToJson(button));
+    }
+    result["changeButton"] = changeButtons;
+  }
+  if (!response.add_preserved_key().empty()) {
+    Json::Value preservedKeys(Json::arrayValue);
+    for (const auto &item : response.add_preserved_key()) {
+      Json::Value key;
+      key["keyCode"] = item.key_code();
+      key["modifiers"] = item.modifiers();
+      key["guid"] = item.guid();
+      preservedKeys.append(key);
+    }
+    result["addPreservedKey"] = preservedKeys;
+  }
+  if (!response.remove_preserved_key().empty()) {
+    Json::Value preservedKeys(Json::arrayValue);
+    for (const auto &guid : response.remove_preserved_key()) {
+      preservedKeys.append(guid);
+    }
+    result["removePreservedKey"] = preservedKeys;
+  }
+  if (!response.error().empty())
+    result["error"] = response.error();
+  return result;
+}
 
 static std::string uuidToString(const UUID &uuid) {
   std::string result;
@@ -83,19 +274,18 @@ Client::~Client(void) {
 
 // pack a keyEvent object into a json value
 // static
-void Client::addKeyEventToRpcRequest(Json::Value &request,
+void Client::addKeyEventToRpcRequest(moqi::protocol::ClientRequest &request,
                                      Ime::KeyEvent &keyEvent) {
-  request["charCode"] = keyEvent.charCode();
-  request["keyCode"] = keyEvent.keyCode();
-  request["repeatCount"] = keyEvent.repeatCount();
-  request["scanCode"] = keyEvent.scanCode();
-  request["isExtended"] = keyEvent.isExtended();
-  Json::Value keyStates(Json::arrayValue);
+  auto *protoKeyEvent = request.mutable_key_event();
+  protoKeyEvent->set_char_code(keyEvent.charCode());
+  protoKeyEvent->set_key_code(keyEvent.keyCode());
+  protoKeyEvent->set_repeat_count(keyEvent.repeatCount());
+  protoKeyEvent->set_scan_code(keyEvent.scanCode());
+  protoKeyEvent->set_is_extended(keyEvent.isExtended());
   const BYTE *states = keyEvent.keyStates();
   for (int i = 0; i < 256; ++i) {
-    keyStates.append(states[i]);
+    protoKeyEvent->add_key_states(states[i]);
   }
-  request["keyStates"] = keyStates;
 }
 
 bool Client::handleRpcResponse(Json::Value &msg, Ime::EditSession *session) {
@@ -452,8 +642,8 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 
 // handlers for the text service
 void Client::onActivate() {
-  Json::Value req = createRpcRequest("onActivate");
-  req["isKeyboardOpen"] = textService_->isKeyboardOpened();
+  auto req = createRpcRequest("onActivate");
+  req.set_is_keyboard_open(textService_->isKeyboardOpened());
 
   Json::Value ret;
   callRpcMethod(req, ret);
@@ -463,7 +653,7 @@ void Client::onActivate() {
 }
 
 void Client::onDeactivate() {
-  Json::Value req = createRpcRequest("onDeactivate");
+  auto req = createRpcRequest("onDeactivate");
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret)) {
@@ -473,7 +663,7 @@ void Client::onDeactivate() {
 }
 
 bool Client::filterKeyDown(Ime::KeyEvent &keyEvent) {
-  Json::Value req = createRpcRequest("filterKeyDown");
+  auto req = createRpcRequest("filterKeyDown");
   addKeyEventToRpcRequest(req, keyEvent);
 
   Json::Value ret;
@@ -485,7 +675,7 @@ bool Client::filterKeyDown(Ime::KeyEvent &keyEvent) {
 }
 
 bool Client::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
-  Json::Value req = createRpcRequest("onKeyDown");
+  auto req = createRpcRequest("onKeyDown");
   addKeyEventToRpcRequest(req, keyEvent);
 
   Json::Value ret;
@@ -497,7 +687,7 @@ bool Client::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
 }
 
 bool Client::filterKeyUp(Ime::KeyEvent &keyEvent) {
-  Json::Value req = createRpcRequest("filterKeyUp");
+  auto req = createRpcRequest("filterKeyUp");
   addKeyEventToRpcRequest(req, keyEvent);
 
   Json::Value ret;
@@ -509,7 +699,7 @@ bool Client::filterKeyUp(Ime::KeyEvent &keyEvent) {
 }
 
 bool Client::onKeyUp(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
-  Json::Value req = createRpcRequest("onKeyUp");
+  auto req = createRpcRequest("onKeyUp");
   addKeyEventToRpcRequest(req, keyEvent);
 
   Json::Value ret;
@@ -523,8 +713,8 @@ bool Client::onKeyUp(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
 bool Client::onPreservedKey(const GUID &guid) {
   auto guidStr = uuidToString(guid);
   if (!guidStr.empty()) {
-    Json::Value req = createRpcRequest("onPreservedKey");
-    req["guid"] = std::move(guidStr);
+    auto req = createRpcRequest("onPreservedKey");
+    req.set_preserved_key_guid(guidStr);
 
     Json::Value ret;
     callRpcMethod(req, ret);
@@ -536,9 +726,9 @@ bool Client::onPreservedKey(const GUID &guid) {
 }
 
 bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
-  Json::Value req = createRpcRequest("onCommand");
-  req["id"] = id;
-  req["type"] = type;
+  auto req = createRpcRequest("onCommand");
+  req.set_command_id(id);
+  req.set_command_type(type);
 
   Json::Value ret;
   callRpcMethod(req, ret);
@@ -549,8 +739,8 @@ bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
 }
 
 bool Client::sendOnMenu(std::string button_id, Json::Value &result) {
-  Json::Value req = createRpcRequest("onMenu");
-  req["id"] = button_id;
+  auto req = createRpcRequest("onMenu");
+  req.set_button_id(button_id);
 
   callRpcMethod(req, result);
   if (handleRpcResponse(result)) {
@@ -649,8 +839,8 @@ HMENU Client::onMenu(LangBarButton *btn) {
 void Client::onCompartmentChanged(const GUID &key) {
   auto guidStr = uuidToString(key);
   if (!guidStr.empty()) {
-    Json::Value req = createRpcRequest("onCompartmentChanged");
-    req["guid"] = std::move(guidStr);
+    auto req = createRpcRequest("onCompartmentChanged");
+    req.set_compartment_guid(guidStr);
 
     Json::Value ret;
     callRpcMethod(req, ret);
@@ -661,8 +851,8 @@ void Client::onCompartmentChanged(const GUID &key) {
 
 // called when the keyboard is opened or closed
 void Client::onKeyboardStatusChanged(bool opened) {
-  Json::Value req = createRpcRequest("onKeyboardStatusChanged");
-  req["opened"] = opened;
+  auto req = createRpcRequest("onKeyboardStatusChanged");
+  req.set_opened(opened);
 
   Json::Value ret;
   callRpcMethod(req, ret);
@@ -672,8 +862,8 @@ void Client::onKeyboardStatusChanged(bool opened) {
 
 // called just before current composition is terminated for doing cleanup.
 void Client::onCompositionTerminated(bool forced) {
-  Json::Value req = createRpcRequest("onCompositionTerminated");
-  req["forced"] = forced;
+  auto req = createRpcRequest("onCompositionTerminated");
+  req.set_forced(forced);
 
   Json::Value ret;
   callRpcMethod(req, ret);
@@ -682,22 +872,20 @@ void Client::onCompositionTerminated(bool forced) {
 }
 
 bool Client::init() {
-  Json::Value req = createRpcRequest("init");
-  req["id"] = guid_.c_str(); // language profile guid
-  req["isWindows8Above"] = ::IsWindows8OrGreater();
-  req["isMetroApp"] = textService_->isMetroApp();
-  req["isUiLess"] = textService_->effectiveUiLess();
-  req["isConsole"] = textService_->isConsole();
+  auto req = createRpcRequest("init");
+  req.set_guid(guid_);
+  req.set_is_windows8_above(::IsWindows8OrGreater());
+  req.set_is_metro_app(textService_->isMetroApp());
+  req.set_is_ui_less(textService_->effectiveUiLess());
+  req.set_is_console(textService_->isConsole());
 
   Json::Value ret;
   return callRpcMethod(req, ret) && handleRpcResponse(ret);
 }
 
-Json::Value Client::createRpcRequest(const char *methodName) {
-  Json::Value request;
-  request["method"] = methodName;
-
-  // TODO: add other environment info?
+moqi::protocol::ClientRequest Client::createRpcRequest(const char *methodName) {
+  moqi::protocol::ClientRequest request;
+  request.set_method(methodNameToProto(methodName));
   return request;
 }
 
@@ -730,26 +918,33 @@ bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
 
 // send the request to the server
 // a sequence number will be added to the req object automatically.
-bool Client::callRpcMethod(Json::Value &request, Json::Value &response) {
+bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
+                           Json::Value &response) {
   if (shouldWaitConnection_ && !waitForRpcConnection()) {
     return false;
   }
 
   // Add a sequence number for the request.
   auto seqNum = nextSeqNum_++;
-  request["seqNum"] = seqNum;
+  request.set_seq_num(seqNum);
 
-  Json::FastWriter writer;
-  std::string serializedRequest =
-      writer.write(request); // convert the json object to string
+  std::string serializedRequest;
+  if (!Proto::serializeMessage(request, serializedRequest)) {
+    return false;
+  }
 
   std::string serializedResponse;
   bool success = false;
   if (callRpcPipe(pipe_, serializedRequest, serializedResponse)) {
-    Json::Reader reader;
-    success = reader.parse(serializedResponse, response);
+    Proto::FrameBuffer responseBuffer;
+    responseBuffer.append(serializedResponse.data(), serializedResponse.size());
+    std::string payload;
+    moqi::protocol::ServerResponse protoResponse;
+    success = responseBuffer.nextFrame(payload) &&
+              Proto::parsePayload(payload, protoResponse);
     if (success) {
-      if (response["seqNum"].asUInt() != seqNum) // sequence number mismatch
+      response = responseToJson(protoResponse);
+      if (protoResponse.seq_num() != seqNum) // sequence number mismatch
         success = false;
     }
   } else {

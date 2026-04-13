@@ -18,6 +18,8 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_fl
 project(MoqiIMWindows LANGUAGES C CXX)
 
 include(FetchContent)
+set(MOQI_PROTOBUF_SOURCE_DIR "" CACHE PATH "Optional local protobuf source tree")
+set(MOQI_PROTOBUF_VENDORED_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/protobuf")
 
 # Load semantic version from version.txt.
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" MOQI_VERSION)
@@ -60,6 +62,13 @@ set(LIBUV_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(LIBUV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LIBUV_BUILD_BENCH OFF CACHE BOOL "" FORCE)
 
+set(protobuf_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(protobuf_BUILD_LIBUPB OFF CACHE BOOL "" FORCE)
+set(protobuf_BUILD_PROTOBUF_BINARIES ON CACHE BOOL "" FORCE)
+set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "" FORCE)
+set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -67,6 +76,31 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(spdlog)
+
+if(NOT MOQI_PROTOBUF_SOURCE_DIR AND EXISTS "${MOQI_PROTOBUF_VENDORED_SOURCE_DIR}/CMakeLists.txt")
+    set(MOQI_PROTOBUF_SOURCE_DIR "${MOQI_PROTOBUF_VENDORED_SOURCE_DIR}")
+endif()
+
+if(MOQI_PROTOBUF_SOURCE_DIR)
+    add_subdirectory("${MOQI_PROTOBUF_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/protobuf")
+    set(MOQI_PROTOBUF_INCLUDE_DIR "${MOQI_PROTOBUF_SOURCE_DIR}/src")
+    set(MOQI_PROTOBUF_ABSL_INCLUDE_DIR "${MOQI_PROTOBUF_SOURCE_DIR}/third_party/abseil-cpp")
+else()
+    FetchContent_Declare(
+        protobuf
+        URL https://github.com/protocolbuffers/protobuf/releases/download/v29.5/protobuf-29.5.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(protobuf)
+    set(MOQI_PROTOBUF_INCLUDE_DIR "${protobuf_SOURCE_DIR}/src")
+    set(MOQI_PROTOBUF_ABSL_INCLUDE_DIR "${protobuf_SOURCE_DIR}/third_party/abseil-cpp")
+endif()
+
+if(TARGET protobuf::libprotobuf)
+    set(MOQI_PROTOBUF_TARGET protobuf::libprotobuf)
+else()
+    set(MOQI_PROTOBUF_TARGET libprotobuf)
+endif()
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/jsoncpp")
 

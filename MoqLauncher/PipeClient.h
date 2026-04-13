@@ -24,6 +24,8 @@
 #include <memory>
 #include <cstdint>
 #include "BackendServer.h"
+#include "../proto/moqi.pb.h"
+#include "../proto/ProtoFraming.h"
 
 #include <spdlog/spdlog.h>
 
@@ -61,7 +63,7 @@ public:
         pipe_.write(data, len);
     }
 
-	bool initBackend(const Json::Value& params);
+	bool initBackend(const moqi::protocol::ClientRequest& params);
 
 	void disconnectFromBackend();
 
@@ -84,6 +86,7 @@ private:
 
 	// timer used to wait for response from backend server
 	std::unique_ptr<uv_timer_t> waitResponseTimer_;
+    Proto::FrameBuffer readBuffer_;
 };
 
 } // namespace Moqi
