@@ -96,6 +96,8 @@ private:
 	void initInputMethods(const std::wstring& topDirPath);
 	void asyncRestartAllBackends();
     void restartAllBackends();
+    void asyncTerminateAllBackends();
+    void terminateAllBackends();
 
 	// main pipe server
 	void initDataDir();

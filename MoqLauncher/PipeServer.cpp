@@ -233,6 +233,31 @@ void PipeServer::asyncRestartAllBackends() {
   uv_async_send(asyncTask);
 }
 
+void PipeServer::terminateAllBackends() {
+  logger_->info("Terminate all backends");
+  for (auto &backend : backends_) {
+    if (backend->isProcessRunning()) {
+      backend->terminateProcess();
+    }
+  }
+}
+
+void PipeServer::asyncTerminateAllBackends() {
+  auto callback = [](uv_async_t *asyncTask) {
+    auto this_ = reinterpret_cast<PipeServer *>(asyncTask->data);
+    this_->terminateAllBackends();
+
+    uv_close(reinterpret_cast<uv_handle_t *>(asyncTask),
+             [](uv_handle_t *handle) {
+               delete reinterpret_cast<uv_async_t *>(handle);
+             });
+  };
+  auto asyncTask = new uv_async_t{};
+  asyncTask->data = this;
+  uv_async_init(uv_default_loop(), asyncTask, callback);
+  uv_async_send(asyncTask);
+}
+
 BackendServer *PipeServer::backendFromName(const char *name) {
   // for such a small list, linear search is often faster than hash table or map
   for (auto &backend : backends_) {
@@ -442,8 +467,7 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
       asyncRestartAllBackends();
       return 0;
     case ID_EXIT_Moqi:
-      ::PostMessage(hwnd_, WM_QUIT, 0, 0);
-      ::DestroyWindow(hwnd_);
+      asyncTerminateAllBackends();
       return 0;
     case ID_ENABLE_DEBUG_LOG:
       // toggle between log_level: warning <--> debug
