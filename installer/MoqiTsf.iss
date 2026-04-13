@@ -2,7 +2,7 @@
 ; Build: install Inno Setup 6, then run build-installer.ps1 -StageDir <stage root>
 ; AppId / IME CLSID: keep stable across releases (ARP upgrade path).
 
-#define MyAppName "Moqi IM for Windows"
+#define MyAppName "墨奇输入法"
 #define MyAppPublisher "Moqi"
 #define MyAppURL "https://github.com/gaboolic/moqi-im-windows"
 #define MyAppId "{{C7A6A2D5-16C7-4BE4-8F52-E96D6D6A9E42}"

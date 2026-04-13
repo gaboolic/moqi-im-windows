@@ -121,9 +121,9 @@ Windows 侧的职责主要是：
 
 该脚本会生成：
 
-- `build\Release\MoqiLauncher.exe`
-- `build\Release\MoqiTextService.dll`（Win32）
-- `build64\Release\MoqiTextService.dll`（x64）
+- `build-vs32\Release\MoqiLauncher.exe`
+- `build-vs32\Release\MoqiTextService.dll`（Win32）
+- `build-vs64\Release\MoqiTextService.dll`（x64）
 
 ## 安装部署
 

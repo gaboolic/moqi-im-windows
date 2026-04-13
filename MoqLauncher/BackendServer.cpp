@@ -49,6 +49,20 @@ namespace Moqi {
 static wstring_convert<codecvt_utf8<wchar_t>> utf8Codec;
 static constexpr auto MAX_RESPONSE_WAITING_TIME =
     30; // if a backend is non-responsive for 30 seconds, it's considered dead
+static constexpr uint32_t RIME_DEPLOY_COMMAND_ID = 10;
+
+static DWORD trayNotificationInfoFlags(moqi::protocol::TrayNotificationIcon icon) {
+  switch (icon) {
+  case moqi::protocol::TRAY_NOTIFICATION_ICON_WARNING:
+    return NIIF_WARNING;
+  case moqi::protocol::TRAY_NOTIFICATION_ICON_ERROR:
+    return NIIF_ERROR;
+  case moqi::protocol::TRAY_NOTIFICATION_ICON_INFO:
+  case moqi::protocol::TRAY_NOTIFICATION_ICON_UNSPECIFIED:
+  default:
+    return NIIF_INFO;
+  }
+}
 
 static std::string getUtf8CurrentDir() {
   char dirPath[MAX_PATH];
@@ -85,6 +99,12 @@ void BackendServer::handleClientMessage(PipeClient *client,
                                         const moqi::protocol::ClientRequest &request) {
   if (!isProcessRunning()) {
     startProcess();
+  }
+
+  if (name_ == "moqi-ime" &&
+      request.method() == moqi::protocol::METHOD_ON_COMMAND &&
+      request.command_id() == RIME_DEPLOY_COMMAND_ID) {
+    pipeServer_->enqueueTrayNotification(L"Rime", L"重新部署中...", NIIF_INFO);
   }
 
   moqi::protocol::ClientRequest backendRequest = request;
@@ -252,6 +272,14 @@ void BackendServer::handleBackendReply() {
     if (!Proto::parsePayload(payload, response)) {
       logger()->error("Failed to parse protobuf response from backend {}", name_);
       continue;
+    }
+
+    if (response.has_tray_notification()) {
+      const auto &notification = response.tray_notification();
+      pipeServer_->enqueueTrayNotification(
+          utf8Codec.from_bytes(notification.title()),
+          utf8Codec.from_bytes(notification.message()),
+          trayNotificationInfoFlags(notification.icon()));
     }
 
     if (response.client_id().empty()) {

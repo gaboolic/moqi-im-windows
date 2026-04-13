@@ -51,5 +51,6 @@ build-vs64
 build-protobuf
 build-*
 build64-*
+cmake-build-ninja
 
 installer/stage

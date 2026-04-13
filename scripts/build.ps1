@@ -7,10 +7,10 @@
   Root of moqi-im-windows (defaults to the parent directory of this script).
 
 .PARAMETER Win32BuildDir
-  CMake Win32 build directory (default: RepoRoot\build).
+  CMake Win32 build directory (default: RepoRoot\build-vs32).
 
 .PARAMETER X64BuildDir
-  CMake x64 build directory (default: RepoRoot\build64).
+  CMake x64 build directory (default: RepoRoot\build-vs64).
 
 .PARAMETER Configuration
   Build configuration (default: Release).
@@ -119,8 +119,8 @@ $scriptRepoRoot = Join-Path $PSScriptRoot ".."
 if (-not $RepoRoot) { $RepoRoot = $scriptRepoRoot }
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 
-if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build" }
-if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build64" }
+if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build-vs32" }
+if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build-vs64" }
 $Win32BuildDir = [System.IO.Path]::GetFullPath($Win32BuildDir)
 $X64BuildDir = [System.IO.Path]::GetFullPath($X64BuildDir)
 $ProtobufRoot = Resolve-ProtobufRoot -RequestedPath $ProtobufRoot

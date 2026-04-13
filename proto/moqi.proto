@@ -83,6 +83,19 @@ message MessageWindow {
   int32 duration = 2;
 }
 
+enum TrayNotificationIcon {
+  TRAY_NOTIFICATION_ICON_UNSPECIFIED = 0;
+  TRAY_NOTIFICATION_ICON_INFO = 1;
+  TRAY_NOTIFICATION_ICON_WARNING = 2;
+  TRAY_NOTIFICATION_ICON_ERROR = 3;
+}
+
+message TrayNotification {
+  string title = 1;
+  string message = 2;
+  TrayNotificationIcon icon = 3;
+}
+
 message ClientRequest {
   uint32 seq_num = 1;
   Method method = 2;
@@ -135,4 +148,5 @@ message ServerResponse {
   repeated PreservedKey add_preserved_key = 23;
   repeated string remove_preserved_key = 24;
   string error = 25;
+  optional TrayNotification tray_notification = 26;
 }

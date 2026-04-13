@@ -3,6 +3,7 @@
 // Used by ChewingTextService.rc
 //
 #define IDC_STATIC                      -1
+#define IDI_MOQI_LAUNCHER               101
 
 // Next default values for new objects
 // 

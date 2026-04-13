@@ -21,12 +21,12 @@ BEGIN
         BLOCK "040404b0"
         BEGIN
             VALUE "CompanyName", "Moqi"
-            VALUE "FileDescription", "Moqi Launcher"
+            VALUE "FileDescription", "墨奇输入法"
             VALUE "FileVersion", "@MOQI_VERSION_MAJOR@.@MOQI_VERSION_MINOR@.@MOQI_VERSION_PATCH@"
             VALUE "InternalName", "MoqiLauncher.exe"
             VALUE "LegalCopyright", "Copyright (C) 2013-2016 Moqi developers"
             VALUE "OriginalFilename", "MoqiLauncher.exe"
-            VALUE "ProductName", "Moqi"
+            VALUE "ProductName", "墨奇输入法"
             VALUE "ProductVersion", "@MOQI_VERSION_MAJOR@.@MOQI_VERSION_MINOR@.@MOQI_VERSION_PATCH@"
         END
     END

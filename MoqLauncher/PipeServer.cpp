@@ -46,6 +46,7 @@
 #include <spdlog/spdlog.h>
 
 #include "BackendServer.h"
+#include "resource.h"
 #include "Utils.h"
 
 using namespace std;
@@ -60,17 +61,27 @@ wchar_t PipeServer::wndClassName_[] = L"MoqiLauncherWnd";
 static wstring_convert<codecvt_utf8<wchar_t>> utf8Codec;
 
 static constexpr UINT WM_SHELL_NOTIFY_ICON = WM_APP + 1;
+static constexpr UINT WM_SHOW_TRAY_NOTIFICATION = WM_APP + 2;
 static constexpr UINT MAIN_SHELL_NOTIFY_ICON_ID = 1;
+static constexpr UINT TRAY_NOTIFICATION_TIMEOUT_MS = 5000;
 
 static constexpr UINT ID_ENABLE_DEBUG_LOG = 1000;
 static constexpr UINT ID_SHOW_DEBUG_LOGS = 1001;
 static constexpr UINT ID_RESTART_Moqi_BACKENDS = 1002;
+static constexpr UINT ID_EXIT_Moqi = 1003;
 
 static constexpr size_t MAX_LOG_FILE_SIZE =
     5 * 1024 * 1024;                    // log file size: 5 MB
 static constexpr int NUM_LOG_FILES = 5; // backup 3 copies of the log file
 
 static constexpr wchar_t CONFIG_FILE_REL_PATH[] = L"\\MoqiLauncher.json";
+
+static void copyNotifyText(wchar_t *dest, size_t destCount, const std::wstring &text) {
+  if (destCount == 0) {
+    return;
+  }
+  wcsncpy_s(dest, destCount, text.c_str(), _TRUNCATE);
+}
 
 PipeServer::PipeServer()
     : quitExistingLauncher_(false), singleInstanceMutex_(nullptr),
@@ -318,6 +329,18 @@ void PipeServer::removeClient(PipeClient *client) {
   delete client;
 }
 
+void PipeServer::enqueueTrayNotification(const std::wstring &title,
+                                         const std::wstring &message,
+                                         DWORD infoFlags) {
+  {
+    std::lock_guard<std::mutex> lock(trayNotificationsMutex_);
+    trayNotifications_.push_back(TrayNotificationRequest{title, message, infoFlags});
+  }
+  if (hwnd_ != nullptr) {
+    ::PostMessage(hwnd_, WM_SHOW_TRAY_NOTIFICATION, 0, 0);
+  }
+}
+
 void PipeServer::onNewClientConnected(uv_stream_t *server, int status) {
   auto server_pipe = reinterpret_cast<uv_pipe_t *>(server);
   auto client = new PipeClient{this, server_pipe->pipe_mode,
@@ -410,10 +433,17 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
       return 0;
     }
     break;
+  case WM_SHOW_TRAY_NOTIFICATION:
+    flushTrayNotifications();
+    return 0;
   case WM_COMMAND:
     switch (LOWORD(wp)) {
     case ID_RESTART_Moqi_BACKENDS:
       asyncRestartAllBackends();
+      return 0;
+    case ID_EXIT_Moqi:
+      ::PostMessage(hwnd_, WM_QUIT, 0, 0);
+      ::DestroyWindow(hwnd_);
       return 0;
     case ID_ENABLE_DEBUG_LOG:
       // toggle between log_level: warning <--> debug
@@ -469,18 +499,46 @@ void PipeServer::createShellNotifyIcon() {
   shellNotifyIconData_.uID = MAIN_SHELL_NOTIFY_ICON_ID;
   shellNotifyIconData_.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
   shellNotifyIconData_.uCallbackMessage = WM_SHELL_NOTIFY_ICON;
-  // auto hinstance = HINSTANCE(::GetModuleHandle(NULL));
-  // shellNotifyIconData_.hIcon = ::LoadIcon(hinstance, IDI_APPLICATION);
-  shellNotifyIconData_.hIcon = ::LoadIcon(NULL, IDI_APPLICATION);
+  auto hinstance = HINSTANCE(::GetModuleHandle(NULL));
+  shellNotifyIconData_.hIcon = static_cast<HICON>(::LoadImage(
+      hinstance, MAKEINTRESOURCE(IDI_MOQI_LAUNCHER), IMAGE_ICON,
+      ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON),
+      LR_DEFAULTCOLOR));
+  if (shellNotifyIconData_.hIcon == nullptr) {
+    shellNotifyIconData_.hIcon = ::LoadIcon(NULL, IDI_APPLICATION);
+  }
 
-  // FIXME: make this translatable later
-  wcscpy(shellNotifyIconData_.szTip, L"Moqi Launcher");
+  wcscpy_s(shellNotifyIconData_.szTip, L"墨奇输入法");
 
   ::Shell_NotifyIcon(NIM_ADD, &shellNotifyIconData_);
 }
 
 void PipeServer::destroyShellNotifyIcon() {
   ::Shell_NotifyIcon(NIM_DELETE, &shellNotifyIconData_);
+}
+
+void PipeServer::showTrayNotification(const std::wstring &title,
+                                      const std::wstring &message,
+                                      DWORD infoFlags) {
+  NOTIFYICONDATA notifyData = shellNotifyIconData_;
+  notifyData.uFlags = NIF_INFO;
+  notifyData.dwInfoFlags = infoFlags;
+  notifyData.uTimeout = TRAY_NOTIFICATION_TIMEOUT_MS;
+  copyNotifyText(notifyData.szInfoTitle, ARRAYSIZE(notifyData.szInfoTitle), title);
+  copyNotifyText(notifyData.szInfo, ARRAYSIZE(notifyData.szInfo), message);
+  ::Shell_NotifyIcon(NIM_MODIFY, &notifyData);
+}
+
+void PipeServer::flushTrayNotifications() {
+  std::deque<TrayNotificationRequest> notifications;
+  {
+    std::lock_guard<std::mutex> lock(trayNotificationsMutex_);
+    notifications.swap(trayNotifications_);
+  }
+  for (const auto &notification : notifications) {
+    showTrayNotification(notification.title, notification.message,
+                         notification.infoFlags);
+  }
 }
 
 void PipeServer::showPopupMenu() const {
@@ -494,12 +552,14 @@ void PipeServer::showPopupMenu() const {
   // FIXME: make this translatable later
   bool debugEnabled = logLevel_ <= spdlog::level::debug;
   ::AppendMenu(hmenu, MF_STRING | MF_ENABLED | (debugEnabled ? MF_CHECKED : 0),
-               ID_ENABLE_DEBUG_LOG, L"Enable Debug Log");
+               ID_ENABLE_DEBUG_LOG, L"开启调试");
   ::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_SHOW_DEBUG_LOGS,
-               L"Show Debug Logs");
+               L"打开日志");
   ::AppendMenu(hmenu, MF_SEPARATOR, 0, 0);
   ::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_RESTART_Moqi_BACKENDS,
-               L"Restart Moqi");
+               L"重启墨奇引擎");
+  ::AppendMenu(hmenu, MF_STRING | MF_ENABLED, ID_EXIT_Moqi,
+               L"退出墨奇引擎");
 
   ::SetForegroundWindow(hwnd_);
   ::TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_BOTTOMALIGN, pos.x, pos.y, 0,
@@ -514,7 +574,7 @@ void PipeServer::runGuiThread() {
 
   WNDCLASSEX wndClass;
   auto wndClassAtom = registerWndClass(wndClass);
-  hwnd_ = ::CreateWindowEx(0, LPCTSTR(wndClassAtom), NULL, 0, 0, 0, 0, 0,
+  hwnd_ = ::CreateWindowEx(0, LPCTSTR(wndClassAtom), L"墨奇输入法", 0, 0, 0, 0, 0,
                            HWND_DESKTOP, NULL, wndClass.hInstance, this);
 
   createShellNotifyIcon();

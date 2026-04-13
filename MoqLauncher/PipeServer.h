@@ -34,6 +34,7 @@
 #include <queue>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include "BackendServer.h"
 #include "PipeSecurity.h"
 
@@ -65,6 +66,9 @@ public:
 		return logger_;
 	}
 
+	void enqueueTrayNotification(const std::wstring& title, const std::wstring& message,
+	                             DWORD infoFlags);
+
 	BackendServer* backendFromLangProfileGuid(const char* guid);
 
 	BackendServer* backendFromName(const char* name);
@@ -83,6 +87,9 @@ private:
 	void createShellNotifyIcon();
 	void destroyShellNotifyIcon();
 	void showPopupMenu() const;
+	void showTrayNotification(const std::wstring& title, const std::wstring& message,
+	                         DWORD infoFlags);
+	void flushTrayNotifications();
 
 	// backend server
 	void initBackendServers(const std::wstring& topDirPath);
@@ -122,6 +129,13 @@ private:
 	HWND hwnd_; // handle of the window
 	static wchar_t wndClassName_[];
 	NOTIFYICONDATA shellNotifyIconData_;
+	struct TrayNotificationRequest {
+		std::wstring title;
+		std::wstring message;
+		DWORD infoFlags;
+	};
+	std::deque<TrayNotificationRequest> trayNotifications_;
+	std::mutex trayNotificationsMutex_;
 
 	HANDLE singleInstanceMutex_;
 

@@ -11,10 +11,10 @@
   Root of moqi-im-windows (defaults to the parent directory of this script).
 
 .PARAMETER Win32BuildDir
-  CMake Win32 build directory (default: RepoRoot\build).
+  CMake Win32 build directory (default: RepoRoot\build-vs32).
 
 .PARAMETER X64BuildDir
-  CMake x64 build directory (default: RepoRoot\build64).
+  CMake x64 build directory (default: RepoRoot\build-vs64).
 
 .PARAMETER MoqiImeSource
   Path to the moqi-ime runtime tree to copy as backend.
@@ -152,8 +152,8 @@ $scriptRepoRoot = Join-Path $PSScriptRoot ".."
 if (-not $RepoRoot) { $RepoRoot = $scriptRepoRoot }
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 
-if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build" }
-if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build64" }
+if (-not $Win32BuildDir) { $Win32BuildDir = Join-Path $RepoRoot "build-vs32" }
+if (-not $X64BuildDir) { $X64BuildDir = Join-Path $RepoRoot "build-vs64" }
 $MoqiImeSource = Resolve-MoqiImeSource -RepoRoot $RepoRoot -RequestedSource $MoqiImeSource
 if (-not $StageDir) { $StageDir = Join-Path $RepoRoot "installer\stage" }
 if (-not $IssPath) { $IssPath = Join-Path $RepoRoot "installer\MoqiTsf.iss" }

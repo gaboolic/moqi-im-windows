@@ -59,6 +59,8 @@ enum ButtonType : int;
 extern const uint32_t ButtonType_internal_data_[];
 enum Method : int;
 extern const uint32_t Method_internal_data_[];
+enum TrayNotificationIcon : int;
+extern const uint32_t TrayNotificationIcon_internal_data_[];
 class ButtonInfo;
 struct ButtonInfoDefaultTypeInternal;
 extern ButtonInfoDefaultTypeInternal _ButtonInfo_default_instance_;
@@ -91,6 +93,10 @@ class ServerResponse;
 struct ServerResponseDefaultTypeInternal;
 extern ServerResponseDefaultTypeInternal _ServerResponse_default_instance_;
 extern const ::google::protobuf::internal::ClassDataFull ServerResponse_class_data_;
+class TrayNotification;
+struct TrayNotificationDefaultTypeInternal;
+extern TrayNotificationDefaultTypeInternal _TrayNotification_default_instance_;
+extern const ::google::protobuf::internal::ClassDataFull TrayNotification_class_data_;
 }  // namespace protocol
 }  // namespace moqi
 namespace google {
@@ -101,6 +107,9 @@ internal::EnumTraitsT<::moqi::protocol::ButtonType_internal_data_>
 template <>
 internal::EnumTraitsT<::moqi::protocol::Method_internal_data_>
     internal::EnumTraitsImpl::value<::moqi::protocol::Method>;
+template <>
+internal::EnumTraitsT<::moqi::protocol::TrayNotificationIcon_internal_data_>
+    internal::EnumTraitsImpl::value<::moqi::protocol::TrayNotificationIcon>;
 }  // namespace protobuf
 }  // namespace google
 
@@ -194,10 +203,272 @@ inline bool ButtonType_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<ButtonType>(ButtonType_descriptor(), name,
                                            value);
 }
+enum TrayNotificationIcon : int {
+  TRAY_NOTIFICATION_ICON_UNSPECIFIED = 0,
+  TRAY_NOTIFICATION_ICON_INFO = 1,
+  TRAY_NOTIFICATION_ICON_WARNING = 2,
+  TRAY_NOTIFICATION_ICON_ERROR = 3,
+  TrayNotificationIcon_INT_MIN_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::min(),
+  TrayNotificationIcon_INT_MAX_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::max(),
+};
+
+extern const uint32_t TrayNotificationIcon_internal_data_[];
+inline constexpr TrayNotificationIcon TrayNotificationIcon_MIN =
+    static_cast<TrayNotificationIcon>(0);
+inline constexpr TrayNotificationIcon TrayNotificationIcon_MAX =
+    static_cast<TrayNotificationIcon>(3);
+inline bool TrayNotificationIcon_IsValid(int value) {
+  return 0 <= value && value <= 3;
+}
+inline constexpr int TrayNotificationIcon_ARRAYSIZE = 3 + 1;
+const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL TrayNotificationIcon_descriptor();
+template <typename T>
+const ::std::string& TrayNotificationIcon_Name(T value) {
+  static_assert(::std::is_same<T, TrayNotificationIcon>::value ||
+                    ::std::is_integral<T>::value,
+                "Incorrect type passed to TrayNotificationIcon_Name().");
+  return TrayNotificationIcon_Name(static_cast<TrayNotificationIcon>(value));
+}
+template <>
+inline const ::std::string& TrayNotificationIcon_Name(TrayNotificationIcon value) {
+  return ::google::protobuf::internal::NameOfDenseEnum<TrayNotificationIcon_descriptor, 0, 3>(
+      static_cast<int>(value));
+}
+inline bool TrayNotificationIcon_Parse(
+    ::absl::string_view name, TrayNotificationIcon* PROTOBUF_NONNULL value) {
+  return ::google::protobuf::internal::ParseNamedEnum<TrayNotificationIcon>(TrayNotificationIcon_descriptor(), name,
+                                           value);
+}
 
 // ===================================================================
 
 
+// -------------------------------------------------------------------
+
+class TrayNotification final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:moqi.protocol.TrayNotification) */ {
+ public:
+  inline TrayNotification() : TrayNotification(nullptr) {}
+  ~TrayNotification() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(TrayNotification* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(TrayNotification));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR TrayNotification(::google::protobuf::internal::ConstantInitialized);
+
+  inline TrayNotification(const TrayNotification& from) : TrayNotification(nullptr, from) {}
+  inline TrayNotification(TrayNotification&& from) noexcept
+      : TrayNotification(nullptr, ::std::move(from)) {}
+  inline TrayNotification& operator=(const TrayNotification& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline TrayNotification& operator=(TrayNotification&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const TrayNotification& default_instance() {
+    return *reinterpret_cast<const TrayNotification*>(
+        &_TrayNotification_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 6;
+  friend void swap(TrayNotification& a, TrayNotification& b) { a.Swap(&b); }
+  inline void Swap(TrayNotification* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(TrayNotification* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  TrayNotification* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<TrayNotification>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const TrayNotification& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const TrayNotification& from) { TrayNotification::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(TrayNotification* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "moqi.protocol.TrayNotification"; }
+
+  explicit TrayNotification(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  TrayNotification(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const TrayNotification& from);
+  TrayNotification(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, TrayNotification&& from) noexcept
+      : TrayNotification(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kTitleFieldNumber = 1,
+    kMessageFieldNumber = 2,
+    kIconFieldNumber = 3,
+  };
+  // string title = 1;
+  void clear_title() ;
+  const ::std::string& title() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_title(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_title();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_title();
+  void set_allocated_title(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_title() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_title(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_title();
+
+  public:
+  // string message = 2;
+  void clear_message() ;
+  const ::std::string& message() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_message(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_message();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_message();
+  void set_allocated_message(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_message() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_message(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_message();
+
+  public:
+  // .moqi.protocol.TrayNotificationIcon icon = 3;
+  void clear_icon() ;
+  ::moqi::protocol::TrayNotificationIcon icon() const;
+  void set_icon(::moqi::protocol::TrayNotificationIcon value);
+
+  private:
+  ::moqi::protocol::TrayNotificationIcon _internal_icon() const;
+  void _internal_set_icon(::moqi::protocol::TrayNotificationIcon value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:moqi.protocol.TrayNotification)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 3,
+                                   0, 51,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const TrayNotification& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr title_;
+    ::google::protobuf::internal::ArenaStringPtr message_;
+    int icon_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proto_2fmoqi_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull TrayNotification_class_data_;
 // -------------------------------------------------------------------
 
 class PreservedKey final : public ::google::protobuf::Message
@@ -1829,7 +2100,7 @@ class ServerResponse final : public ::google::protobuf::Message
     return *reinterpret_cast<const ServerResponse*>(
         &_ServerResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 7;
+  static constexpr int kIndexInFileMessages = 8;
   friend void swap(ServerResponse& a, ServerResponse& b) { a.Swap(&b); }
   inline void Swap(ServerResponse* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1930,6 +2201,7 @@ class ServerResponse final : public ::google::protobuf::Message
     kErrorFieldNumber = 25,
     kCustomizeUiFieldNumber = 16,
     kShowMessageFieldNumber = 20,
+    kTrayNotificationFieldNumber = 26,
     kSeqNumFieldNumber = 2,
     kReturnValueFieldNumber = 4,
     kCursorPosFieldNumber = 10,
@@ -2182,6 +2454,21 @@ class ServerResponse final : public ::google::protobuf::Message
   ::moqi::protocol::MessageWindow* PROTOBUF_NONNULL _internal_mutable_show_message();
 
   public:
+  // optional .moqi.protocol.TrayNotification tray_notification = 26;
+  bool has_tray_notification() const;
+  void clear_tray_notification() ;
+  const ::moqi::protocol::TrayNotification& tray_notification() const;
+  [[nodiscard]] ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE release_tray_notification();
+  ::moqi::protocol::TrayNotification* PROTOBUF_NONNULL mutable_tray_notification();
+  void set_allocated_tray_notification(::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_tray_notification(::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE value);
+  ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE unsafe_arena_release_tray_notification();
+
+  private:
+  const ::moqi::protocol::TrayNotification& _internal_tray_notification() const;
+  ::moqi::protocol::TrayNotification* PROTOBUF_NONNULL _internal_mutable_tray_notification();
+
+  public:
   // uint32 seq_num = 2;
   void clear_seq_num() ;
   ::uint32_t seq_num() const;
@@ -2296,8 +2583,8 @@ class ServerResponse final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<5, 25,
-                                   6, 165,
+  static const ::google::protobuf::internal::TcParseTable<5, 26,
+                                   7, 165,
                                    2>
       _table_;
 
@@ -2332,6 +2619,7 @@ class ServerResponse final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr error_;
     ::moqi::protocol::CustomizeUi* PROTOBUF_NULLABLE customize_ui_;
     ::moqi::protocol::MessageWindow* PROTOBUF_NULLABLE show_message_;
+    ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE tray_notification_;
     ::uint32_t seq_num_;
     ::int32_t return_value_;
     ::int32_t cursor_pos_;
@@ -2407,7 +2695,7 @@ class ClientRequest final : public ::google::protobuf::Message
     return *reinterpret_cast<const ClientRequest*>(
         &_ClientRequest_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 6;
+  static constexpr int kIndexInFileMessages = 7;
   friend void swap(ClientRequest& a, ClientRequest& b) { a.Swap(&b); }
   inline void Swap(ClientRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4347,6 +4635,165 @@ inline void MessageWindow::_internal_set_duration(::int32_t value) {
 
 // -------------------------------------------------------------------
 
+// TrayNotification
+
+// string title = 1;
+inline void TrayNotification::clear_title() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.title_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::std::string& TrayNotification::title() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.TrayNotification.title)
+  return _internal_title();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void TrayNotification::set_title(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  _impl_.title_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.TrayNotification.title)
+}
+inline ::std::string* PROTOBUF_NONNULL TrayNotification::mutable_title()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::std::string* _s = _internal_mutable_title();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.TrayNotification.title)
+  return _s;
+}
+inline const ::std::string& TrayNotification::_internal_title() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.title_.Get();
+}
+inline void TrayNotification::_internal_set_title(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.title_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL TrayNotification::_internal_mutable_title() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.title_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE TrayNotification::release_title() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.TrayNotification.title)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000001U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  auto* released = _impl_.title_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.title_.Set("", GetArena());
+  }
+  return released;
+}
+inline void TrayNotification::set_allocated_title(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  _impl_.title_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.title_.IsDefault()) {
+    _impl_.title_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.TrayNotification.title)
+}
+
+// string message = 2;
+inline void TrayNotification::clear_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::std::string& TrayNotification::message() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.TrayNotification.message)
+  return _internal_message();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void TrayNotification::set_message(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.message_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.TrayNotification.message)
+}
+inline ::std::string* PROTOBUF_NONNULL TrayNotification::mutable_message()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_message();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.TrayNotification.message)
+  return _s;
+}
+inline const ::std::string& TrayNotification::_internal_message() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.message_.Get();
+}
+inline void TrayNotification::_internal_set_message(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL TrayNotification::_internal_mutable_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.message_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE TrayNotification::release_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.TrayNotification.message)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.message_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.message_.Set("", GetArena());
+  }
+  return released;
+}
+inline void TrayNotification::set_allocated_message(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.message_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.message_.IsDefault()) {
+    _impl_.message_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.TrayNotification.message)
+}
+
+// .moqi.protocol.TrayNotificationIcon icon = 3;
+inline void TrayNotification::clear_icon() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.icon_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::moqi::protocol::TrayNotificationIcon TrayNotification::icon() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.TrayNotification.icon)
+  return _internal_icon();
+}
+inline void TrayNotification::set_icon(::moqi::protocol::TrayNotificationIcon value) {
+  _internal_set_icon(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.TrayNotification.icon)
+}
+inline ::moqi::protocol::TrayNotificationIcon TrayNotification::_internal_icon() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::moqi::protocol::TrayNotificationIcon>(_impl_.icon_);
+}
+inline void TrayNotification::_internal_set_icon(::moqi::protocol::TrayNotificationIcon value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.icon_ = value;
+}
+
+// -------------------------------------------------------------------
+
 // ClientRequest
 
 // uint32 seq_num = 1;
@@ -5387,7 +5834,7 @@ inline void ServerResponse::clear_seq_num() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.seq_num_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00004000U);
+                  0x00008000U);
 }
 inline ::uint32_t ServerResponse::seq_num() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.seq_num)
@@ -5395,7 +5842,7 @@ inline ::uint32_t ServerResponse::seq_num() const {
 }
 inline void ServerResponse::set_seq_num(::uint32_t value) {
   _internal_set_seq_num(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.seq_num)
 }
 inline ::uint32_t ServerResponse::_internal_seq_num() const {
@@ -5412,7 +5859,7 @@ inline void ServerResponse::clear_success() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.success_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00100000U);
+                  0x00200000U);
 }
 inline bool ServerResponse::success() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.success)
@@ -5420,7 +5867,7 @@ inline bool ServerResponse::success() const {
 }
 inline void ServerResponse::set_success(bool value) {
   _internal_set_success(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00100000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00200000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.success)
 }
 inline bool ServerResponse::_internal_success() const {
@@ -5437,7 +5884,7 @@ inline void ServerResponse::clear_return_value() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.return_value_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00008000U);
+                  0x00010000U);
 }
 inline ::int32_t ServerResponse::return_value() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.return_value)
@@ -5445,7 +5892,7 @@ inline ::int32_t ServerResponse::return_value() const {
 }
 inline void ServerResponse::set_return_value(::int32_t value) {
   _internal_set_return_value(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.return_value)
 }
 inline ::int32_t ServerResponse::_internal_return_value() const {
@@ -5720,7 +6167,7 @@ inline void ServerResponse::clear_show_candidates() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.show_candidates_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00200000U);
+                  0x00400000U);
 }
 inline bool ServerResponse::show_candidates() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.show_candidates)
@@ -5728,7 +6175,7 @@ inline bool ServerResponse::show_candidates() const {
 }
 inline void ServerResponse::set_show_candidates(bool value) {
   _internal_set_show_candidates(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00200000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00400000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.show_candidates)
 }
 inline bool ServerResponse::_internal_show_candidates() const {
@@ -5745,7 +6192,7 @@ inline void ServerResponse::clear_cursor_pos() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cursor_pos_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00010000U);
+                  0x00020000U);
 }
 inline ::int32_t ServerResponse::cursor_pos() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.cursor_pos)
@@ -5753,7 +6200,7 @@ inline ::int32_t ServerResponse::cursor_pos() const {
 }
 inline void ServerResponse::set_cursor_pos(::int32_t value) {
   _internal_set_cursor_pos(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00020000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.cursor_pos)
 }
 inline ::int32_t ServerResponse::_internal_cursor_pos() const {
@@ -5770,7 +6217,7 @@ inline void ServerResponse::clear_composition_cursor() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.composition_cursor_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00020000U);
+                  0x00040000U);
 }
 inline ::int32_t ServerResponse::composition_cursor() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.composition_cursor)
@@ -5778,7 +6225,7 @@ inline ::int32_t ServerResponse::composition_cursor() const {
 }
 inline void ServerResponse::set_composition_cursor(::int32_t value) {
   _internal_set_composition_cursor(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00020000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00040000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.composition_cursor)
 }
 inline ::int32_t ServerResponse::_internal_composition_cursor() const {
@@ -5795,7 +6242,7 @@ inline void ServerResponse::clear_candidate_cursor() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.candidate_cursor_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00040000U);
+                  0x00080000U);
 }
 inline ::int32_t ServerResponse::candidate_cursor() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.candidate_cursor)
@@ -5803,7 +6250,7 @@ inline ::int32_t ServerResponse::candidate_cursor() const {
 }
 inline void ServerResponse::set_candidate_cursor(::int32_t value) {
   _internal_set_candidate_cursor(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00040000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00080000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.candidate_cursor)
 }
 inline ::int32_t ServerResponse::_internal_candidate_cursor() const {
@@ -5820,7 +6267,7 @@ inline void ServerResponse::clear_sel_start() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sel_start_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00080000U);
+                  0x00100000U);
 }
 inline ::int32_t ServerResponse::sel_start() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.sel_start)
@@ -5828,7 +6275,7 @@ inline ::int32_t ServerResponse::sel_start() const {
 }
 inline void ServerResponse::set_sel_start(::int32_t value) {
   _internal_set_sel_start(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00080000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00100000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.sel_start)
 }
 inline ::int32_t ServerResponse::_internal_sel_start() const {
@@ -5845,7 +6292,7 @@ inline void ServerResponse::clear_sel_end() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sel_end_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x01000000U);
+                  0x02000000U);
 }
 inline ::int32_t ServerResponse::sel_end() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.sel_end)
@@ -5853,7 +6300,7 @@ inline ::int32_t ServerResponse::sel_end() const {
 }
 inline void ServerResponse::set_sel_end(::int32_t value) {
   _internal_set_sel_end(value);
-  SetHasBit(_impl_._has_bits_[0], 0x01000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x02000000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.sel_end)
 }
 inline ::int32_t ServerResponse::_internal_sel_end() const {
@@ -6317,7 +6764,7 @@ inline void ServerResponse::clear_hide_message() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.hide_message_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00400000U);
+                  0x00800000U);
 }
 inline bool ServerResponse::hide_message() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.hide_message)
@@ -6325,7 +6772,7 @@ inline bool ServerResponse::hide_message() const {
 }
 inline void ServerResponse::set_hide_message(bool value) {
   _internal_set_hide_message(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00400000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00800000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.hide_message)
 }
 inline bool ServerResponse::_internal_hide_message() const {
@@ -6342,7 +6789,7 @@ inline void ServerResponse::clear_open_keyboard() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.open_keyboard_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00800000U);
+                  0x01000000U);
 }
 inline bool ServerResponse::open_keyboard() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.open_keyboard)
@@ -6350,7 +6797,7 @@ inline bool ServerResponse::open_keyboard() const {
 }
 inline void ServerResponse::set_open_keyboard(bool value) {
   _internal_set_open_keyboard(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00800000U);
+  SetHasBit(_impl_._has_bits_[0], 0x01000000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.ServerResponse.open_keyboard)
 }
 inline bool ServerResponse::_internal_open_keyboard() const {
@@ -6555,6 +7002,105 @@ inline void ServerResponse::set_allocated_error(::std::string* PROTOBUF_NULLABLE
   // @@protoc_insertion_point(field_set_allocated:moqi.protocol.ServerResponse.error)
 }
 
+// optional .moqi.protocol.TrayNotification tray_notification = 26;
+inline bool ServerResponse::has_tray_notification() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  PROTOBUF_ASSUME(!value || _impl_.tray_notification_ != nullptr);
+  return value;
+}
+inline void ServerResponse::clear_tray_notification() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.tray_notification_ != nullptr) _impl_.tray_notification_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00004000U);
+}
+inline const ::moqi::protocol::TrayNotification& ServerResponse::_internal_tray_notification() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::moqi::protocol::TrayNotification* p = _impl_.tray_notification_;
+  return p != nullptr ? *p : reinterpret_cast<const ::moqi::protocol::TrayNotification&>(::moqi::protocol::_TrayNotification_default_instance_);
+}
+inline const ::moqi::protocol::TrayNotification& ServerResponse::tray_notification() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.ServerResponse.tray_notification)
+  return _internal_tray_notification();
+}
+inline void ServerResponse::unsafe_arena_set_allocated_tray_notification(
+    ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.tray_notification_);
+  }
+  _impl_.tray_notification_ = reinterpret_cast<::moqi::protocol::TrayNotification*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:moqi.protocol.ServerResponse.tray_notification)
+}
+inline ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE ServerResponse::release_tray_notification() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+  ::moqi::protocol::TrayNotification* released = _impl_.tray_notification_;
+  _impl_.tray_notification_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE ServerResponse::unsafe_arena_release_tray_notification() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.ServerResponse.tray_notification)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+  ::moqi::protocol::TrayNotification* temp = _impl_.tray_notification_;
+  _impl_.tray_notification_ = nullptr;
+  return temp;
+}
+inline ::moqi::protocol::TrayNotification* PROTOBUF_NONNULL ServerResponse::_internal_mutable_tray_notification() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.tray_notification_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::moqi::protocol::TrayNotification>(GetArena());
+    _impl_.tray_notification_ = reinterpret_cast<::moqi::protocol::TrayNotification*>(p);
+  }
+  return _impl_.tray_notification_;
+}
+inline ::moqi::protocol::TrayNotification* PROTOBUF_NONNULL ServerResponse::mutable_tray_notification()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  ::moqi::protocol::TrayNotification* _msg = _internal_mutable_tray_notification();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.ServerResponse.tray_notification)
+  return _msg;
+}
+inline void ServerResponse::set_allocated_tray_notification(::moqi::protocol::TrayNotification* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.tray_notification_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+  }
+
+  _impl_.tray_notification_ = reinterpret_cast<::moqi::protocol::TrayNotification*>(value);
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.ServerResponse.tray_notification)
+}
+
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif  // __GNUC__
@@ -6578,6 +7124,12 @@ struct is_proto_enum<::moqi::protocol::ButtonType> : std::true_type {};
 template <>
 inline const EnumDescriptor* PROTOBUF_NONNULL GetEnumDescriptor<::moqi::protocol::ButtonType>() {
   return ::moqi::protocol::ButtonType_descriptor();
+}
+template <>
+struct is_proto_enum<::moqi::protocol::TrayNotificationIcon> : std::true_type {};
+template <>
+inline const EnumDescriptor* PROTOBUF_NONNULL GetEnumDescriptor<::moqi::protocol::TrayNotificationIcon>() {
+  return ::moqi::protocol::TrayNotificationIcon_descriptor();
 }
 
 }  // namespace protobuf
