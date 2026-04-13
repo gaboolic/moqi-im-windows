@@ -177,8 +177,9 @@ void PipeServer::initInputMethods(const std::wstring &topDirPath) {
             Json::Value json;
             if (loadJsonFile(imejson, json)) {
               std::string guid = json["guid"].asString();
-              transform(guid.begin(), guid.end(), guid.begin(),
-                        tolower); // convert GUID to lwoer case
+              std::transform(
+                  guid.begin(), guid.end(), guid.begin(),
+                  [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); }); // convert GUID to lower case
                                   // map text service GUID to its backend server
               backendMap_.insert(std::make_pair(
                   guid, backendFromName(backend->name_.c_str())));

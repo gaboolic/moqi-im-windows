@@ -24,14 +24,18 @@ add_definitions(
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
+    ${MOQI_GENERATED_PROTO_ROOT}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${jsoncpp_SOURCE_DIR}/include
+    ${MOQI_PROTOBUF_INCLUDE_DIR}
+    ${MOQI_PROTOBUF_ABSL_INCLUDE_DIR}
     ${LIBUV_INCLUDE_DIRS}
     ${SPDLOG_INCLUDE_DIRS}
 )
 
 add_executable(MoqiLauncher WIN32
+    ${MOQI_PROTO_CPP}
     UvPipe.h
     MoqiLauncher.cpp
     PipeServer.cpp
@@ -48,8 +52,12 @@ add_executable(MoqiLauncher WIN32
     MoqiLauncher.rc
 )
 
+set_source_files_properties(${MOQI_PROTO_CPP} ${MOQI_PROTO_HDR} PROPERTIES GENERATED TRUE)
+add_dependencies(MoqiLauncher moqi_proto_cpp_gen)
+
 target_link_libraries(MoqiLauncher 
     jsoncpp_lib_static
+    ${MOQI_PROTOBUF_TARGET}
     Rpcrt4 # for uuid stuff
     libuv
 )

@@ -39,6 +39,8 @@
 #include "BackendServer.h"
 #include "PipeClient.h"
 #include "PipeServer.h"
+#include "../proto/ProtoFraming.h"
+#include "proto/moqi.pb.h"
 
 using namespace std;
 
@@ -79,22 +81,23 @@ std::shared_ptr<spdlog::logger> &BackendServer::logger() {
   return pipeServer_->logger();
 }
 
-void BackendServer::handleClientMessage(PipeClient *client, const char *readBuf,
-                                        size_t len) {
+void BackendServer::handleClientMessage(PipeClient *client,
+                                        const moqi::protocol::ClientRequest &request) {
   if (!isProcessRunning()) {
     startProcess();
   }
 
-  // message format: <client_id>|<json string>\n
-  string msg = string{client->clientId_};
-  msg += "|";
-  msg.append(readBuf, len);
-  msg += "\n";
-
-  logger()->debug("SEND: {}", msg);
+  moqi::protocol::ClientRequest backendRequest = request;
+  backendRequest.set_client_id(client->clientId_);
+  std::string framedMessage;
+  if (!Proto::serializeMessage(backendRequest, framedMessage)) {
+    logger()->error("Failed to serialize backend request for client {}",
+                    client->clientId_);
+    return;
+  }
 
   // write the message to the backend server
-  stdinPipe_->write(std::move(msg));
+  stdinPipe_->write(std::move(framedMessage));
 }
 
 uv::Pipe *BackendServer::createStdinPipe() {
@@ -125,7 +128,7 @@ void BackendServer::startProcess() {
   process_ = new uv_process_t{};
   // create pipes for stdio of the child process
   stdoutPipe_ = createStdoutPipe();
-  stdoutReadBuf_.clear();
+  stdoutFrameBuf_.clear();
   stdinPipe_ = createStdinPipe();
   stderrPipe_ = createStderrPipe();
 
@@ -209,10 +212,7 @@ void BackendServer::terminateProcess() {
 bool BackendServer::isProcessRunning() { return process_ != nullptr; }
 
 void BackendServer::onStdoutRead(const char *buf, size_t len) {
-  if (logger()->level() <= spdlog::level::debug) {
-    logger()->debug("RECV: {}", std::string(buf, len));
-  }
-  stdoutReadBuf_.write(buf, len);
+  stdoutFrameBuf_.append(buf, len);
   handleBackendReply();
 }
 
@@ -236,7 +236,7 @@ void BackendServer::closeStdioPipes() {
   if (stdoutPipe_ != nullptr) {
     stdoutPipe_->close();
     stdoutPipe_ = nullptr;
-    stdoutReadBuf_ = std::stringstream();
+    stdoutFrameBuf_.clear();
   }
 
   if (stderrPipe_ != nullptr) {
@@ -246,45 +246,22 @@ void BackendServer::closeStdioPipes() {
 }
 
 void BackendServer::handleBackendReply() {
-  // each output message should be a full line ends with \n or \r\n, so we need
-  // to do buffering and handle the messages line by line.
-  std::string line;
-  for (;;) {
-    std::getline(stdoutReadBuf_, line);
-    if (stdoutReadBuf_.eof()) {
-      // getline() reached end of buffer before finding a '\n'. The current line
-      // is incomplete. Put remaining data back to the buffer and wait for the
-      // next \n so it becomes a full line.
-      stdoutReadBuf_.clear();
-      stdoutReadBuf_.str(line);
-      break;
+  std::string payload;
+  while (stdoutFrameBuf_.nextFrame(payload)) {
+    moqi::protocol::ServerResponse response;
+    if (!Proto::parsePayload(payload, response)) {
+      logger()->error("Failed to parse protobuf response from backend {}", name_);
+      continue;
     }
 
-    // only handle lines prefixed with "Moqi_MSG|" since other lines
-    // might be debug messages printed by the backend.
-    // Format of each message: "PIMG_MSG|<client_id>|<reply JSON string>\n"
-    constexpr char pimeMsgPrefix[] = "Moqi_MSG|";
-    constexpr size_t pimeMsgPrefixLen = 9;
-    if (line.compare(0, pimeMsgPrefixLen, pimeMsgPrefix) == 0) {
-      // because Windows uses CRLF "\r\n" for new lines, python and node.js
-      // try to convert "\n" to "\r\n" sometimes. Let's remove the additional
-      // '\r'
-      if (line.back() == '\r') {
-        line.pop_back();
-      }
+    if (response.client_id().empty()) {
+      logger()->warn("Ignoring backend response without client_id from {}", name_);
+      continue;
+    }
 
-      auto sep = line.find('|', pimeMsgPrefixLen); // Find the next "|".
-      if (sep != line.npos) {
-        // split the client_id from the remaining json reply
-        string clientId = line.substr(pimeMsgPrefixLen, sep - pimeMsgPrefixLen);
-        // send the reply message back to the client
-        auto msgStart = sep + 1;
-        auto msg = line.c_str() + msgStart;
-        auto msgLen = line.length() - msgStart;
-        if (auto client = pipeServer_->clientFromId(clientId)) {
-          client->writePipe(msg, msgLen);
-        }
-      }
+    if (auto client = pipeServer_->clientFromId(response.client_id())) {
+      const auto framedPayload = Proto::framePayload(payload);
+      client->writePipe(framedPayload.data(), framedPayload.size());
     }
   }
 }

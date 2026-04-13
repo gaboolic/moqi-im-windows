@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package moqi.protocol;
+
+option go_package = "github.com/gaboolic/moqi-ime/proto;moqipb";
+
+enum Method {
+  METHOD_UNSPECIFIED = 0;
+  METHOD_INIT = 1;
+  METHOD_CLOSE = 2;
+  METHOD_ON_ACTIVATE = 3;
+  METHOD_ON_DEACTIVATE = 4;
+  METHOD_FILTER_KEY_DOWN = 5;
+  METHOD_ON_KEY_DOWN = 6;
+  METHOD_FILTER_KEY_UP = 7;
+  METHOD_ON_KEY_UP = 8;
+  METHOD_ON_PRESERVED_KEY = 9;
+  METHOD_ON_COMMAND = 10;
+  METHOD_ON_MENU = 11;
+  METHOD_ON_COMPARTMENT_CHANGED = 12;
+  METHOD_ON_KEYBOARD_STATUS_CHANGED = 13;
+  METHOD_ON_COMPOSITION_TERMINATED = 14;
+  METHOD_ON_LANG_PROFILE_ACTIVATED = 15;
+}
+
+enum ButtonType {
+  BUTTON_TYPE_UNSPECIFIED = 0;
+  BUTTON_TYPE_BUTTON = 1;
+  BUTTON_TYPE_TOGGLE = 2;
+  BUTTON_TYPE_MENU = 3;
+}
+
+message KeyEvent {
+  uint32 char_code = 1;
+  uint32 key_code = 2;
+  uint32 repeat_count = 3;
+  uint32 scan_code = 4;
+  bool is_extended = 5;
+  repeated uint32 key_states = 6;
+}
+
+message ButtonInfo {
+  string id = 1;
+  string icon = 2;
+  string text = 3;
+  string tooltip = 4;
+  uint32 command_id = 5;
+  ButtonType type = 6;
+  bool enable = 7;
+  bool toggled = 8;
+  optional uint32 style = 9;
+}
+
+message MenuItem {
+  uint32 id = 1;
+  string text = 2;
+  bool checked = 3;
+  bool enabled = 4;
+  repeated MenuItem submenu = 5;
+  bool separator = 6;
+}
+
+message PreservedKey {
+  uint32 key_code = 1;
+  uint32 modifiers = 2;
+  string guid = 3;
+}
+
+message CustomizeUi {
+  optional string cand_font_name = 1;
+  optional uint32 cand_font_size = 2;
+  optional uint32 cand_per_row = 3;
+  optional bool cand_use_cursor = 4;
+  optional bool inline_preedit = 5;
+  optional string cand_background_color = 6;
+  optional string cand_highlight_color = 7;
+  optional string cand_text_color = 8;
+  optional string cand_highlight_text_color = 9;
+}
+
+message MessageWindow {
+  string message = 1;
+  int32 duration = 2;
+}
+
+message ClientRequest {
+  uint32 seq_num = 1;
+  Method method = 2;
+  optional string guid = 3;
+  bool is_windows8_above = 4;
+  bool is_metro_app = 5;
+  bool is_ui_less = 6;
+  bool is_console = 7;
+  bool opened = 8;
+  bool forced = 9;
+  uint32 command_type = 10;
+  KeyEvent key_event = 11;
+  string composition_string = 12;
+  repeated string candidate_list = 13;
+  bool show_candidates = 14;
+  int32 cursor_pos = 15;
+  int32 sel_start = 16;
+  int32 sel_end = 17;
+  optional string button_id = 18;
+  optional uint32 command_id = 19;
+  optional string preserved_key_guid = 20;
+  optional string compartment_guid = 21;
+  bool is_keyboard_open = 22;
+  optional string client_id = 23;
+}
+
+message ServerResponse {
+  optional string client_id = 1;
+  uint32 seq_num = 2;
+  bool success = 3;
+  int32 return_value = 4;
+  repeated MenuItem menu_items = 5;
+  string composition_string = 6;
+  string commit_string = 7;
+  repeated string candidate_list = 8;
+  bool show_candidates = 9;
+  int32 cursor_pos = 10;
+  int32 composition_cursor = 11;
+  int32 candidate_cursor = 12;
+  int32 sel_start = 13;
+  int32 sel_end = 14;
+  string set_sel_keys = 15;
+  optional CustomizeUi customize_ui = 16;
+  repeated ButtonInfo add_button = 17;
+  repeated string remove_button = 18;
+  repeated ButtonInfo change_button = 19;
+  optional MessageWindow show_message = 20;
+  bool hide_message = 21;
+  bool open_keyboard = 22;
+  repeated PreservedKey add_preserved_key = 23;
+  repeated string remove_preserved_key = 24;
+  string error = 25;
+}
