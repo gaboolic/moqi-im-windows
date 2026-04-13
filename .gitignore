@@ -50,5 +50,6 @@ build-vs32
 build-vs64
 build-protobuf
 build-*
+build64-*
 
 installer/stage

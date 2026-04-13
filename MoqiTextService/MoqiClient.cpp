@@ -20,7 +20,7 @@
 #include "MoqiClient.h"
 #include "libIME2/src/Utils.h"
 #include "../proto/ProtoFraming.h"
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 #include <algorithm>
 #include <json/json.h>
 
@@ -233,8 +233,10 @@ static std::string uuidToString(const UUID &uuid) {
   if (SUCCEEDED(::StringFromCLSID(uuid, &buf))) {
     result = utf16ToUtf8(buf);
     ::CoTaskMemFree(buf);
-    // convert GUID to lwoer case
-    transform(result.begin(), result.end(), result.begin(), tolower);
+    // convert GUID to lower case
+    std::transform(
+        result.begin(), result.end(), result.begin(),
+        [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
   }
   return result;
 }
@@ -1059,11 +1061,11 @@ wstring Client::getPipeName(const wchar_t *base_name) {
   DWORD len = 0;
   ::GetUserNameW(NULL, &len); // get the required size of the buffer
   if (len <= 0)
-    return false;
+    return wstring();
   // add username to the pipe path so it won't clash with the other users' pipes
   unique_ptr<wchar_t[]> username(new wchar_t[len]);
   if (!::GetUserNameW(username.get(), &len))
-    return false;
+    return wstring();
   pipeName += username.get();
   pipeName += L"\\MoqiIM\\";
   pipeName += base_name;

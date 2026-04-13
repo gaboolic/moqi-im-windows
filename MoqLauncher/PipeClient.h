@@ -24,7 +24,7 @@
 #include <memory>
 #include <cstdint>
 #include "BackendServer.h"
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 #include "../proto/ProtoFraming.h"
 
 #include <spdlog/spdlog.h>

@@ -40,7 +40,7 @@
 #include "PipeClient.h"
 #include "PipeServer.h"
 #include "../proto/ProtoFraming.h"
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 
 using namespace std;
 

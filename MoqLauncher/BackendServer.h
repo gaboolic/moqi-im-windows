@@ -35,7 +35,7 @@
 #include <spdlog/spdlog.h>
 
 #include "UvPipe.h"
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 #include "../proto/ProtoFraming.h"
 
 namespace Moqi {

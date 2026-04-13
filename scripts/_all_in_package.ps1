@@ -15,6 +15,9 @@
 .PARAMETER Generator
   CMake generator for moqi-im-windows (default: Visual Studio 17 2022).
 
+.PARAMETER ProtobufRoot
+  Optional local protobuf/protoc install root forwarded to scripts\build.ps1.
+
 .PARAMETER ProtobufSourceDir
   Optional local protobuf source tree forwarded to scripts\build.ps1.
 #>
@@ -23,6 +26,7 @@ param(
     [string] $MoqiImeRoot = "",
     [string] $Configuration = "Release",
     [string] $Generator = "Visual Studio 17 2022",
+    [string] $ProtobufRoot = "",
     [string] $ProtobufSourceDir = ""
 )
 
@@ -64,15 +68,32 @@ $windowsBuildScript = Join-Path $RepoRoot "scripts\build.ps1"
 $windowsInstallScript = Join-Path $RepoRoot "scripts\install.ps1"
 $moqiImeRuntimeDir = Join-Path $MoqiImeRoot "scripts\build\moqi-ime"
 
+if (-not $ProtobufRoot) {
+    $candidatePaths = @()
+    $defaultRoot = "D:\a_dev\protoc-33.5-win64"
+    if (Test-Path -LiteralPath $defaultRoot) {
+        $candidatePaths += $defaultRoot
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:MOQI_PROTOBUF_ROOT)) {
+        $candidatePaths += $env:MOQI_PROTOBUF_ROOT
+    }
+
+    foreach ($candidate in $candidatePaths) {
+        if (Test-Path -LiteralPath (Join-Path $candidate "bin\protoc.exe")) {
+            $ProtobufRoot = [System.IO.Path]::GetFullPath($candidate)
+            break
+        }
+    }
+}
+
 if (-not $ProtobufSourceDir) {
-    $candidatePaths = @(
-        (Join-Path $RepoRoot "third_party\protobuf")
-    )
+    $candidatePaths = @()
     if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
         $cacheRoot = Join-Path $env:USERPROFILE ".cache\moqi-protobuf"
         $candidatePaths += @(
-            (Join-Path $cacheRoot "protobuf-29.5"),
-            (Join-Path $cacheRoot "protobuf-34.1")
+            (Join-Path $cacheRoot "protobuf-33.5"),
+            (Join-Path $cacheRoot "protobuf-34.1"),
+            (Join-Path $cacheRoot "protobuf-29.5")
         )
     }
 
@@ -86,6 +107,9 @@ if (-not $ProtobufSourceDir) {
 
 if ($ProtobufSourceDir) {
     Write-Host "[INFO] Using local protobuf source: $ProtobufSourceDir"
+}
+if ($ProtobufRoot) {
+    Write-Host "[INFO] Using local protobuf root: $ProtobufRoot"
 }
 
 foreach ($path in @($moqiImeBuildScript, $windowsBuildScript, $windowsInstallScript)) {
@@ -117,6 +141,9 @@ Write-Host "== Step 2/3: Build moqi-im-windows binaries =="
 )
 if ($ProtobufSourceDir) {
     $windowsBuildArgs += @("-ProtobufSourceDir", "`"$ProtobufSourceDir`"")
+}
+if ($ProtobufRoot) {
+    $windowsBuildArgs += @("-ProtobufRoot", "`"$ProtobufRoot`"")
 }
 Invoke-Step -FilePath "powershell.exe" -ArgumentList $windowsBuildArgs -WorkingDirectory $RepoRoot
 

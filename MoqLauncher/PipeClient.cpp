@@ -21,7 +21,7 @@
 #include "PipeServer.h"
 #include "Utils.h"
 #include "BackendServer.h"
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 #include "../proto/ProtoFraming.h"
 
 using namespace std;

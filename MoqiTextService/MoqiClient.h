@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <string>
 #include <json/json.h>
-#include "../proto/moqi.pb.h"
+#include "proto/moqi.pb.h"
 
 namespace Moqi {
 
