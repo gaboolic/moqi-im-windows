@@ -43,5 +43,7 @@ build
 build_*
 build64
 build64_*
+build-vs32
+build-vs64
 
 installer/stage

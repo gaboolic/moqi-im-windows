@@ -175,6 +175,9 @@ public:
 	}
 
 	bool effectiveInlinePreedit() const {
+		if (autoInlinePreeditDisabled_) {
+			return false;
+		}
 		return effectiveUiLess() || inlinePreedit_;
 	}
 
@@ -182,12 +185,16 @@ public:
 		return !effectiveInlinePreedit();
 	}
 
+	bool tsfCandidateUiEnabled() const {
+		return !autoDisableTsfCandidateUi_;
+	}
+
 	virtual bool inlinePreeditEnabledForComposition() const override {
 		return effectiveInlinePreedit();
 	}
 
 	virtual bool shouldUseDummyCompositionAnchor() const override {
-		return effectiveExternalPreedit() && autoDummyAnchorCompat_;
+		return !effectiveUiLess() && autoDummyAnchorCompat_;
 	}
 
 	void setInlinePreedit(bool inlinePreedit) {
@@ -251,6 +258,8 @@ private:
 	bool manualUiLessOverride_;
 	bool autoUiLessOverride_;
 	bool autoDummyAnchorCompat_;
+	bool autoInlinePreeditDisabled_;
+	bool autoDisableTsfCandidateUi_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
 	std::vector<std::wstring> candidates_; // current candidate list

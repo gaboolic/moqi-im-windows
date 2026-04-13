@@ -6,21 +6,130 @@
 #include <ShlObj.h>
 #include <Shlwapi.h> // for PathIsRelative
 #include <VersionHelpers.h>  // Provided by Windows SDK >= 8.1
+#include <strsafe.h>
 
 #include <json/json.h>
 #include "../libIME2/src/Utils.h"
 
+namespace {
+
+bool endsWithCaseInsensitive(const std::wstring& value, const wchar_t* suffix) {
+	if (!suffix) {
+		return false;
+	}
+	const size_t suffixLen = wcslen(suffix);
+	if (value.length() < suffixLen) {
+		return false;
+	}
+	const wchar_t* valueSuffix = value.c_str() + value.length() - suffixLen;
+	return _wcsicmp(valueSuffix, suffix) == 0;
+}
+
+void appendDllMainLog(const wchar_t* line) {
+	wchar_t localAppData[MAX_PATH] = {};
+	DWORD localAppDataLen = ::GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, _countof(localAppData));
+	if (localAppDataLen == 0 || localAppDataLen >= _countof(localAppData)) {
+		return;
+	}
+
+	wchar_t moqiDir[MAX_PATH] = {};
+	if (FAILED(StringCchPrintfW(moqiDir, _countof(moqiDir), L"%s\\MoqiIM", localAppData))) {
+		return;
+	}
+	::CreateDirectoryW(moqiDir, nullptr);
+
+	wchar_t logDir[MAX_PATH] = {};
+	if (FAILED(StringCchPrintfW(logDir, _countof(logDir), L"%s\\Log", moqiDir))) {
+		return;
+	}
+	::CreateDirectoryW(logDir, nullptr);
+
+	wchar_t logPath[MAX_PATH] = {};
+	if (FAILED(StringCchPrintfW(logPath, _countof(logPath), L"%s\\tsf-dllmain.log", logDir))) {
+		return;
+	}
+
+	HANDLE file = ::CreateFileW(
+		logPath,
+		FILE_APPEND_DATA,
+		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		nullptr,
+		OPEN_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL,
+		nullptr);
+	if (file == INVALID_HANDLE_VALUE) {
+		return;
+	}
+
+	DWORD bytesWritten = 0;
+	::WriteFile(file, line, static_cast<DWORD>(wcslen(line) * sizeof(wchar_t)), &bytesWritten, nullptr);
+	static const wchar_t newline[] = L"\r\n";
+	::WriteFile(file, newline, static_cast<DWORD>((_countof(newline) - 1) * sizeof(wchar_t)), &bytesWritten, nullptr);
+	::CloseHandle(file);
+}
+
+const wchar_t* processBaseName(const wchar_t* path) {
+	if (!path || !*path) {
+		return L"";
+	}
+	const wchar_t* slash = wcsrchr(path, L'\\');
+	const wchar_t* altSlash = wcsrchr(path, L'/');
+	const wchar_t* base = slash;
+	if (!base || (altSlash && altSlash > base)) {
+		base = altSlash;
+	}
+	return base ? base + 1 : path;
+}
+
+void logDllMainEvent(const wchar_t* phase, HMODULE module, LPVOID reserved) {
+	SYSTEMTIME st{};
+	::GetLocalTime(&st);
+
+	wchar_t exePath[MAX_PATH] = {};
+	::GetModuleFileNameW(nullptr, exePath, _countof(exePath));
+
+	wchar_t dllPath[MAX_PATH] = {};
+	::GetModuleFileNameW(module, dllPath, _countof(dllPath));
+
+	wchar_t line[1024] = {};
+	if (SUCCEEDED(StringCchPrintfW(
+		line,
+		_countof(line),
+		L"[%04u-%02u-%02u %02u:%02u:%02u.%03u][pid=%lu][tid=%lu] [%s] exe=%s exe_path=%s dll=%s terminating=%s",
+		st.wYear,
+		st.wMonth,
+		st.wDay,
+		st.wHour,
+		st.wMinute,
+		st.wSecond,
+		st.wMilliseconds,
+		::GetCurrentProcessId(),
+		::GetCurrentThreadId(),
+		phase ? phase : L"unknown",
+		processBaseName(exePath),
+		exePath,
+		dllPath,
+		reserved ? L"true" : L"false"))) {
+		appendDllMainLog(line);
+		::OutputDebugStringW(line);
+		::OutputDebugStringW(L"\n");
+	}
+}
+
+}
 
 Moqi::ImeModule* g_imeModule = NULL;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
 	switch (ul_reason_for_call) {
 	case DLL_PROCESS_ATTACH:
+		logDllMainEvent(L"process_attach", hModule, lpReserved);
 		::DisableThreadLibraryCalls(hModule); // disable DllMain calls due to new thread creation
 		//::MessageBox(0, L"X!", 0, 0);
 		g_imeModule = new Moqi::ImeModule(hModule);
 		break;
 	case DLL_PROCESS_DETACH:
+		logDllMainEvent(L"process_detach", hModule, lpReserved);
 		if(g_imeModule) {
 			g_imeModule->Release();
 			g_imeModule = NULL;
@@ -42,7 +151,7 @@ STDAPI DllUnregisterServer(void) {
 	return g_imeModule->unregisterServer();
 }
 
-static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::string& guid) {
+static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::string& guid, int defaultIconIndex) {
 	// load the json file to get the info of input method
 	std::ifstream fp(file, std::ifstream::binary);
 	if(fp) {
@@ -64,13 +173,15 @@ static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::s
 				iconFile = file.substr(0, p + 1) + iconFile;
 			}
 		}
+		int iconIndex = endsWithCaseInsensitive(iconFile, L".ico") ? 0 : defaultIconIndex;
 		// ::MessageBox(0, iconFile.c_str(), 0, 0);
 		Ime::LangProfileInfo langProfile = {
 			name,
 			guid,
 			locale,
 			fallbackLocale,
-			iconFile
+			iconFile,
+			iconIndex
 		};
 		return langProfile;
 	}
@@ -106,7 +217,10 @@ STDAPI DllRegisterServer(void) {
 						if (fileAttrib != INVALID_FILE_ATTRIBUTES) {
 							// load the json file to get the info of input method
 							std::string guid;
-							langProfiles.push_back(std::move(langProfileFromJson(imejson, guid)));
+							Ime::LangProfileInfo langProfile = langProfileFromJson(imejson, guid, iconIndex);
+							if (!langProfile.name.empty()) {
+								langProfiles.push_back(std::move(langProfile));
+							}
 						}
 					}
 				}
