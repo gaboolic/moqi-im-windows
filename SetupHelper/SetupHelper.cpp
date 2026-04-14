@@ -30,8 +30,79 @@ struct Options {
   std::wstring app_dir;
 };
 
-std::wstring Quote(const std::wstring& value) {
-  return L"\"" + value + L"\"";
+bool NeedsCommandLineQuoting(const std::wstring& value) {
+  if (value.empty()) {
+    return true;
+  }
+  for (const wchar_t ch : value) {
+    if (ch == L' ' || ch == L'\t' || ch == L'"') {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::wstring QuoteCommandLineArgument(const std::wstring& value) {
+  if (!NeedsCommandLineQuoting(value)) {
+    return value;
+  }
+
+  std::wstring quoted;
+  quoted.push_back(L'"');
+  size_t backslash_count = 0;
+  for (const wchar_t ch : value) {
+    if (ch == L'\\') {
+      ++backslash_count;
+      continue;
+    }
+
+    if (ch == L'"') {
+      quoted.append(backslash_count * 2 + 1, L'\\');
+      quoted.push_back(L'"');
+      backslash_count = 0;
+      continue;
+    }
+
+    quoted.append(backslash_count, L'\\');
+    backslash_count = 0;
+    quoted.push_back(ch);
+  }
+
+  quoted.append(backslash_count * 2, L'\\');
+  quoted.push_back(L'"');
+  return quoted;
+}
+
+std::wstring FormatWindowsErrorMessage(const DWORD error_code) {
+  if (error_code == 0) {
+    return L"Win32 error 0";
+  }
+
+  LPWSTR buffer = nullptr;
+  const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                      FORMAT_MESSAGE_FROM_SYSTEM |
+                      FORMAT_MESSAGE_IGNORE_INSERTS;
+  const DWORD length = FormatMessageW(flags, nullptr, error_code, 0,
+                                      reinterpret_cast<LPWSTR>(&buffer), 0,
+                                      nullptr);
+  std::wstring message = L"Win32 error " + std::to_wstring(error_code);
+  if (length > 0 && buffer != nullptr) {
+    DWORD trimmed_length = length;
+    while (trimmed_length > 0 &&
+           (buffer[trimmed_length - 1] == L'\r' ||
+            buffer[trimmed_length - 1] == L'\n')) {
+      buffer[trimmed_length - 1] = L'\0';
+      --trimmed_length;
+    }
+    if (*buffer != L'\0') {
+      message += L": ";
+      message += buffer;
+    }
+  }
+  if (buffer != nullptr) {
+    LocalFree(buffer);
+  }
+  return message;
 }
 
 std::wstring GetModulePath() {
@@ -62,7 +133,7 @@ std::wstring JoinArguments(const std::vector<std::wstring>& args,
     if (!result.empty()) {
       result += L' ';
     }
-    result += Quote(args[i]);
+    result += QuoteCommandLineArgument(args[i]);
   }
   return result;
 }
@@ -203,7 +274,11 @@ std::wstring NormalizePathForPendingOperation(const std::wstring& path) {
 bool RunProcess(const std::wstring& application_path,
                 std::wstring command,
                 const std::wstring& working_dir,
-                DWORD* exit_code) {
+                DWORD* exit_code,
+                DWORD* error_code = nullptr) {
+  if (error_code != nullptr) {
+    *error_code = 0;
+  }
   STARTUPINFOW startup_info = {};
   startup_info.cb = sizeof(startup_info);
   startup_info.dwFlags = STARTF_USESHOWWINDOW;
@@ -216,6 +291,9 @@ bool RunProcess(const std::wstring& application_path,
                      working_dir.empty() ? nullptr : working_dir.c_str(),
                      &startup_info, &process_info);
   if (!created) {
+    if (error_code != nullptr) {
+      *error_code = GetLastError();
+    }
     return false;
   }
 
@@ -228,6 +306,9 @@ bool RunProcess(const std::wstring& application_path,
   if (exit_code != nullptr) {
     *exit_code = got_exit_code ? process_exit_code : static_cast<DWORD>(-1);
   }
+  if (!got_exit_code && error_code != nullptr) {
+    *error_code = GetLastError();
+  }
   return got_exit_code == TRUE;
 }
 
@@ -239,11 +320,11 @@ bool RunRegsvr(const fs::path& regsvr_path,
     return true;
   }
 
-  std::wstring command = Quote(regsvr_path.wstring());
+  std::wstring command = QuoteCommandLineArgument(regsvr_path.wstring());
   if (unregister) {
     command += L" /u";
   }
-  command += L" /s " + Quote(dll_path_for_process.wstring());
+  command += L" /s " + QuoteCommandLineArgument(dll_path_for_process.wstring());
 
   std::wstring mutable_command = command;
   std::wstring working_dir = dll_path_for_process.parent_path().wstring();
@@ -347,8 +428,9 @@ void CleanupStaleOldFiles(const fs::path& destination) {
 bool DeleteReregisterTask() {
   const fs::path schtasks =
       fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
-  std::wstring command = Quote(schtasks.wstring()) + L" /Delete /TN " +
-                         Quote(kReregisterTaskName) + L" /F";
+  std::wstring command = QuoteCommandLineArgument(schtasks.wstring()) +
+                         L" /Delete /TN " +
+                         QuoteCommandLineArgument(kReregisterTaskName) + L" /F";
   DWORD exit_code = 0;
   if (!RunProcess(schtasks.wstring(), command, GetModuleDirectory(), &exit_code)) {
     return false;
@@ -356,19 +438,32 @@ bool DeleteReregisterTask() {
   return exit_code == 0 || exit_code == 1;
 }
 
-bool ScheduleReregisterTask(const Options& options) {
+bool ScheduleReregisterTask(const Options& options, std::wstring& error) {
   const fs::path schtasks =
       fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
   const std::wstring task_command =
-      Quote(GetModulePath()) + L" /r /s --appdir " + Quote(options.app_dir);
-  std::wstring command = Quote(schtasks.wstring()) + L" /Create /TN " +
-                         Quote(kReregisterTaskName) +
+      QuoteCommandLineArgument(GetModulePath()) + L" /r /s --appdir " +
+      QuoteCommandLineArgument(options.app_dir);
+  std::wstring command = QuoteCommandLineArgument(schtasks.wstring()) +
+                         L" /Create /TN " +
+                         QuoteCommandLineArgument(kReregisterTaskName) +
                          L" /SC ONSTART /RU SYSTEM /RL HIGHEST /TR " +
-                         Quote(task_command) + L" /F";
+                         QuoteCommandLineArgument(task_command) + L" /F";
   DWORD exit_code = 0;
-  return RunProcess(schtasks.wstring(), command, GetModuleDirectory(),
-                    &exit_code) &&
-         exit_code == 0;
+  DWORD error_code = 0;
+  if (!RunProcess(schtasks.wstring(), command, GetModuleDirectory(), &exit_code,
+                  &error_code)) {
+    error = L"Failed to launch schtasks.exe (" +
+            FormatWindowsErrorMessage(error_code) + L").";
+    return false;
+  }
+  if (exit_code != 0) {
+    error = L"Failed to schedule TSF re-registration after reboot "
+            L"(schtasks exit code " +
+            std::to_wstring(exit_code) + L").";
+    return false;
+  }
+  return true;
 }
 
 bool DeleteFileWithFallback(const fs::path& path, bool& reboot_required) {
@@ -467,10 +562,9 @@ int RunInstall(const Options& options) {
   }
 
   if (reboot_required) {
-    if (!ScheduleReregisterTask(options)) {
-      return ShowFailureAndReturn(
-          L"Failed to schedule TSF re-registration after reboot.",
-          options.silent);
+    std::wstring schedule_error;
+    if (!ScheduleReregisterTask(options, schedule_error)) {
+      return ShowFailureAndReturn(schedule_error, options.silent);
     }
     return kExitRestartRequired;
   }

@@ -45,6 +45,11 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 }
 ```
 
+## 功能演示
+![菜单](others/imgs/caidan.png)
+![菜单2](others/imgs/caidan2.png)
+![输入1](others/imgs/input-zise.png)
+
 ## 运行架构
 
 ```
