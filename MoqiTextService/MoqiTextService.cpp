@@ -606,6 +606,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	if (!candidateWindow_) {
 		return;
 	}
+	candidateWindow_->syncOwner(session);
 	candidateWindow_->clear();
 
 	// FIXME: is this the right place to do it?
@@ -671,6 +672,7 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
         return;
     }
     if (candidateWindow_) {
+        candidateWindow_->syncOwner(session);
         RECT textRect;
         // get the position of composition area from TSF
         if (inputRect(session, &textRect)) {
@@ -718,6 +720,7 @@ void TextService::showCandidates(Ime::EditSession* session) {
 	// Please see Ime::CandidateWindow::CandidateWindow() for an example.
 	createCandidateWindow(session);
 	if (candidateWindow_) {
+		candidateWindow_->syncOwner(session);
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
 	}
 	showingCandidates_ = true;

@@ -59,6 +59,7 @@ public:
     void setHighlightColor(COLORREF color);
     void setTextColor(COLORREF color);
     void setHighlightTextColor(COLORREF color);
+    void syncOwner(Ime::EditSession* session);
     void recalculateSize() override;
 
 protected:

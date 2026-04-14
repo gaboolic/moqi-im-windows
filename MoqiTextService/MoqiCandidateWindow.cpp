@@ -94,6 +94,26 @@ void appendCandidateWindowLog(const std::wstring& message) {
     stream << formatCandidateWindowLogLine(message) << L"\n";
 }
 
+HWND resolveCandidateOwnerWindow(Ime::EditSession* session) {
+    HWND hwnd = nullptr;
+    if (session != nullptr) {
+        if (ITfContext* context = session->context()) {
+            ITfContextView* view = nullptr;
+            if (SUCCEEDED(context->GetActiveView(&view)) && view != nullptr) {
+                view->GetWnd(&hwnd);
+                view->Release();
+            }
+        }
+    }
+    if (hwnd == nullptr) {
+        hwnd = ::GetFocus();
+    }
+    if (hwnd == nullptr) {
+        hwnd = ::GetForegroundWindow();
+    }
+    return hwnd;
+}
+
 } // namespace
 
 namespace Moqi {
@@ -127,7 +147,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       commentFont_(nullptr) {
     margin_ = 0;
 
-    HWND parent = service->compositionWindow(session);
+    HWND parent = resolveCandidateOwnerWindow(session);
     create(parent, WS_POPUP | WS_CLIPCHILDREN,
            WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE);
 
@@ -348,6 +368,31 @@ void CandidateWindow::setHighlightTextColor(COLORREF color) {
             ::InvalidateRect(hwnd_, NULL, TRUE);
         }
     }
+}
+
+void CandidateWindow::syncOwner(Ime::EditSession* session) {
+    if (!hwnd_) {
+        return;
+    }
+
+    HWND owner = resolveCandidateOwnerWindow(session);
+    if (owner == nullptr) {
+        return;
+    }
+
+    HWND currentOwner =
+        reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd_, GWLP_HWNDPARENT));
+    if (currentOwner == owner) {
+        return;
+    }
+
+    ::SetWindowLongPtr(hwnd_, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+
+    std::wostringstream log;
+    log << L"[CandidateWindow::syncOwner] hwnd=" << hwnd_
+        << L" old_owner=" << currentOwner
+        << L" new_owner=" << owner;
+    appendCandidateWindowLog(log.str());
 }
 
 void CandidateWindow::recalculateSize() {
