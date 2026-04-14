@@ -132,10 +132,18 @@ begin
     ResultCode := -1;
 end;
 
-function BuildSetupHelperParameters(const Action: string): string;
+function BuildInstallSetupHelperParameters(const Action: string): string;
 begin
   Result := Action;
   if WizardSilent() then
+    Result := Result + ' /s';
+  Result := Result + ' --appdir "' + ExpandConstant('{app}') + '"';
+end;
+
+function BuildUninstallSetupHelperParameters(const Action: string): string;
+begin
+  Result := Action;
+  if UninstallSilent() then
     Result := Result + ' /s';
   Result := Result + ' --appdir "' + ExpandConstant('{app}') + '"';
 end;
@@ -157,7 +165,7 @@ begin
 
   if CurStep = ssPostInstall then
   begin
-    if not RunSetupHelper(BuildSetupHelperParameters('/i'), ResultCode) then
+    if not RunSetupHelper(BuildInstallSetupHelperParameters('/i'), ResultCode) then
       HandleSetupHelperResult('SetupHelper install', ResultCode);
 
     if ResultCode = SetupHelperExitSuccess then
@@ -200,7 +208,7 @@ begin
   if CurUninstallStep = usUninstall then
   begin
     StopMoqiProcesses;
-    if not RunSetupHelper(BuildSetupHelperParameters('/u'), ResultCode) then
+    if not RunSetupHelper(BuildUninstallSetupHelperParameters('/u'), ResultCode) then
       HandleSetupHelperResult('SetupHelper uninstall', ResultCode);
     if ResultCode = SetupHelperExitRestartRequired then
       HelperUninstallNeedsRestart := True

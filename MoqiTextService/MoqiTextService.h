@@ -111,6 +111,7 @@ public:
 	void setCandFontName(std::wstring candFontName) {
 		candFontName_ = candFontName;
 		updateFont_ = true;
+		applyCandidateAppearanceNow();
 	}
 
 	int candFontSize() {
@@ -120,6 +121,7 @@ public:
 	void setCandFontSize(int candFontSize) {
 		candFontSize_ = candFontSize;
 		updateFont_ = true;
+		applyCandidateAppearanceNow();
 	}
 
 	int candCommentFontSize() const {
@@ -129,6 +131,7 @@ public:
 	void setCandCommentFontSize(int candCommentFontSize) {
 		candCommentFontSize_ = candCommentFontSize;
 		updateFont_ = true;
+		applyCandidateAppearanceNow();
 	}
 
 	COLORREF candBackgroundColor() const {
@@ -257,6 +260,7 @@ private:
 	void destroyCandidateWindow();
 	int candFontHeight();
 	int candCommentFontHeight();
+	void applyCandidateAppearanceNow();
 	void applyUiLessOverrideState();
 
 	void closeClient();

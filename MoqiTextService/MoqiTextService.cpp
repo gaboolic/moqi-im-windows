@@ -609,31 +609,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	candidateWindow_->syncOwner(session);
 	candidateWindow_->clear();
 
-	// FIXME: is this the right place to do it?
-	if (updateFont_) {
-		// font for candidate and mesasge windows
-		LOGFONT lf;
-		GetObject(font_, sizeof(lf), &lf);
-		::DeleteObject(font_); // delete old font
-		if (commentFont_) {
-			::DeleteObject(commentFont_);
-			commentFont_ = nullptr;
-		}
-		lf.lfHeight = candFontHeight(); // apply the new size
-		if (!candFontName_.empty()) { // apply new font name
-			wcsncpy(lf.lfFaceName, candFontName_.c_str(), 31);
-		}
-		font_ = CreateFontIndirect(&lf); // create new font
-		lf.lfHeight = candCommentFontHeight();
-		commentFont_ = CreateFontIndirect(&lf);
-		// if (messageWindow_)
-		//	messageWindow_->setFont(font_);
-		if (candidateWindow_) {
-			candidateWindow_->setFont(font_);
-			candidateWindow_->setCommentFont(commentFont_);
-		}
-		updateFont_ = false;
-	}
+	applyCandidateAppearanceNow();
 
 	candidateWindow_->setUseCursor(candUseCursor_);
 	candidateWindow_->setCandPerRow(candPerRow_);
@@ -831,6 +807,49 @@ int TextService::candCommentFontHeight() {
 		ReleaseDC(NULL, hdc);
 	}
 	return candFontHeight_;
+}
+
+void TextService::applyCandidateAppearanceNow() {
+	if (!updateFont_) {
+		return;
+	}
+
+	HFONT baseFont = font_;
+	if (!baseFont) {
+		baseFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+	}
+
+	LOGFONT lf{};
+	GetObject(baseFont, sizeof(lf), &lf);
+	if (font_) {
+		::DeleteObject(font_);
+		font_ = nullptr;
+	}
+	if (commentFont_) {
+		::DeleteObject(commentFont_);
+		commentFont_ = nullptr;
+	}
+
+	lf.lfHeight = candFontHeight();
+	lf.lfWeight = FW_NORMAL;
+	if (!candFontName_.empty()) {
+		wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), candFontName_.c_str(), _TRUNCATE);
+	}
+	font_ = CreateFontIndirect(&lf);
+
+	lf.lfHeight = candCommentFontHeight();
+	commentFont_ = CreateFontIndirect(&lf);
+	updateFont_ = false;
+
+	if (messageWindow_) {
+		messageWindow_->setFont(font_);
+	}
+	if (candidateWindow_) {
+		candidateWindow_->setFont(font_);
+		candidateWindow_->setCommentFont(commentFont_);
+		candidateWindow_->recalculateSize();
+		candidateWindow_->refresh();
+	}
 }
 
 void TextService::applyUiLessOverrideState() {
