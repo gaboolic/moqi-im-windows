@@ -129,3 +129,15 @@ Windows 侧的职责主要是：
 
 - [Microsoft TSF 文档](https://docs.microsoft.com/en-us/windows/win32/tsf/text-services-framework)
 - [ITfTextInputProcessor 接口](https://docs.microsoft.com/en-us/windows/win32/api/msctf/nn-msctf-itftextinputprocessor)
+
+## 友情链接
+
+白霜拼音 <https://github.com/gaboolic/rime-frost>
+
+墨奇音形 <https://github.com/gaboolic/rime-shuangpin-fuzhuma>
+
+墨奇五笔整句 <https://github.com/gaboolic/rime-wubi-sentence>
+
+### Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=gaboolic/moqi-im-windows&type=Date)](https://star-history.com/#gaboolic/moqi-im-windows&Date)
