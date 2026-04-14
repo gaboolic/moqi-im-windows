@@ -5,6 +5,7 @@
 #include "MoqiCandidateWindow.h"
 
 #include <LibIME2/src/DebugLogConfig.h>
+#include <LibIME2/src/DebugLogFile.h>
 #include <LibIME2/src/DrawUtils.h>
 #include <LibIME2/src/EditSession.h>
 #include <LibIME2/src/TextService.h>
@@ -25,6 +26,50 @@ constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
 constexpr COLORREF kSelectedText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedAuxText = RGB(0, 0, 0);
 
+std::wstring currentProcessPath() {
+    std::wstring buffer(MAX_PATH, L'\0');
+    DWORD len = ::GetModuleFileNameW(nullptr, &buffer[0], static_cast<DWORD>(buffer.size()));
+    if (len == 0) {
+        return L"";
+    }
+    while (len >= buffer.size() - 1) {
+        buffer.resize(buffer.size() * 2);
+        len = ::GetModuleFileNameW(nullptr, &buffer[0], static_cast<DWORD>(buffer.size()));
+        if (len == 0) {
+            return L"";
+        }
+    }
+    buffer.resize(len);
+    return buffer;
+}
+
+std::wstring processBaseName(const std::wstring& imagePath) {
+    const size_t pos = imagePath.find_last_of(L"\\/");
+    return pos == std::wstring::npos ? imagePath : imagePath.substr(pos + 1);
+}
+
+std::wstring timestampNow() {
+    SYSTEMTIME st{};
+    ::GetLocalTime(&st);
+    wchar_t buffer[64] = {0};
+    _snwprintf_s(buffer, _countof(buffer), _TRUNCATE,
+        L"%04u-%02u-%02u %02u:%02u:%02u.%03u",
+        st.wYear, st.wMonth, st.wDay,
+        st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    return buffer;
+}
+
+std::wstring formatCandidateWindowLogLine(const std::wstring& message) {
+    const std::wstring exeName = processBaseName(currentProcessPath());
+    std::wostringstream line;
+    line << L"[" << timestampNow() << L"]"
+         << L"[pid=" << ::GetCurrentProcessId() << L"]"
+         << L"[tid=" << ::GetCurrentThreadId() << L"]"
+         << L"[exe=" << (exeName.empty() ? L"<unknown>" : exeName) << L"] "
+         << message;
+    return line.str();
+}
+
 void appendCandidateWindowLog(const std::wstring& message) {
     if (!Ime::isDebugLoggingEnabled()) {
         return;
@@ -36,15 +81,17 @@ void appendCandidateWindowLog(const std::wstring& message) {
     }
 
     std::wstring logDir = std::wstring(localAppData) + L"\\MoqiIM\\Log";
-    ::CreateDirectoryW((std::wstring(localAppData) + L"\\MoqiIM").c_str(), nullptr);
-    ::CreateDirectoryW(logDir.c_str(), nullptr);
-    std::wstring logPath = logDir + L"\\candidate-window.log";
+    std::wstring logPath = Ime::DebugLogFile::prepareDailyLogFilePath(
+        logDir, L"candidate-window.log");
+    if (logPath.empty()) {
+        return;
+    }
 
     std::wofstream stream(logPath, std::ios::app);
     if (!stream.is_open()) {
         return;
     }
-    stream << message << L"\n";
+    stream << formatCandidateWindowLogLine(message) << L"\n";
 }
 
 } // namespace

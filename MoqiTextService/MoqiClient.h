@@ -79,6 +79,7 @@ public:
 private:
     static std::wstring getPipeName(const wchar_t* base_name);
     HANDLE connectPipe(const wchar_t* pipeName, int timeoutMs);
+    bool ensureLauncherRunning();
 
     moqi::protocol::ClientRequest createRpcRequest(const char* methodName);
 	bool callRpcMethod(moqi::protocol::ClientRequest& request, Json::Value& response);
@@ -123,6 +124,7 @@ private:
 	unsigned int nextSeqNum_;
 	bool isActivated_;
     bool shouldWaitConnection_;
+    bool launcherStartAttempted_;
 	HWND asyncPollTimerWindow_;
 	UINT_PTR asyncPollTimerId_;
 	std::deque<Json::Value> pendingAsyncResponses_;

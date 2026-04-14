@@ -45,6 +45,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include "../libIME2/src/DebugLogFile.h"
 #include "BackendServer.h"
 #include "resource.h"
 #include "Utils.h"
@@ -85,7 +86,7 @@ static void copyNotifyText(wchar_t *dest, size_t destCount, const std::wstring &
 
 PipeServer::PipeServer()
     : quitExistingLauncher_(false), singleInstanceMutex_(nullptr),
-      logLevel_{spdlog::level::warn} {
+      logLevel_{spdlog::level::err} {
 
   // this can only be assigned once
   assert(singleton_ == nullptr);
@@ -111,9 +112,9 @@ void PipeServer::initDataDir() {
 
 void PipeServer::initLogger() {
   auto logDirPath = dataDirPath_ + L"\\Log";
-  makeDirs(logDirPath);
+  auto logFile = Ime::DebugLogFile::prepareDailyLogFilePath(
+      logDirPath, L"MoqiLauncher.log");
 
-  auto logFile = logDirPath + L"\\MoqiLauncher.log";
   try {
     logger_ = spdlog::rotating_logger_mt("MoqiLauncher", logFile,
                                          MAX_LOG_FILE_SIZE, NUM_LOG_FILES);
@@ -131,8 +132,9 @@ void PipeServer::loadConfig() {
   auto configFile = dataDirPath_ + CONFIG_FILE_REL_PATH;
   Json::Value config;
   if (loadJsonFile(configFile, config)) {
-    auto levelName = config["logLevel"].asString();
-    logLevel_ = spdlog::level::from_str(levelName);
+    auto loadedLevel = spdlog::level::from_str(config["logLevel"].asString());
+    logLevel_ = loadedLevel <= spdlog::level::debug ? spdlog::level::debug
+                                                    : spdlog::level::err;
   }
 }
 
@@ -470,8 +472,8 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
       asyncTerminateAllBackends();
       return 0;
     case ID_ENABLE_DEBUG_LOG:
-      // toggle between log_level: warning <--> debug
-      logLevel_ = (logLevel_ <= spdlog::level::debug) ? spdlog::level::warn
+      // toggle between log_level: error <--> debug
+      logLevel_ = (logLevel_ <= spdlog::level::debug) ? spdlog::level::err
                                                       : spdlog::level::debug;
       logger_->set_level(logLevel_);
       saveConfig();

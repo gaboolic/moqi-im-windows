@@ -40,24 +40,24 @@ DisableWelcomePage=no
 Name: "chinesesimplified"; MessagesFile: ".\Inno-Setup-Chinese-Simplified-Translation\ChineseSimplified.isl"
 
 [Files]
-Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
 [Run]
-Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Flags: nowait; Check: ShouldLaunchLauncher
+Filename: "{app}\MoqiLauncher.exe"; Flags: nowait; Check: ShouldLaunchLauncher
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "MoqiLauncher"; \
-  ValueData: """{autopf32}\MoqiIM\MoqiLauncher.exe"""; \
+  ValueData: """{app}\MoqiLauncher.exe"""; \
   Flags: uninsdeletevalue
 
 [InstallDelete]
-Type: filesandordirs; Name: "{autopf32}\MoqiIM\moqi-ime"
-Type: filesandordirs; Name: "{autopf32}\MoqiIM\x64"
+Type: filesandordirs; Name: "{app}\moqi-ime"
+Type: filesandordirs; Name: "{app}\x64"
 
 [Code]
 const
@@ -166,7 +166,7 @@ begin
       HelperInstallNeedsRestart := True;
       SuppressibleMsgBox(
         '安装程序已更新应用文件，但 TSF DLL 当前仍被系统占用。' + #13#10#13#10 +
-        '请在安装完成后尽快重启 Windows，然后重新运行安装程序以完成 TSF 注册。',
+        '请在安装完成后尽快重启 Windows。安装器已安排在系统重启后自动完成 TSF 注册。',
         mbInformation, MB_OK, IDOK);
     end;
     if (ResultCode <> SetupHelperExitSuccess) and

@@ -22,6 +22,7 @@
 #include <string>
 #include <algorithm>
 #include <libIME2/src/DebugLogConfig.h>
+#include <libIME2/src/DebugLogFile.h>
 #include <libIME2/src/ComPtr.h>
 #include <libIME2/src/Utils.h>
 #include <libIME2/src/LangBarButton.h>
@@ -39,6 +40,11 @@ namespace Moqi {
 
 namespace {
 
+std::wstring currentProcessPath();
+std::wstring processBaseName(const std::wstring& imagePath);
+std::wstring timestampNow();
+std::wstring formatDebugLogLine(const std::wstring& message);
+
 // {3FCBE4CC-CC03-4BD4-B39F-3B6B0BEA5D90}
 const GUID kToggleUiLessOverrideGuid = {
 	0x3fcbe4cc, 0xcc03, 0x4bd4, { 0xb3, 0x9f, 0x3b, 0x6b, 0x0b, 0xea, 0x5d, 0x90 }
@@ -55,15 +61,17 @@ void appendCandidateWindowLog(const std::wstring& message) {
 	}
 
 	std::wstring logDir = std::wstring(localAppData) + L"\\MoqiIM\\Log";
-	::CreateDirectoryW((std::wstring(localAppData) + L"\\MoqiIM").c_str(), nullptr);
-	::CreateDirectoryW(logDir.c_str(), nullptr);
-	std::wstring logPath = logDir + L"\\candidate-window.log";
+	std::wstring logPath = Ime::DebugLogFile::prepareDailyLogFilePath(
+		logDir, L"candidate-window.log");
+	if (logPath.empty()) {
+		return;
+	}
 
 	std::wofstream stream(logPath, std::ios::app);
 	if (!stream.is_open()) {
 		return;
 	}
-	stream << message << L"\n";
+	stream << formatDebugLogLine(message) << L"\n";
 }
 
 void appendTsfDebugLog(const std::wstring& message) {
@@ -77,9 +85,11 @@ void appendTsfDebugLog(const std::wstring& message) {
 	}
 
 	std::wstring logDir = std::wstring(localAppData) + L"\\MoqiIM\\Log";
-	::CreateDirectoryW((std::wstring(localAppData) + L"\\MoqiIM").c_str(), nullptr);
-	::CreateDirectoryW(logDir.c_str(), nullptr);
-	std::wstring logPath = logDir + L"\\tsf-debug.log";
+	std::wstring logPath = Ime::DebugLogFile::prepareDailyLogFilePath(
+		logDir, L"tsf-debug.log");
+	if (logPath.empty()) {
+		return;
+	}
 
 	std::wofstream stream(logPath, std::ios::app);
 	if (!stream.is_open()) {
@@ -115,6 +125,11 @@ std::wstring currentProcessPath() {
 std::wstring processBaseName(const std::wstring& imagePath) {
 	const size_t pos = imagePath.find_last_of(L"\\/");
 	return pos == std::wstring::npos ? imagePath : imagePath.substr(pos + 1);
+}
+
+std::wstring currentProcessName() {
+	const std::wstring exeName = processBaseName(currentProcessPath());
+	return exeName.empty() ? L"<unknown>" : exeName;
 }
 
 std::wstring processPathForPid(DWORD pid) {
@@ -159,13 +174,21 @@ std::wstring timestampNow() {
 	return buffer;
 }
 
-void logDebug(const std::wstring& message) {
+std::wstring formatDebugLogLine(const std::wstring& message) {
 	std::wostringstream line;
 	line << L"[" << timestampNow() << L"]"
 	     << L"[pid=" << ::GetCurrentProcessId() << L"]"
-	     << L"[tid=" << ::GetCurrentThreadId() << L"] "
+	     << L"[tid=" << ::GetCurrentThreadId() << L"]"
+	     << L"[exe=" << currentProcessName() << L"] "
 	     << message;
-	const std::wstring formatted = line.str();
+	return line.str();
+}
+
+void logDebug(const std::wstring& message) {
+	if (!Ime::isDebugLoggingEnabled()) {
+		return;
+	}
+	const std::wstring formatted = formatDebugLogLine(message);
 	::OutputDebugStringW((formatted + L"\n").c_str());
 	appendTsfDebugLog(formatted);
 }

@@ -25,6 +25,8 @@
 #include <json/json.h>
 
 #include "MoqiTextService.h"
+#include "MoqiImeModule.h"
+#include <Shellapi.h>
 #include <VersionHelpers.h> // Provided by Windows SDK >= 8.1
 #include <Winnls.h> // for IS_HIGH_SURROGATE() macro for checking UTF16 surrogate pairs
 #include <algorithm>
@@ -268,7 +270,8 @@ bool parseHexColor(const std::string &text, COLORREF &result) {
 Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
-      shouldWaitConnection_{true}, asyncPollTimerWindow_(nullptr),
+      shouldWaitConnection_{true}, launcherStartAttempted_{false},
+      asyncPollTimerWindow_(nullptr),
       asyncPollTimerId_(0) {}
 
 Client::~Client(void) {
@@ -1146,6 +1149,31 @@ HANDLE Client::connectPipe(const wchar_t *pipeName, int timeoutMs) {
   return pipe;
 }
 
+bool Client::ensureLauncherRunning() {
+  if (launcherStartAttempted_) {
+    return false;
+  }
+  launcherStartAttempted_ = true;
+
+  auto module =
+      static_cast<Moqi::ImeModule *>(textService_->imeModule().operator->());
+  if (module == nullptr || module->programDir().empty()) {
+    return false;
+  }
+
+  std::wstring launcherPath = module->programDir();
+  launcherPath += L"\\MoqiLauncher.exe";
+  const DWORD attrs = ::GetFileAttributesW(launcherPath.c_str());
+  if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+    return false;
+  }
+
+  HINSTANCE result =
+      ::ShellExecuteW(nullptr, L"open", launcherPath.c_str(), nullptr,
+                      module->programDir().c_str(), SW_SHOWNORMAL);
+  return reinterpret_cast<INT_PTR>(result) > 32;
+}
+
 // Ensure that we're connected to the Moqi input method server
 // If we are already connected, the method simply returns true;
 // otherwise, it tries to establish the connection.
@@ -1155,10 +1183,15 @@ bool Client::waitForRpcConnection() {
   }
 
   wstring serverPipeName = getPipeName(L"Launcher");
-  for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 5;
+  pipe_ = connectPipe(serverPipeName.c_str(), 0);
+  if (pipe_ == INVALID_HANDLE_VALUE) {
+    ensureLauncherRunning();
+  }
+
+  for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 10;
        ++attempt) {
     // try to connect to the server
-    pipe_ = connectPipe(serverPipeName.c_str(), 30000);
+    pipe_ = connectPipe(serverPipeName.c_str(), 3000);
   }
 
   if (pipe_ != INVALID_HANDLE_VALUE) {

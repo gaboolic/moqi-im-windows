@@ -9,6 +9,8 @@
 #include <strsafe.h>
 
 #include <json/json.h>
+#include "../libIME2/src/DebugLogConfig.h"
+#include "../libIME2/src/DebugLogFile.h"
 #include "../libIME2/src/Utils.h"
 
 namespace {
@@ -42,15 +44,14 @@ void appendDllMainLog(const wchar_t* line) {
 	if (FAILED(StringCchPrintfW(logDir, _countof(logDir), L"%s\\Log", moqiDir))) {
 		return;
 	}
-	::CreateDirectoryW(logDir, nullptr);
-
-	wchar_t logPath[MAX_PATH] = {};
-	if (FAILED(StringCchPrintfW(logPath, _countof(logPath), L"%s\\tsf-dllmain.log", logDir))) {
+	const std::wstring preparedLogPath = Ime::DebugLogFile::prepareDailyLogFilePath(
+		logDir, L"tsf-dllmain.log");
+	if (preparedLogPath.empty()) {
 		return;
 	}
 
 	HANDLE file = ::CreateFileW(
-		logPath,
+		preparedLogPath.c_str(),
 		FILE_APPEND_DATA,
 		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 		nullptr,
@@ -82,6 +83,10 @@ const wchar_t* processBaseName(const wchar_t* path) {
 }
 
 void logDllMainEvent(const wchar_t* phase, HMODULE module, LPVOID reserved) {
+	if (!Ime::isDebugLoggingEnabled()) {
+		return;
+	}
+
 	SYSTEMTIME st{};
 	::GetLocalTime(&st);
 

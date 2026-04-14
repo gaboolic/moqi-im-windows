@@ -14,10 +14,13 @@ constexpr int kExitSuccess = 0;
 constexpr int kExitFailure = 1;
 constexpr int kExitRestartRequired = 2;
 constexpr int kExitInvalidArgs = 3;
+constexpr wchar_t kProgramDirEnvVar[] = L"MOQI_PROGRAM_DIR";
+constexpr wchar_t kReregisterTaskName[] = L"MoqiIM-ReRegisterTSF";
 
 enum class Action {
   kHelp,
   kInstall,
+  kReregister,
   kUninstall,
 };
 
@@ -185,6 +188,49 @@ std::wstring GetNativeSystemDirectoryForChildProcess() {
   return (fs::path(GetWindowsDirectoryPath()) / L"System32").wstring();
 }
 
+std::wstring NormalizePathForPendingOperation(const std::wstring& path) {
+  const std::wstring sysnative_prefix =
+      fs::path(GetWindowsDirectoryPath() + L"\\Sysnative").wstring() + L"\\";
+  if (_wcsnicmp(path.c_str(), sysnative_prefix.c_str(),
+                sysnative_prefix.length()) == 0) {
+    return (fs::path(GetWindowsDirectoryPath()) / L"System32" /
+            path.substr(sysnative_prefix.length()))
+        .wstring();
+  }
+  return path;
+}
+
+bool RunProcess(const std::wstring& application_path,
+                std::wstring command,
+                const std::wstring& working_dir,
+                DWORD* exit_code) {
+  STARTUPINFOW startup_info = {};
+  startup_info.cb = sizeof(startup_info);
+  startup_info.dwFlags = STARTF_USESHOWWINDOW;
+  startup_info.wShowWindow = SW_HIDE;
+  PROCESS_INFORMATION process_info = {};
+
+  const BOOL created =
+      CreateProcessW(application_path.c_str(), command.data(), nullptr, nullptr,
+                     FALSE, 0, nullptr,
+                     working_dir.empty() ? nullptr : working_dir.c_str(),
+                     &startup_info, &process_info);
+  if (!created) {
+    return false;
+  }
+
+  WaitForSingleObject(process_info.hProcess, INFINITE);
+  DWORD process_exit_code = 0;
+  const BOOL got_exit_code =
+      GetExitCodeProcess(process_info.hProcess, &process_exit_code);
+  CloseHandle(process_info.hThread);
+  CloseHandle(process_info.hProcess);
+  if (exit_code != nullptr) {
+    *exit_code = got_exit_code ? process_exit_code : static_cast<DWORD>(-1);
+  }
+  return got_exit_code == TRUE;
+}
+
 bool RunRegsvr(const fs::path& regsvr_path,
                const fs::path& dll_path_for_process,
                const fs::path& program_dir,
@@ -199,42 +245,28 @@ bool RunRegsvr(const fs::path& regsvr_path,
   }
   command += L" /s " + Quote(dll_path_for_process.wstring());
 
-  STARTUPINFOW startup_info = {};
-  startup_info.cb = sizeof(startup_info);
-  startup_info.dwFlags = STARTF_USESHOWWINDOW;
-  startup_info.wShowWindow = SW_HIDE;
-  PROCESS_INFORMATION process_info = {};
   std::wstring mutable_command = command;
   std::wstring working_dir = dll_path_for_process.parent_path().wstring();
   std::wstring previous_program_dir;
-  const DWORD previous_len =
-      GetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", nullptr, 0);
+  const DWORD previous_len = GetEnvironmentVariableW(kProgramDirEnvVar, nullptr, 0);
   if (previous_len > 0) {
     previous_program_dir.resize(previous_len - 1);
-    GetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", previous_program_dir.data(),
-                            previous_len);
+    GetEnvironmentVariableW(kProgramDirEnvVar, previous_program_dir.data(), previous_len);
   }
-  SetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", program_dir.c_str());
+  SetEnvironmentVariableW(kProgramDirEnvVar, program_dir.c_str());
 
-  const BOOL created = CreateProcessW(
-      regsvr_path.c_str(), mutable_command.data(), nullptr, nullptr, FALSE, 0,
-      nullptr, working_dir.c_str(), &startup_info, &process_info);
+  DWORD exit_code = 0;
+  const bool ran =
+      RunProcess(regsvr_path.wstring(), mutable_command, working_dir, &exit_code);
   if (previous_len > 0) {
-    SetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", previous_program_dir.c_str());
+    SetEnvironmentVariableW(kProgramDirEnvVar, previous_program_dir.c_str());
   } else {
-    SetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", nullptr);
+    SetEnvironmentVariableW(kProgramDirEnvVar, nullptr);
   }
-  if (!created) {
+  if (!ran) {
     return false;
   }
-
-  WaitForSingleObject(process_info.hProcess, INFINITE);
-  DWORD exit_code = 0;
-  const BOOL got_exit_code =
-      GetExitCodeProcess(process_info.hProcess, &exit_code);
-  CloseHandle(process_info.hThread);
-  CloseHandle(process_info.hProcess);
-  return got_exit_code && exit_code == 0;
+  return exit_code == 0;
 }
 
 fs::path BuildOldPath(const fs::path& destination) {
@@ -278,7 +310,10 @@ bool RenameFileForDeleteOnReboot(const fs::path& path, bool& reboot_required) {
   const fs::path old_path = BuildOldPath(path);
   if (MoveFileExW(path.c_str(), old_path.c_str(), MOVEFILE_REPLACE_EXISTING) ==
       TRUE) {
-    if (MoveFileExW(old_path.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT) ==
+    const std::wstring pending_delete_path =
+        NormalizePathForPendingOperation(old_path.wstring());
+    if (MoveFileExW(pending_delete_path.c_str(), nullptr,
+                    MOVEFILE_DELAY_UNTIL_REBOOT) ==
         TRUE) {
       reboot_required = true;
       return true;
@@ -287,6 +322,53 @@ bool RenameFileForDeleteOnReboot(const fs::path& path, bool& reboot_required) {
     return false;
   }
   return false;
+}
+
+void CleanupStaleOldFiles(const fs::path& destination) {
+  std::error_code ec;
+  const fs::path directory = destination.parent_path();
+  if (!fs::exists(directory, ec)) {
+    return;
+  }
+
+  const std::wstring prefix = destination.filename().wstring() + L".old";
+  for (const auto& entry : fs::directory_iterator(directory, ec)) {
+    if (ec || !entry.is_regular_file(ec)) {
+      continue;
+    }
+    const std::wstring name = entry.path().filename().wstring();
+    if (name.rfind(prefix, 0) == 0) {
+      fs::remove(entry.path(), ec);
+      ec.clear();
+    }
+  }
+}
+
+bool DeleteReregisterTask() {
+  const fs::path schtasks =
+      fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
+  std::wstring command = Quote(schtasks.wstring()) + L" /Delete /TN " +
+                         Quote(kReregisterTaskName) + L" /F";
+  DWORD exit_code = 0;
+  if (!RunProcess(schtasks.wstring(), command, GetModuleDirectory(), &exit_code)) {
+    return false;
+  }
+  return exit_code == 0 || exit_code == 1;
+}
+
+bool ScheduleReregisterTask(const Options& options) {
+  const fs::path schtasks =
+      fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
+  const std::wstring task_command =
+      Quote(GetModulePath()) + L" /r /s --appdir " + Quote(options.app_dir);
+  std::wstring command = Quote(schtasks.wstring()) + L" /Create /TN " +
+                         Quote(kReregisterTaskName) +
+                         L" /SC ONSTART /RU SYSTEM /RL HIGHEST /TR " +
+                         Quote(task_command) + L" /F";
+  DWORD exit_code = 0;
+  return RunProcess(schtasks.wstring(), command, GetModuleDirectory(),
+                    &exit_code) &&
+         exit_code == 0;
 }
 
 bool DeleteFileWithFallback(const fs::path& path, bool& reboot_required) {
@@ -324,6 +406,30 @@ int ShowFailureAndReturn(const std::wstring& message, const bool silent) {
   return kExitFailure;
 }
 
+int RunReregister(const Options& options) {
+  const fs::path app_dir(options.app_dir);
+  const fs::path dest32 = fs::path(GetSyswow64DirectoryPath()) / L"MoqiTextService.dll";
+  const fs::path dest64 = fs::path(GetNativeSystemDirectoryPath()) / L"MoqiTextService.dll";
+  const fs::path dest64_for_regsvr =
+      fs::path(GetNativeSystemDirectoryForChildProcess()) / L"MoqiTextService.dll";
+  const fs::path regsvr32 = fs::path(GetSyswow64DirectoryPath()) / L"regsvr32.exe";
+  const fs::path regsvr64 = fs::path(GetNativeSystemDirectoryPath()) / L"regsvr32.exe";
+
+  CleanupStaleOldFiles(dest32);
+  CleanupStaleOldFiles(dest64);
+
+  if (!RunRegsvr(regsvr32, dest32, app_dir, false)) {
+    return ShowFailureAndReturn(L"Failed to register Win32 TSF DLL.",
+                                options.silent);
+  }
+  if (!RunRegsvr(regsvr64, dest64_for_regsvr, app_dir, false)) {
+    return ShowFailureAndReturn(L"Failed to register x64 TSF DLL.",
+                                options.silent);
+  }
+  DeleteReregisterTask();
+  return kExitSuccess;
+}
+
 int RunInstall(const Options& options) {
   const fs::path app_dir(options.app_dir);
   const fs::path source32 = app_dir / L"MoqiTextService.dll";
@@ -346,6 +452,7 @@ int RunInstall(const Options& options) {
                                 options.silent);
   }
 
+  DeleteReregisterTask();
   RunRegsvr(regsvr32, dest32, app_dir, true);
   RunRegsvr(regsvr64, dest64_for_regsvr, app_dir, true);
 
@@ -360,6 +467,11 @@ int RunInstall(const Options& options) {
   }
 
   if (reboot_required) {
+    if (!ScheduleReregisterTask(options)) {
+      return ShowFailureAndReturn(
+          L"Failed to schedule TSF re-registration after reboot.",
+          options.silent);
+    }
     return kExitRestartRequired;
   }
 
@@ -383,6 +495,7 @@ int RunUninstall(const Options& options) {
   const fs::path regsvr32 = fs::path(GetSyswow64DirectoryPath()) / L"regsvr32.exe";
   const fs::path regsvr64 = fs::path(GetNativeSystemDirectoryPath()) / L"regsvr32.exe";
 
+  DeleteReregisterTask();
   RunRegsvr(regsvr32, dest32, app_dir, true);
   RunRegsvr(regsvr64, dest64_for_regsvr, app_dir, true);
 
@@ -400,8 +513,9 @@ int RunUninstall(const Options& options) {
 
 void ShowUsage() {
   const std::wstring help_text =
-      L"Usage: SetupHelper.exe /i|/u [/s] [--appdir <path>]\n"
+      L"Usage: SetupHelper.exe /i|/r|/u [/s] [--appdir <path>]\n"
       L"  /i       Install or upgrade the TSF DLLs.\n"
+      L"  /r       Register the TSF DLLs after a reboot.\n"
       L"  /u       Uninstall the TSF DLLs.\n"
       L"  /s       Silent mode.\n"
       L"  --appdir Explicit application directory.\n";
@@ -422,6 +536,12 @@ bool ParseOptions(const std::vector<std::wstring>& args,
         return false;
       }
       options.action = Action::kInstall;
+    } else if (arg == L"/r") {
+      if (options.action != Action::kHelp) {
+        error = L"Only one action may be specified.";
+        return false;
+      }
+      options.action = Action::kReregister;
     } else if (arg == L"/u") {
       if (options.action != Action::kHelp) {
         error = L"Only one action may be specified.";
@@ -477,6 +597,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
 
   if (options.action == Action::kInstall) {
     return RunInstall(options);
+  }
+  if (options.action == Action::kReregister) {
+    return RunReregister(options);
   }
   return RunUninstall(options);
 }
