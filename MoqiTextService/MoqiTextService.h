@@ -140,9 +140,6 @@ public:
 
 	void setCandBackgroundColor(COLORREF color) {
 		candBackgroundColor_ = color;
-		if (candidateWindow_) {
-			candidateWindow_->setBackgroundColor(color);
-		}
 	}
 
 	COLORREF candHighlightColor() const {
@@ -151,9 +148,6 @@ public:
 
 	void setCandHighlightColor(COLORREF color) {
 		candHighlightColor_ = color;
-		if (candidateWindow_) {
-			candidateWindow_->setHighlightColor(color);
-		}
 	}
 
 	COLORREF candTextColor() const {
@@ -162,9 +156,6 @@ public:
 
 	void setCandTextColor(COLORREF color) {
 		candTextColor_ = color;
-		if (candidateWindow_) {
-			candidateWindow_->setTextColor(color);
-		}
 	}
 
 	COLORREF candHighlightTextColor() const {
@@ -173,9 +164,6 @@ public:
 
 	void setCandHighlightTextColor(COLORREF color) {
 		candHighlightTextColor_ = color;
-		if (candidateWindow_) {
-			candidateWindow_->setHighlightTextColor(color);
-		}
 	}
 
 	bool inlinePreedit() const {
@@ -261,6 +249,7 @@ private:
 	int candFontHeight();
 	int candCommentFontHeight();
 	void applyCandidateAppearanceNow();
+	void refreshCandidateAppearance();
 	void applyUiLessOverrideState();
 
 	void closeClient();

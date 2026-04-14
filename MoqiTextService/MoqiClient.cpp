@@ -361,6 +361,8 @@ void Client::updateUI(const Json::Value &data) {
       }
     }
   }
+  textService_->applyCandidateAppearanceNow();
+  textService_->refreshCandidateAppearance();
 }
 
 void Client::updateSelectionKeys(Json::Value &msg) {

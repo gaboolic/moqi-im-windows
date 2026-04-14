@@ -847,9 +847,24 @@ void TextService::applyCandidateAppearanceNow() {
 	if (candidateWindow_) {
 		candidateWindow_->setFont(font_);
 		candidateWindow_->setCommentFont(commentFont_);
-		candidateWindow_->recalculateSize();
-		candidateWindow_->refresh();
 	}
+	refreshCandidateAppearance();
+}
+
+void TextService::refreshCandidateAppearance() {
+	if (!candidateWindow_) {
+		return;
+	}
+	candidateWindow_->setUseCursor(candUseCursor_);
+	candidateWindow_->setCandPerRow(candPerRow_);
+	candidateWindow_->setBackgroundColor(candBackgroundColor_);
+	candidateWindow_->setHighlightColor(candHighlightColor_);
+	candidateWindow_->setTextColor(candTextColor_);
+	candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
+	candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
+	candidateWindow_->recalculateSize();
+	candidateWindow_->refresh();
+	refreshCandidates();
 }
 
 void TextService::applyUiLessOverrideState() {
