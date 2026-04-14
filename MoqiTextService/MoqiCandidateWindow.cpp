@@ -103,6 +103,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       shown_(false),
       selKeyWidth_(0),
       textWidth_(0),
+      commentWidth_(0),
       itemHeight_(0),
       candPerRow_(1),
       colSpacing_(0),
@@ -110,6 +111,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       padX_(service->isImmersive() ? 10 : 7),
       padY_(service->isImmersive() ? 6 : 3),
       labelGap_(6),
+      commentGap_(8),
       borderWidth_(1),
       borderRadius_(4),
       minWidth_(200),
@@ -121,7 +123,8 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       textColor_(kItemText),
       highlightTextColor_(kSelectedText),
       currentSel_(0),
-      useCursor_(false) {
+      useCursor_(false),
+      commentFont_(nullptr) {
     margin_ = 0;
 
     HWND parent = service->compositionWindow(session);
@@ -215,7 +218,7 @@ STDMETHODIMP CandidateWindow::GetString(UINT uIndex, BSTR* pbstr) {
     if (uIndex >= items_.size()) {
         return E_INVALIDARG;
     }
-    *pbstr = SysAllocString(items_[uIndex].c_str());
+    *pbstr = SysAllocString(items_[uIndex].combinedText().c_str());
     return S_OK;
 }
 
@@ -249,7 +252,7 @@ STDMETHODIMP CandidateWindow::GetCurrentPage(UINT* puPage) {
     return S_OK;
 }
 
-void CandidateWindow::add(std::wstring item, wchar_t selKey) {
+void CandidateWindow::add(CandidateUiItem item, wchar_t selKey) {
     items_.push_back(std::move(item));
     selKeys_.push_back(selKey);
 }
@@ -301,6 +304,16 @@ void CandidateWindow::setPreeditText(std::wstring text) {
     }
 }
 
+void CandidateWindow::setCommentFont(HFONT font) {
+    if (commentFont_ != font) {
+        commentFont_ = font;
+        recalculateSize();
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
 void CandidateWindow::setBackgroundColor(COLORREF color) {
     if (backgroundColor_ != color) {
         backgroundColor_ = color;
@@ -341,6 +354,7 @@ void CandidateWindow::recalculateSize() {
     if (items_.empty() && preedit_.empty()) {
         selKeyWidth_ = 0;
         textWidth_ = 0;
+        commentWidth_ = 0;
         itemHeight_ = 0;
         preeditHeight_ = 0;
         contentTop_ = borderWidth_ + padY_;
@@ -356,11 +370,13 @@ void CandidateWindow::recalculateSize() {
 
     selKeyWidth_ = 0;
     textWidth_ = 0;
+    commentWidth_ = 0;
     itemHeight_ = 0;
     preeditHeight_ = 0;
 
     HGDIOBJ oldFont = ::SelectObject(hdc, font_);
     TEXTMETRICW metrics = {};
+    TEXTMETRICW commentMetrics = {};
     for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
         SIZE selKeySize = {};
         wchar_t selKey[] = L"?.";
@@ -369,10 +385,19 @@ void CandidateWindow::recalculateSize() {
         selKeyWidth_ = (std::max)(selKeyWidth_, static_cast<int>(selKeySize.cx));
 
         SIZE candidateSize = {};
-        const std::wstring& item = items_[i];
-        ::GetTextExtentPoint32W(hdc, item.c_str(), static_cast<int>(item.length()), &candidateSize);
+        const CandidateUiItem& item = items_[i];
+        ::GetTextExtentPoint32W(hdc, item.text.c_str(), static_cast<int>(item.text.length()), &candidateSize);
         textWidth_ = (std::max)(textWidth_, static_cast<int>(candidateSize.cx));
-        itemHeight_ = (std::max)(itemHeight_, (std::max)(static_cast<int>(candidateSize.cy), static_cast<int>(selKeySize.cy)));
+        int candidateHeight = static_cast<int>(candidateSize.cy);
+        if (!item.comment.empty() && commentFont_) {
+            SIZE commentSize = {};
+            ::SelectObject(hdc, commentFont_);
+            ::GetTextExtentPoint32W(hdc, item.comment.c_str(), static_cast<int>(item.comment.length()), &commentSize);
+            ::SelectObject(hdc, font_);
+            commentWidth_ = (std::max)(commentWidth_, static_cast<int>(commentSize.cx));
+            candidateHeight = (std::max)(candidateHeight, static_cast<int>(commentSize.cy));
+        }
+        itemHeight_ = (std::max)(itemHeight_, (std::max)(candidateHeight, static_cast<int>(selKeySize.cy)));
     }
     if (!preedit_.empty()) {
         SIZE preeditSize = {};
@@ -381,16 +406,25 @@ void CandidateWindow::recalculateSize() {
         preeditHeight_ = static_cast<int>(preeditSize.cy);
     }
     ::GetTextMetricsW(hdc, &metrics);
+    if (commentFont_) {
+        ::SelectObject(hdc, commentFont_);
+        ::GetTextMetricsW(hdc, &commentMetrics);
+        ::SelectObject(hdc, font_);
+    }
     ::SelectObject(hdc, oldFont);
     ::ReleaseDC(hwnd(), hdc);
 
     const int itemsPerRow = (std::max)(1, candPerRow_);
     itemHeight_ = (std::max)(itemHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading + 2));
+    if (commentFont_) {
+        itemHeight_ = (std::max)(itemHeight_, static_cast<int>(commentMetrics.tmHeight + commentMetrics.tmExternalLeading + 2));
+    }
     preeditHeight_ = preedit_.empty()
                          ? 0
                          : (std::max)(preeditHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading));
 
-    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_;
+    const int commentSectionWidth = commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0;
+    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ + commentSectionWidth;
     const int columns = (std::min)(itemsPerRow, static_cast<int>(items_.size()));
     const int rows = (static_cast<int>(items_.size()) + itemsPerRow - 1) / itemsPerRow;
     const int candidateContentWidth = columns * itemWidth + (std::max)(0, columns - 1) * colSpacing_;
@@ -482,6 +516,8 @@ void CandidateWindow::onPaint() {
     int col = 0;
     int x = borderWidth_ + padX_;
     y = contentTop_;
+    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
+                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0);
     for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
         paintItem(memdc, i, x, y);
         ++col;
@@ -490,7 +526,7 @@ void CandidateWindow::onPaint() {
             x = borderWidth_ + padX_;
             y += itemHeight_ + rowSpacing_;
         } else {
-            x += colSpacing_ + selKeyWidth_ + labelGap_ + textWidth_;
+            x += colSpacing_ + itemWidth;
         }
     }
 
@@ -510,15 +546,23 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     const bool selected = useCursor_ && index == currentSel_;
 
     RECT itemRc = {x, y, x + selKeyWidth_ + labelGap_ + textWidth_, y + itemHeight_};
+    if (commentWidth_ > 0) {
+        itemRc.right += commentGap_ + commentWidth_;
+    }
     RECT highlightRc = itemRc;
     RECT selRc = itemRc;
     selRc.right = selRc.left + selKeyWidth_;
     RECT textRc = itemRc;
     textRc.left += selKeyWidth_ + labelGap_;
+    textRc.right = textRc.left + textWidth_;
+    RECT commentRc = textRc;
+    commentRc.left = textRc.right + commentGap_;
+    commentRc.right = commentRc.left + commentWidth_;
 
     const COLORREF bgColor = selected ? highlightColor_ : backgroundColor_;
     const COLORREF textColor = selected ? highlightTextColor_ : textColor_;
     const COLORREF selColor = selected ? highlightTextColor_ : textColor_;
+    const COLORREF commentColor = selected ? kSelectedAuxText : kItemAuxText;
 
     if (selected) {
         if (candPerRow_ == 1) {
@@ -538,18 +582,28 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     ::DrawTextW(hdc, selKey, 2, &selRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
     ::SetTextColor(hdc, textColor);
-    const std::wstring& item = items_[index];
-    ::DrawTextW(hdc, item.c_str(), static_cast<int>(item.length()), &textRc,
+    const CandidateUiItem& item = items_[index];
+    HGDIOBJ oldFont = ::SelectObject(hdc, font_);
+    ::DrawTextW(hdc, item.text.c_str(), static_cast<int>(item.text.length()), &textRc,
                 DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    if (!item.comment.empty() && commentFont_) {
+        ::SelectObject(hdc, commentFont_);
+        ::SetTextColor(hdc, commentColor);
+        ::DrawTextW(hdc, item.comment.c_str(), static_cast<int>(item.comment.length()), &commentRc,
+                    DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    }
+    ::SelectObject(hdc, oldFont);
     ::SetTextColor(hdc, oldColor);
 }
 
 void CandidateWindow::itemRect(int index, RECT& rect) const {
     const int row = index / candPerRow_;
     const int col = index % candPerRow_;
-    rect.left = borderWidth_ + padX_ + col * (selKeyWidth_ + labelGap_ + textWidth_ + colSpacing_);
+    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
+                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0);
+    rect.left = borderWidth_ + padX_ + col * (itemWidth + colSpacing_);
     rect.top = contentTop_ + row * (itemHeight_ + rowSpacing_);
-    rect.right = rect.left + selKeyWidth_ + labelGap_ + textWidth_;
+    rect.right = rect.left + itemWidth;
     rect.bottom = rect.top + itemHeight_;
 }
 

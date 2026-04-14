@@ -66,6 +66,11 @@ message PreservedKey {
   string guid = 3;
 }
 
+message CandidateEntry {
+  string text = 1;
+  string comment = 2;
+}
+
 message CustomizeUi {
   optional string cand_font_name = 1;
   optional uint32 cand_font_size = 2;
@@ -76,6 +81,7 @@ message CustomizeUi {
   optional string cand_highlight_color = 7;
   optional string cand_text_color = 8;
   optional string cand_highlight_text_color = 9;
+  optional uint32 cand_comment_font_size = 10;
 }
 
 message MessageWindow {
@@ -149,4 +155,5 @@ message ServerResponse {
   repeated string remove_preserved_key = 24;
   string error = 25;
   optional TrayNotification tray_notification = 26;
+  repeated CandidateEntry candidate_entries = 27;
 }

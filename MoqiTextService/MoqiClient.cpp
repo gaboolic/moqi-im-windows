@@ -100,6 +100,8 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
     result["candFontName"] = ui.cand_font_name();
   if (ui.has_cand_font_size())
     result["candFontSize"] = ui.cand_font_size();
+  if (ui.has_cand_comment_font_size())
+    result["candCommentFontSize"] = ui.cand_comment_font_size();
   if (ui.has_cand_per_row())
     result["candPerRow"] = ui.cand_per_row();
   if (ui.has_cand_use_cursor())
@@ -166,6 +168,17 @@ static Json::Value responseToJson(const moqi::protocol::ServerResponse &response
     candidateList.append(candidate);
   }
   result["candidateList"] = candidateList;
+  if (!response.candidate_entries().empty()) {
+    Json::Value candidateEntries(Json::arrayValue);
+    for (const auto &candidate : response.candidate_entries()) {
+      Json::Value item;
+      item["text"] = candidate.text();
+      if (!candidate.comment().empty())
+        item["comment"] = candidate.comment();
+      candidateEntries.append(item);
+    }
+    result["candidateEntries"] = candidateEntries;
+  }
 
   if (!response.menu_items().empty()) {
     result["return"] = menuItemsToJson(response.menu_items());
@@ -318,6 +331,8 @@ void Client::updateUI(const Json::Value &data) {
       textService_->setCandFontName(fontName);
     } else if (value.isInt() && strcmp(name, "candFontSize") == 0) {
       textService_->setCandFontSize(value.asInt());
+    } else if (value.isInt() && strcmp(name, "candCommentFontSize") == 0) {
+      textService_->setCandCommentFontSize(value.asInt());
     } else if (value.isInt() && strcmp(name, "candPerRow") == 0) {
       textService_->setCandPerRow(value.asInt());
     } else if (value.isBool() && strcmp(name, "candUseCursor") == 0) {
@@ -630,13 +645,35 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
   }
 
   const auto &candidateListVal = msg["candidateList"];
-  if (candidateListVal.isArray()) {
+  const auto &candidateEntriesVal = msg["candidateEntries"];
+  if (candidateEntriesVal.isArray()) {
+    vector<CandidateUiItem> &candidates = textService_->candidates_;
+    candidates.clear();
+    for (const auto &candidate : candidateEntriesVal) {
+      CandidateUiItem item;
+      if (candidate.isObject()) {
+        if (candidate["text"].isString()) {
+          item.text = utf8ToUtf16(candidate["text"].asCString());
+        }
+        if (candidate["comment"].isString()) {
+          item.comment = utf8ToUtf16(candidate["comment"].asCString());
+        }
+      }
+      candidates.emplace_back(std::move(item));
+    }
+    textService_->updateCandidates(session);
+    if (!showCandidatesVal.asBool()) {
+      textService_->hideCandidates();
+    }
+  } else if (candidateListVal.isArray()) {
     // handle candidates
     // FIXME: directly access private member is dirty!!!
-    vector<wstring> &candidates = textService_->candidates_;
+    vector<CandidateUiItem> &candidates = textService_->candidates_;
     candidates.clear();
     for (const auto &candidate : candidateListVal) {
-      candidates.emplace_back(utf8ToUtf16(candidate.asCString()));
+      CandidateUiItem item;
+      item.text = utf8ToUtf16(candidate.asCString());
+      candidates.emplace_back(std::move(item));
     }
     textService_->updateCandidates(session);
     if (!showCandidatesVal.asBool()) {

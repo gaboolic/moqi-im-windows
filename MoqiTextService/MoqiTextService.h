@@ -122,6 +122,15 @@ public:
 		updateFont_ = true;
 	}
 
+	int candCommentFontSize() const {
+		return candCommentFontSize_;
+	}
+
+	void setCandCommentFontSize(int candCommentFontSize) {
+		candCommentFontSize_ = candCommentFontSize;
+		updateFont_ = true;
+	}
+
 	COLORREF candBackgroundColor() const {
 		return candBackgroundColor_;
 	}
@@ -247,6 +256,7 @@ private:
 	void createCandidateWindow(Ime::EditSession* session);
 	void destroyCandidateWindow();
 	int candFontHeight();
+	int candCommentFontHeight();
 	void applyUiLessOverrideState();
 
 	void closeClient();
@@ -262,16 +272,18 @@ private:
 	bool autoDisableTsfCandidateUi_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
-	std::vector<std::wstring> candidates_; // current candidate list
+	std::vector<CandidateUiItem> candidates_; // current candidate list
 	std::unique_ptr<Ime::MessageWindow> messageWindow_;
 	UINT messageTimerId_;
 	HFONT font_;
+	HFONT commentFont_;
 	bool updateFont_;
 	int candPerRow_;
 	std::wstring selKeys_;
 	bool candUseCursor_;
 	std::wstring candFontName_;
 	int candFontSize_;
+	int candCommentFontSize_;
 	COLORREF candBackgroundColor_;
 	COLORREF candHighlightColor_;
 	COLORREF candTextColor_;

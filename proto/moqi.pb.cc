@@ -199,7 +199,8 @@ inline constexpr CustomizeUi::Impl_::Impl_(
         cand_font_size_{0u},
         cand_per_row_{0u},
         cand_use_cursor_{false},
-        inline_preedit_{false} {}
+        inline_preedit_{false},
+        cand_comment_font_size_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR CustomizeUi::CustomizeUi(::_pbi::ConstantInitialized)
@@ -220,6 +221,36 @@ struct CustomizeUiDefaultTypeInternal {
 
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CustomizeUiDefaultTypeInternal _CustomizeUi_default_instance_;
+
+inline constexpr CandidateEntry::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        text_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        comment_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()) {}
+
+template <typename>
+PROTOBUF_CONSTEXPR CandidateEntry::CandidateEntry(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(CandidateEntry_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct CandidateEntryDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR CandidateEntryDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~CandidateEntryDefaultTypeInternal() {}
+  union {
+    CandidateEntry _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CandidateEntryDefaultTypeInternal _CandidateEntry_default_instance_;
 
 inline constexpr ButtonInfo::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
@@ -272,6 +303,7 @@ inline constexpr ServerResponse::Impl_::Impl_(
         change_button_{},
         add_preserved_key_{},
         remove_preserved_key_{},
+        candidate_entries_{},
         client_id_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
@@ -450,8 +482,15 @@ const ::uint32_t
         2,
         0,
         0x081, // bitmap
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::CandidateEntry, _impl_._has_bits_),
+        5, // hasbit index offset
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::CandidateEntry, _impl_.text_),
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::CandidateEntry, _impl_.comment_),
+        0,
+        1,
+        0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_._has_bits_),
-        12, // hasbit index offset
+        13, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_font_name_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_font_size_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_per_row_),
@@ -461,6 +500,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_highlight_color_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_text_color_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_highlight_text_color_),
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_comment_font_size_),
         0,
         5,
         6,
@@ -470,6 +510,7 @@ const ::uint32_t
         2,
         3,
         4,
+        9,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::MessageWindow, _impl_._has_bits_),
         5, // hasbit index offset
@@ -537,7 +578,7 @@ const ::uint32_t
         6,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_._has_bits_),
-        29, // hasbit index offset
+        30, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.client_id_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.seq_num_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.success_),
@@ -564,32 +605,34 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.remove_preserved_key_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.error_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.tray_notification_),
-        7,
-        15,
-        21,
-        16,
-        0,
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_.candidate_entries_),
         8,
-        9,
-        1,
+        16,
         22,
         17,
+        0,
+        9,
+        10,
+        1,
+        23,
         18,
         19,
         20,
-        25,
-        10,
-        12,
+        21,
+        26,
+        11,
+        13,
         2,
         3,
         4,
-        13,
-        23,
+        14,
         24,
+        25,
         5,
         6,
-        11,
-        14,
+        12,
+        15,
+        7,
 };
 
 static const ::_pbi::MigrationSchema
@@ -598,17 +641,19 @@ static const ::_pbi::MigrationSchema
         {15, sizeof(::moqi::protocol::ButtonInfo)},
         {36, sizeof(::moqi::protocol::MenuItem)},
         {51, sizeof(::moqi::protocol::PreservedKey)},
-        {60, sizeof(::moqi::protocol::CustomizeUi)},
-        {81, sizeof(::moqi::protocol::MessageWindow)},
-        {88, sizeof(::moqi::protocol::TrayNotification)},
-        {97, sizeof(::moqi::protocol::ClientRequest)},
-        {146, sizeof(::moqi::protocol::ServerResponse)},
+        {60, sizeof(::moqi::protocol::CandidateEntry)},
+        {67, sizeof(::moqi::protocol::CustomizeUi)},
+        {90, sizeof(::moqi::protocol::MessageWindow)},
+        {97, sizeof(::moqi::protocol::TrayNotification)},
+        {106, sizeof(::moqi::protocol::ClientRequest)},
+        {155, sizeof(::moqi::protocol::ServerResponse)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::moqi::protocol::_KeyEvent_default_instance_._instance,
     &::moqi::protocol::_ButtonInfo_default_instance_._instance,
     &::moqi::protocol::_MenuItem_default_instance_._instance,
     &::moqi::protocol::_PreservedKey_default_instance_._instance,
+    &::moqi::protocol::_CandidateEntry_default_instance_._instance,
     &::moqi::protocol::_CustomizeUi_default_instance_._instance,
     &::moqi::protocol::_MessageWindow_default_instance_._instance,
     &::moqi::protocol::_TrayNotification_default_instance_._instance,
@@ -631,93 +676,98 @@ const char descriptor_table_protodef_proto_2fmoqi_2eproto[] ABSL_ATTRIBUTE_SECTI
     "bmenu\030\005 \003(\0132\027.moqi.protocol.MenuItem\022\021\n\t"
     "separator\030\006 \001(\010\"A\n\014PreservedKey\022\020\n\010key_c"
     "ode\030\001 \001(\r\022\021\n\tmodifiers\030\002 \001(\r\022\014\n\004guid\030\003 \001"
-    "(\t\"\355\003\n\013CustomizeUi\022\033\n\016cand_font_name\030\001 \001"
-    "(\tH\000\210\001\001\022\033\n\016cand_font_size\030\002 \001(\rH\001\210\001\001\022\031\n\014"
-    "cand_per_row\030\003 \001(\rH\002\210\001\001\022\034\n\017cand_use_curs"
-    "or\030\004 \001(\010H\003\210\001\001\022\033\n\016inline_preedit\030\005 \001(\010H\004\210"
-    "\001\001\022\"\n\025cand_background_color\030\006 \001(\tH\005\210\001\001\022!"
-    "\n\024cand_highlight_color\030\007 \001(\tH\006\210\001\001\022\034\n\017can"
-    "d_text_color\030\010 \001(\tH\007\210\001\001\022&\n\031cand_highligh"
-    "t_text_color\030\t \001(\tH\010\210\001\001B\021\n\017_cand_font_na"
-    "meB\021\n\017_cand_font_sizeB\017\n\r_cand_per_rowB\022"
-    "\n\020_cand_use_cursorB\021\n\017_inline_preeditB\030\n"
-    "\026_cand_background_colorB\027\n\025_cand_highlig"
-    "ht_colorB\022\n\020_cand_text_colorB\034\n\032_cand_hi"
-    "ghlight_text_color\"2\n\rMessageWindow\022\017\n\007m"
-    "essage\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005\"e\n\020TrayNo"
-    "tification\022\r\n\005title\030\001 \001(\t\022\017\n\007message\030\002 \001"
-    "(\t\0221\n\004icon\030\003 \001(\0162#.moqi.protocol.TrayNot"
-    "ificationIcon\"\235\005\n\rClientRequest\022\017\n\007seq_n"
-    "um\030\001 \001(\r\022%\n\006method\030\002 \001(\0162\025.moqi.protocol"
-    ".Method\022\021\n\004guid\030\003 \001(\tH\000\210\001\001\022\031\n\021is_windows"
-    "8_above\030\004 \001(\010\022\024\n\014is_metro_app\030\005 \001(\010\022\022\n\ni"
-    "s_ui_less\030\006 \001(\010\022\022\n\nis_console\030\007 \001(\010\022\016\n\006o"
-    "pened\030\010 \001(\010\022\016\n\006forced\030\t \001(\010\022\024\n\014command_t"
-    "ype\030\n \001(\r\022*\n\tkey_event\030\013 \001(\0132\027.moqi.prot"
-    "ocol.KeyEvent\022\032\n\022composition_string\030\014 \001("
-    "\t\022\026\n\016candidate_list\030\r \003(\t\022\027\n\017show_candid"
-    "ates\030\016 \001(\010\022\022\n\ncursor_pos\030\017 \001(\005\022\021\n\tsel_st"
-    "art\030\020 \001(\005\022\017\n\007sel_end\030\021 \001(\005\022\026\n\tbutton_id\030"
-    "\022 \001(\tH\001\210\001\001\022\027\n\ncommand_id\030\023 \001(\rH\002\210\001\001\022\037\n\022p"
-    "reserved_key_guid\030\024 \001(\tH\003\210\001\001\022\035\n\020compartm"
-    "ent_guid\030\025 \001(\tH\004\210\001\001\022\030\n\020is_keyboard_open\030"
-    "\026 \001(\010\022\026\n\tclient_id\030\027 \001(\tH\005\210\001\001B\007\n\005_guidB\014"
-    "\n\n_button_idB\r\n\013_command_idB\025\n\023_preserve"
-    "d_key_guidB\023\n\021_compartment_guidB\014\n\n_clie"
-    "nt_id\"\366\006\n\016ServerResponse\022\026\n\tclient_id\030\001 "
-    "\001(\tH\000\210\001\001\022\017\n\007seq_num\030\002 \001(\r\022\017\n\007success\030\003 \001"
-    "(\010\022\024\n\014return_value\030\004 \001(\005\022+\n\nmenu_items\030\005"
-    " \003(\0132\027.moqi.protocol.MenuItem\022\032\n\022composi"
-    "tion_string\030\006 \001(\t\022\025\n\rcommit_string\030\007 \001(\t"
-    "\022\026\n\016candidate_list\030\010 \003(\t\022\027\n\017show_candida"
-    "tes\030\t \001(\010\022\022\n\ncursor_pos\030\n \001(\005\022\032\n\022composi"
-    "tion_cursor\030\013 \001(\005\022\030\n\020candidate_cursor\030\014 "
-    "\001(\005\022\021\n\tsel_start\030\r \001(\005\022\017\n\007sel_end\030\016 \001(\005\022"
-    "\024\n\014set_sel_keys\030\017 \001(\t\0225\n\014customize_ui\030\020 "
-    "\001(\0132\032.moqi.protocol.CustomizeUiH\001\210\001\001\022-\n\n"
-    "add_button\030\021 \003(\0132\031.moqi.protocol.ButtonI"
-    "nfo\022\025\n\rremove_button\030\022 \003(\t\0220\n\rchange_but"
-    "ton\030\023 \003(\0132\031.moqi.protocol.ButtonInfo\0227\n\014"
-    "show_message\030\024 \001(\0132\034.moqi.protocol.Messa"
-    "geWindowH\002\210\001\001\022\024\n\014hide_message\030\025 \001(\010\022\025\n\ro"
-    "pen_keyboard\030\026 \001(\010\0226\n\021add_preserved_key\030"
-    "\027 \003(\0132\033.moqi.protocol.PreservedKey\022\034\n\024re"
-    "move_preserved_key\030\030 \003(\t\022\r\n\005error\030\031 \001(\t\022"
-    "\?\n\021tray_notification\030\032 \001(\0132\037.moqi.protoc"
-    "ol.TrayNotificationH\003\210\001\001B\014\n\n_client_idB\017"
-    "\n\r_customize_uiB\017\n\r_show_messageB\024\n\022_tra"
-    "y_notification*\267\003\n\006Method\022\026\n\022METHOD_UNSP"
-    "ECIFIED\020\000\022\017\n\013METHOD_INIT\020\001\022\020\n\014METHOD_CLO"
-    "SE\020\002\022\026\n\022METHOD_ON_ACTIVATE\020\003\022\030\n\024METHOD_O"
-    "N_DEACTIVATE\020\004\022\032\n\026METHOD_FILTER_KEY_DOWN"
-    "\020\005\022\026\n\022METHOD_ON_KEY_DOWN\020\006\022\030\n\024METHOD_FIL"
-    "TER_KEY_UP\020\007\022\024\n\020METHOD_ON_KEY_UP\020\010\022\033\n\027ME"
-    "THOD_ON_PRESERVED_KEY\020\t\022\025\n\021METHOD_ON_COM"
-    "MAND\020\n\022\022\n\016METHOD_ON_MENU\020\013\022!\n\035METHOD_ON_"
-    "COMPARTMENT_CHANGED\020\014\022%\n!METHOD_ON_KEYBO"
-    "ARD_STATUS_CHANGED\020\r\022$\n METHOD_ON_COMPOS"
-    "ITION_TERMINATED\020\016\022$\n METHOD_ON_LANG_PRO"
-    "FILE_ACTIVATED\020\017*o\n\nButtonType\022\033\n\027BUTTON"
-    "_TYPE_UNSPECIFIED\020\000\022\026\n\022BUTTON_TYPE_BUTTO"
-    "N\020\001\022\026\n\022BUTTON_TYPE_TOGGLE\020\002\022\024\n\020BUTTON_TY"
-    "PE_MENU\020\003*\245\001\n\024TrayNotificationIcon\022&\n\"TR"
-    "AY_NOTIFICATION_ICON_UNSPECIFIED\020\000\022\037\n\033TR"
-    "AY_NOTIFICATION_ICON_INFO\020\001\022\"\n\036TRAY_NOTI"
-    "FICATION_ICON_WARNING\020\002\022 \n\034TRAY_NOTIFICA"
-    "TION_ICON_ERROR\020\003B+Z)github.com/gaboolic"
-    "/moqi-ime/proto;moqipbb\006proto3"
+    "(\t\"/\n\016CandidateEntry\022\014\n\004text\030\001 \001(\t\022\017\n\007co"
+    "mment\030\002 \001(\t\"\255\004\n\013CustomizeUi\022\033\n\016cand_font"
+    "_name\030\001 \001(\tH\000\210\001\001\022\033\n\016cand_font_size\030\002 \001(\r"
+    "H\001\210\001\001\022\031\n\014cand_per_row\030\003 \001(\rH\002\210\001\001\022\034\n\017cand"
+    "_use_cursor\030\004 \001(\010H\003\210\001\001\022\033\n\016inline_preedit"
+    "\030\005 \001(\010H\004\210\001\001\022\"\n\025cand_background_color\030\006 \001"
+    "(\tH\005\210\001\001\022!\n\024cand_highlight_color\030\007 \001(\tH\006\210"
+    "\001\001\022\034\n\017cand_text_color\030\010 \001(\tH\007\210\001\001\022&\n\031cand"
+    "_highlight_text_color\030\t \001(\tH\010\210\001\001\022#\n\026cand"
+    "_comment_font_size\030\n \001(\rH\t\210\001\001B\021\n\017_cand_f"
+    "ont_nameB\021\n\017_cand_font_sizeB\017\n\r_cand_per"
+    "_rowB\022\n\020_cand_use_cursorB\021\n\017_inline_pree"
+    "ditB\030\n\026_cand_background_colorB\027\n\025_cand_h"
+    "ighlight_colorB\022\n\020_cand_text_colorB\034\n\032_c"
+    "and_highlight_text_colorB\031\n\027_cand_commen"
+    "t_font_size\"2\n\rMessageWindow\022\017\n\007message\030"
+    "\001 \001(\t\022\020\n\010duration\030\002 \001(\005\"e\n\020TrayNotificat"
+    "ion\022\r\n\005title\030\001 \001(\t\022\017\n\007message\030\002 \001(\t\0221\n\004i"
+    "con\030\003 \001(\0162#.moqi.protocol.TrayNotificati"
+    "onIcon\"\235\005\n\rClientRequest\022\017\n\007seq_num\030\001 \001("
+    "\r\022%\n\006method\030\002 \001(\0162\025.moqi.protocol.Method"
+    "\022\021\n\004guid\030\003 \001(\tH\000\210\001\001\022\031\n\021is_windows8_above"
+    "\030\004 \001(\010\022\024\n\014is_metro_app\030\005 \001(\010\022\022\n\nis_ui_le"
+    "ss\030\006 \001(\010\022\022\n\nis_console\030\007 \001(\010\022\016\n\006opened\030\010"
+    " \001(\010\022\016\n\006forced\030\t \001(\010\022\024\n\014command_type\030\n \001"
+    "(\r\022*\n\tkey_event\030\013 \001(\0132\027.moqi.protocol.Ke"
+    "yEvent\022\032\n\022composition_string\030\014 \001(\t\022\026\n\016ca"
+    "ndidate_list\030\r \003(\t\022\027\n\017show_candidates\030\016 "
+    "\001(\010\022\022\n\ncursor_pos\030\017 \001(\005\022\021\n\tsel_start\030\020 \001"
+    "(\005\022\017\n\007sel_end\030\021 \001(\005\022\026\n\tbutton_id\030\022 \001(\tH\001"
+    "\210\001\001\022\027\n\ncommand_id\030\023 \001(\rH\002\210\001\001\022\037\n\022preserve"
+    "d_key_guid\030\024 \001(\tH\003\210\001\001\022\035\n\020compartment_gui"
+    "d\030\025 \001(\tH\004\210\001\001\022\030\n\020is_keyboard_open\030\026 \001(\010\022\026"
+    "\n\tclient_id\030\027 \001(\tH\005\210\001\001B\007\n\005_guidB\014\n\n_butt"
+    "on_idB\r\n\013_command_idB\025\n\023_preserved_key_g"
+    "uidB\023\n\021_compartment_guidB\014\n\n_client_id\"\260"
+    "\007\n\016ServerResponse\022\026\n\tclient_id\030\001 \001(\tH\000\210\001"
+    "\001\022\017\n\007seq_num\030\002 \001(\r\022\017\n\007success\030\003 \001(\010\022\024\n\014r"
+    "eturn_value\030\004 \001(\005\022+\n\nmenu_items\030\005 \003(\0132\027."
+    "moqi.protocol.MenuItem\022\032\n\022composition_st"
+    "ring\030\006 \001(\t\022\025\n\rcommit_string\030\007 \001(\t\022\026\n\016can"
+    "didate_list\030\010 \003(\t\022\027\n\017show_candidates\030\t \001"
+    "(\010\022\022\n\ncursor_pos\030\n \001(\005\022\032\n\022composition_cu"
+    "rsor\030\013 \001(\005\022\030\n\020candidate_cursor\030\014 \001(\005\022\021\n\t"
+    "sel_start\030\r \001(\005\022\017\n\007sel_end\030\016 \001(\005\022\024\n\014set_"
+    "sel_keys\030\017 \001(\t\0225\n\014customize_ui\030\020 \001(\0132\032.m"
+    "oqi.protocol.CustomizeUiH\001\210\001\001\022-\n\nadd_but"
+    "ton\030\021 \003(\0132\031.moqi.protocol.ButtonInfo\022\025\n\r"
+    "remove_button\030\022 \003(\t\0220\n\rchange_button\030\023 \003"
+    "(\0132\031.moqi.protocol.ButtonInfo\0227\n\014show_me"
+    "ssage\030\024 \001(\0132\034.moqi.protocol.MessageWindo"
+    "wH\002\210\001\001\022\024\n\014hide_message\030\025 \001(\010\022\025\n\ropen_key"
+    "board\030\026 \001(\010\0226\n\021add_preserved_key\030\027 \003(\0132\033"
+    ".moqi.protocol.PreservedKey\022\034\n\024remove_pr"
+    "eserved_key\030\030 \003(\t\022\r\n\005error\030\031 \001(\t\022\?\n\021tray"
+    "_notification\030\032 \001(\0132\037.moqi.protocol.Tray"
+    "NotificationH\003\210\001\001\0228\n\021candidate_entries\030\033"
+    " \003(\0132\035.moqi.protocol.CandidateEntryB\014\n\n_"
+    "client_idB\017\n\r_customize_uiB\017\n\r_show_mess"
+    "ageB\024\n\022_tray_notification*\267\003\n\006Method\022\026\n\022"
+    "METHOD_UNSPECIFIED\020\000\022\017\n\013METHOD_INIT\020\001\022\020\n"
+    "\014METHOD_CLOSE\020\002\022\026\n\022METHOD_ON_ACTIVATE\020\003\022"
+    "\030\n\024METHOD_ON_DEACTIVATE\020\004\022\032\n\026METHOD_FILT"
+    "ER_KEY_DOWN\020\005\022\026\n\022METHOD_ON_KEY_DOWN\020\006\022\030\n"
+    "\024METHOD_FILTER_KEY_UP\020\007\022\024\n\020METHOD_ON_KEY"
+    "_UP\020\010\022\033\n\027METHOD_ON_PRESERVED_KEY\020\t\022\025\n\021ME"
+    "THOD_ON_COMMAND\020\n\022\022\n\016METHOD_ON_MENU\020\013\022!\n"
+    "\035METHOD_ON_COMPARTMENT_CHANGED\020\014\022%\n!METH"
+    "OD_ON_KEYBOARD_STATUS_CHANGED\020\r\022$\n METHO"
+    "D_ON_COMPOSITION_TERMINATED\020\016\022$\n METHOD_"
+    "ON_LANG_PROFILE_ACTIVATED\020\017*o\n\nButtonTyp"
+    "e\022\033\n\027BUTTON_TYPE_UNSPECIFIED\020\000\022\026\n\022BUTTON"
+    "_TYPE_BUTTON\020\001\022\026\n\022BUTTON_TYPE_TOGGLE\020\002\022\024"
+    "\n\020BUTTON_TYPE_MENU\020\003*\245\001\n\024TrayNotificatio"
+    "nIcon\022&\n\"TRAY_NOTIFICATION_ICON_UNSPECIF"
+    "IED\020\000\022\037\n\033TRAY_NOTIFICATION_ICON_INFO\020\001\022\""
+    "\n\036TRAY_NOTIFICATION_ICON_WARNING\020\002\022 \n\034TR"
+    "AY_NOTIFICATION_ICON_ERROR\020\003B+Z)github.c"
+    "om/gaboolic/moqi-ime/proto;moqipbb\006proto"
+    "3"
 };
 static ::absl::once_flag descriptor_table_proto_2fmoqi_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_proto_2fmoqi_2eproto = {
     false,
     false,
-    3550,
+    3721,
     descriptor_table_protodef_proto_2fmoqi_2eproto,
     "proto/moqi.proto",
     &descriptor_table_proto_2fmoqi_2eproto_once,
     nullptr,
     0,
-    9,
+    10,
     schemas,
     file_default_instances,
     TableStruct_proto_2fmoqi_2eproto::offsets,
@@ -2568,6 +2618,326 @@ void PreservedKey::InternalSwap(PreservedKey* PROTOBUF_RESTRICT PROTOBUF_NONNULL
 }
 // ===================================================================
 
+class CandidateEntry::_Internal {
+ public:
+  using HasBits =
+      decltype(::std::declval<CandidateEntry>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_._has_bits_);
+};
+
+CandidateEntry::CandidateEntry(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(arena, CandidateEntry_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:moqi.protocol.CandidateEntry)
+}
+PROTOBUF_NDEBUG_INLINE CandidateEntry::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    [[maybe_unused]] const ::moqi::protocol::CandidateEntry& from_msg)
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        text_(arena, from.text_),
+        comment_(arena, from.comment_) {}
+
+CandidateEntry::CandidateEntry(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const CandidateEntry& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(arena, CandidateEntry_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  CandidateEntry* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+
+  // @@protoc_insertion_point(copy_constructor:moqi.protocol.CandidateEntry)
+}
+PROTOBUF_NDEBUG_INLINE CandidateEntry::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+      : _cached_size_{0},
+        text_(arena),
+        comment_(arena) {}
+
+inline void CandidateEntry::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+}
+CandidateEntry::~CandidateEntry() {
+  // @@protoc_insertion_point(destructor:moqi.protocol.CandidateEntry)
+  SharedDtor(*this);
+}
+inline void CandidateEntry::SharedDtor(MessageLite& self) {
+  CandidateEntry& this_ = static_cast<CandidateEntry&>(self);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.text_.Destroy();
+  this_._impl_.comment_.Destroy();
+  this_._impl_.~Impl_();
+}
+
+inline void* PROTOBUF_NONNULL CandidateEntry::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) CandidateEntry(arena);
+}
+constexpr auto CandidateEntry::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(CandidateEntry),
+                                            alignof(CandidateEntry));
+}
+constexpr auto CandidateEntry::InternalGenerateClassData_() {
+  return ::google::protobuf::internal::ClassDataFull{
+      ::google::protobuf::internal::ClassData{
+          &_CandidateEntry_default_instance_._instance,
+          &_table_.header,
+          nullptr,  // OnDemandRegisterArenaDtor
+          nullptr,  // IsInitialized
+          &CandidateEntry::MergeImpl,
+          ::google::protobuf::Message::GetNewImpl<CandidateEntry>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &CandidateEntry::SharedDtor,
+          ::google::protobuf::Message::GetClearImpl<CandidateEntry>(), &CandidateEntry::ByteSizeLong,
+              &CandidateEntry::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_._cached_size_),
+          false,
+      },
+      &CandidateEntry::kDescriptorMethods,
+      &descriptor_table_proto_2fmoqi_2eproto,
+      nullptr,  // tracker
+  };
+}
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
+    ::google::protobuf::internal::ClassDataFull CandidateEntry_class_data_ =
+        CandidateEntry::InternalGenerateClassData_();
+
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+CandidateEntry::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&CandidateEntry_class_data_);
+  ::google::protobuf::internal::PrefetchToLocalCache(CandidateEntry_class_data_.tc_table);
+  return CandidateEntry_class_data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<1, 2, 0, 48, 2>
+CandidateEntry::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_._has_bits_),
+    0, // no _extensions_
+    2, 8,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967292,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    2,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    CandidateEntry_class_data_.base(),
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallback,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::moqi::protocol::CandidateEntry>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // string comment = 2;
+    {::_pbi::TcParser::FastUS1,
+     {18, 1, 0,
+      PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_.comment_)}},
+    // string text = 1;
+    {::_pbi::TcParser::FastUS1,
+     {10, 0, 0,
+      PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_.text_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // string text = 1;
+    {PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_.text_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // string comment = 2;
+    {PROTOBUF_FIELD_OFFSET(CandidateEntry, _impl_.comment_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+  }},
+  // no aux_entries
+  {{
+    "\34\4\7\0\0\0\0\0"
+    "moqi.protocol.CandidateEntry"
+    "text"
+    "comment"
+  }},
+};
+PROTOBUF_NOINLINE void CandidateEntry::Clear() {
+// @@protoc_insertion_point(message_clear_start:moqi.protocol.CandidateEntry)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  cached_has_bits = _impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      _impl_.text_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      _impl_.comment_.ClearNonDefaultToEmpty();
+    }
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL CandidateEntry::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const CandidateEntry& this_ = static_cast<const CandidateEntry&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL CandidateEntry::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const CandidateEntry& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(serialize_to_array_start:moqi.protocol.CandidateEntry)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // string text = 1;
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (!this_._internal_text().empty()) {
+      const ::std::string& _s = this_._internal_text();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "moqi.protocol.CandidateEntry.text");
+      target = stream->WriteStringMaybeAliased(1, _s, target);
+    }
+  }
+
+  // string comment = 2;
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (!this_._internal_comment().empty()) {
+      const ::std::string& _s = this_._internal_comment();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "moqi.protocol.CandidateEntry.comment");
+      target = stream->WriteStringMaybeAliased(2, _s, target);
+    }
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:moqi.protocol.CandidateEntry)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t CandidateEntry::ByteSizeLong(const MessageLite& base) {
+  const CandidateEntry& this_ = static_cast<const CandidateEntry&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t CandidateEntry::ByteSizeLong() const {
+  const CandidateEntry& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:moqi.protocol.CandidateEntry)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void)cached_has_bits;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    // string text = 1;
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!this_._internal_text().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_text());
+      }
+    }
+    // string comment = 2;
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!this_._internal_comment().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_comment());
+      }
+    }
+  }
+  return this_.MaybeComputeUnknownFieldsSize(total_size,
+                                             &this_._impl_._cached_size_);
+}
+
+void CandidateEntry::MergeImpl(::google::protobuf::MessageLite& to_msg,
+                            const ::google::protobuf::MessageLite& from_msg) {
+   auto* const _this =
+      static_cast<CandidateEntry*>(&to_msg);
+  auto& from = static_cast<const CandidateEntry&>(from_msg);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    from.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(class_specific_merge_from_start:moqi.protocol.CandidateEntry)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!from._internal_text().empty()) {
+        _this->_internal_set_text(from._internal_text());
+      } else {
+        if (_this->_impl_.text_.IsDefault()) {
+          _this->_internal_set_text("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!from._internal_comment().empty()) {
+        _this->_internal_set_comment(from._internal_comment());
+      } else {
+        if (_this->_impl_.comment_.IsDefault()) {
+          _this->_internal_set_comment("");
+        }
+      }
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+}
+
+void CandidateEntry::CopyFrom(const CandidateEntry& from) {
+  // @@protoc_insertion_point(class_specific_copy_from_start:moqi.protocol.CandidateEntry)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void CandidateEntry::InternalSwap(CandidateEntry* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using ::std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.text_, &other->_impl_.text_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.comment_, &other->_impl_.comment_, arena);
+}
+
+::google::protobuf::Metadata CandidateEntry::GetMetadata() const {
+  return ::google::protobuf::Message::GetMetadataImpl(GetClassData()->full());
+}
+// ===================================================================
+
 class CustomizeUi::_Internal {
  public:
   using HasBits =
@@ -2614,9 +2984,9 @@ CustomizeUi::CustomizeUi(
                offsetof(Impl_, cand_font_size_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, cand_font_size_),
-           offsetof(Impl_, inline_preedit_) -
+           offsetof(Impl_, cand_comment_font_size_) -
                offsetof(Impl_, cand_font_size_) +
-               sizeof(Impl_::inline_preedit_));
+               sizeof(Impl_::cand_comment_font_size_));
 
   // @@protoc_insertion_point(copy_constructor:moqi.protocol.CustomizeUi)
 }
@@ -2635,9 +3005,9 @@ inline void CustomizeUi::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, cand_font_size_),
            0,
-           offsetof(Impl_, inline_preedit_) -
+           offsetof(Impl_, cand_comment_font_size_) -
                offsetof(Impl_, cand_font_size_) +
-               sizeof(Impl_::inline_preedit_));
+               sizeof(Impl_::cand_comment_font_size_));
 }
 CustomizeUi::~CustomizeUi() {
   // @@protoc_insertion_point(destructor:moqi.protocol.CustomizeUi)
@@ -2701,16 +3071,16 @@ CustomizeUi::GetClassData() const {
   return CustomizeUi_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 9, 0, 137, 2>
+const ::_pbi::TcParseTable<4, 10, 0, 137, 2>
 CustomizeUi::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_._has_bits_),
     0, // no _extensions_
-    9, 120,  // max_field_number, fast_idx_mask
+    10, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294966784,  // skipmap
+    4294966272,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    9,  // num_field_entries
+    10,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     CustomizeUi_class_data_.base(),
@@ -2757,7 +3127,10 @@ CustomizeUi::_table_ = {
     {::_pbi::TcParser::FastUS1,
      {74, 4, 0,
       PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_highlight_text_color_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // optional uint32 cand_comment_font_size = 10;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(CustomizeUi, _impl_.cand_comment_font_size_), 9>(),
+     {80, 9, 0,
+      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_font_size_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -2784,6 +3157,8 @@ CustomizeUi::_table_ = {
     {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_text_color_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // optional string cand_highlight_text_color = 9;
     {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_highlight_text_color_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // optional uint32 cand_comment_font_size = 10;
+    {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_font_size_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
   }},
   // no aux_entries
   {{
@@ -2826,7 +3201,11 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
         reinterpret_cast<char*>(&_impl_.cand_use_cursor_) -
         reinterpret_cast<char*>(&_impl_.cand_font_size_)) + sizeof(_impl_.cand_use_cursor_));
   }
-  _impl_.inline_preedit_ = false;
+  if (BatchCheckHasBit(cached_has_bits, 0x00000300U)) {
+    ::memset(&_impl_.inline_preedit_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.cand_comment_font_size_) -
+        reinterpret_cast<char*>(&_impl_.inline_preedit_)) + sizeof(_impl_.cand_comment_font_size_));
+  }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -2918,6 +3297,13 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
     target = stream->WriteStringMaybeAliased(9, _s, target);
   }
 
+  // optional uint32 cand_comment_font_size = 10;
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+        10, this_._internal_cand_comment_font_size(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -2981,6 +3367,13 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
           this_._internal_cand_per_row());
     }
   }
+   {
+    // optional uint32 cand_comment_font_size = 10;
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+          this_._internal_cand_comment_font_size());
+    }
+  }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
                                              &this_._impl_._cached_size_);
 }
@@ -3025,8 +3418,13 @@ void CustomizeUi::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.cand_use_cursor_ = from._impl_.cand_use_cursor_;
     }
   }
-  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
-    _this->_impl_.inline_preedit_ = from._impl_.inline_preedit_;
+  if (BatchCheckHasBit(cached_has_bits, 0x00000300U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      _this->_impl_.inline_preedit_ = from._impl_.inline_preedit_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      _this->_impl_.cand_comment_font_size_ = from._impl_.cand_comment_font_size_;
+    }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
@@ -3053,8 +3451,8 @@ void CustomizeUi::InternalSwap(CustomizeUi* PROTOBUF_RESTRICT PROTOBUF_NONNULL o
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.cand_text_color_, &other->_impl_.cand_text_color_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.cand_highlight_text_color_, &other->_impl_.cand_highlight_text_color_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.inline_preedit_)
-      + sizeof(CustomizeUi::_impl_.inline_preedit_)
+      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_font_size_)
+      + sizeof(CustomizeUi::_impl_.cand_comment_font_size_)
       - PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_font_size_)>(
           reinterpret_cast<char*>(&_impl_.cand_font_size_),
           reinterpret_cast<char*>(&other->_impl_.cand_font_size_));
@@ -4710,6 +5108,7 @@ PROTOBUF_NDEBUG_INLINE ServerResponse::Impl_::Impl_(
         change_button_{visibility, arena, from.change_button_},
         add_preserved_key_{visibility, arena, from.add_preserved_key_},
         remove_preserved_key_{visibility, arena, from.remove_preserved_key_},
+        candidate_entries_{visibility, arena, from.candidate_entries_},
         client_id_(arena, from.client_id_),
         composition_string_(arena, from.composition_string_),
         commit_string_(arena, from.commit_string_),
@@ -4730,13 +5129,13 @@ ServerResponse::ServerResponse(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
   ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.customize_ui_ = (CheckHasBit(cached_has_bits, 0x00001000U))
+  _impl_.customize_ui_ = (CheckHasBit(cached_has_bits, 0x00002000U))
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.customize_ui_)
                 : nullptr;
-  _impl_.show_message_ = (CheckHasBit(cached_has_bits, 0x00002000U))
+  _impl_.show_message_ = (CheckHasBit(cached_has_bits, 0x00004000U))
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.show_message_)
                 : nullptr;
-  _impl_.tray_notification_ = (CheckHasBit(cached_has_bits, 0x00004000U))
+  _impl_.tray_notification_ = (CheckHasBit(cached_has_bits, 0x00008000U))
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.tray_notification_)
                 : nullptr;
   ::memcpy(reinterpret_cast<char*>(&_impl_) +
@@ -4760,6 +5159,7 @@ PROTOBUF_NDEBUG_INLINE ServerResponse::Impl_::Impl_(
         change_button_{visibility, arena},
         add_preserved_key_{visibility, arena},
         remove_preserved_key_{visibility, arena},
+        candidate_entries_{visibility, arena},
         client_id_(arena),
         composition_string_(arena),
         commit_string_(arena),
@@ -4832,6 +5232,10 @@ constexpr auto ServerResponse::InternalNewImpl_() {
           decltype(ServerResponse::_impl_.remove_preserved_key_)::
               InternalGetArenaOffset(
                   ::google::protobuf::Message::internal_visibility()),
+      PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_entries_) +
+          decltype(ServerResponse::_impl_.candidate_entries_)::
+              InternalGetArenaOffset(
+                  ::google::protobuf::Message::internal_visibility()),
   });
   if (arena_bits.has_value()) {
     return ::google::protobuf::internal::MessageCreator::CopyInit(
@@ -4876,17 +5280,17 @@ ServerResponse::GetClassData() const {
   return ServerResponse_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 26, 7, 165, 2>
+const ::_pbi::TcParseTable<5, 27, 8, 165, 2>
 ServerResponse::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_._has_bits_),
     0, // no _extensions_
-    26, 248,  // max_field_number, fast_idx_mask
+    27, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4227858432,  // skipmap
+    4160749568,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    26,  // num_field_entries
-    7,  // num_aux_entries
+    27,  // num_field_entries
+    8,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     ServerResponse_class_data_.base(),
     nullptr,  // post_loop_handler
@@ -4898,19 +5302,19 @@ ServerResponse::_table_ = {
     {::_pbi::TcParser::MiniParse, {}},
     // optional string client_id = 1;
     {::_pbi::TcParser::FastUS1,
-     {10, 7, 0,
+     {10, 8, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.client_id_)}},
     // uint32 seq_num = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.seq_num_), 15>(),
-     {16, 15, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.seq_num_), 16>(),
+     {16, 16, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.seq_num_)}},
     // bool success = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ServerResponse, _impl_.success_), 21>(),
-     {24, 21, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ServerResponse, _impl_.success_), 22>(),
+     {24, 22, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.success_)}},
     // int32 return_value = 4;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.return_value_), 16>(),
-     {32, 16, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.return_value_), 17>(),
+     {32, 17, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.return_value_)}},
     // repeated .moqi.protocol.MenuItem menu_items = 5;
     {::_pbi::TcParser::FastMtR1,
@@ -4918,47 +5322,47 @@ ServerResponse::_table_ = {
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.menu_items_)}},
     // string composition_string = 6;
     {::_pbi::TcParser::FastUS1,
-     {50, 8, 0,
+     {50, 9, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_string_)}},
     // string commit_string = 7;
     {::_pbi::TcParser::FastUS1,
-     {58, 9, 0,
+     {58, 10, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.commit_string_)}},
     // repeated string candidate_list = 8;
     {::_pbi::TcParser::FastUR1,
      {66, 1, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_list_)}},
     // bool show_candidates = 9;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ServerResponse, _impl_.show_candidates_), 22>(),
-     {72, 22, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ServerResponse, _impl_.show_candidates_), 23>(),
+     {72, 23, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_candidates_)}},
     // int32 cursor_pos = 10;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.cursor_pos_), 17>(),
-     {80, 17, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.cursor_pos_), 18>(),
+     {80, 18, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.cursor_pos_)}},
     // int32 composition_cursor = 11;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.composition_cursor_), 18>(),
-     {88, 18, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.composition_cursor_), 19>(),
+     {88, 19, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_cursor_)}},
     // int32 candidate_cursor = 12;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.candidate_cursor_), 19>(),
-     {96, 19, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.candidate_cursor_), 20>(),
+     {96, 20, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_cursor_)}},
     // int32 sel_start = 13;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.sel_start_), 20>(),
-     {104, 20, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.sel_start_), 21>(),
+     {104, 21, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_start_)}},
     // int32 sel_end = 14;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.sel_end_), 25>(),
-     {112, 25, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.sel_end_), 26>(),
+     {112, 26, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_end_)}},
     // string set_sel_keys = 15;
     {::_pbi::TcParser::FastUS1,
-     {122, 10, 0,
+     {122, 11, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.set_sel_keys_)}},
     // optional .moqi.protocol.CustomizeUi customize_ui = 16;
     {::_pbi::TcParser::FastMtS2,
-     {386, 12, 1,
+     {386, 13, 1,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.customize_ui_)}},
     // repeated .moqi.protocol.ButtonInfo add_button = 17;
     {::_pbi::TcParser::FastMtR2,
@@ -4974,15 +5378,15 @@ ServerResponse::_table_ = {
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.change_button_)}},
     // optional .moqi.protocol.MessageWindow show_message = 20;
     {::_pbi::TcParser::FastMtS2,
-     {418, 13, 4,
+     {418, 14, 4,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_message_)}},
     // bool hide_message = 21;
     {::_pbi::TcParser::FastV8S2,
-     {424, 23, 0,
+     {424, 24, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.hide_message_)}},
     // bool open_keyboard = 22;
     {::_pbi::TcParser::FastV8S2,
-     {432, 24, 0,
+     {432, 25, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.open_keyboard_)}},
     // repeated .moqi.protocol.PreservedKey add_preserved_key = 23;
     {::_pbi::TcParser::FastMtR2,
@@ -4994,13 +5398,16 @@ ServerResponse::_table_ = {
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.remove_preserved_key_)}},
     // string error = 25;
     {::_pbi::TcParser::FastUS2,
-     {458, 11, 0,
+     {458, 12, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.error_)}},
     // optional .moqi.protocol.TrayNotification tray_notification = 26;
     {::_pbi::TcParser::FastMtS2,
-     {466, 14, 6,
+     {466, 15, 6,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.tray_notification_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // repeated .moqi.protocol.CandidateEntry candidate_entries = 27;
+    {::_pbi::TcParser::FastMtR2,
+     {474, 7, 7,
+      PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_entries_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -5009,37 +5416,37 @@ ServerResponse::_table_ = {
     65535, 65535
   }}, {{
     // optional string client_id = 1;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.client_id_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.client_id_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // uint32 seq_num = 2;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.seq_num_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.seq_num_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // bool success = 3;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.success_), _Internal::kHasBitsOffset + 21, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.success_), _Internal::kHasBitsOffset + 22, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // int32 return_value = 4;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.return_value_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.return_value_), _Internal::kHasBitsOffset + 17, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // repeated .moqi.protocol.MenuItem menu_items = 5;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.menu_items_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     // string composition_string = 6;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_string_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_string_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // string commit_string = 7;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.commit_string_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.commit_string_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // repeated string candidate_list = 8;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_list_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
     // bool show_candidates = 9;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_candidates_), _Internal::kHasBitsOffset + 22, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_candidates_), _Internal::kHasBitsOffset + 23, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // int32 cursor_pos = 10;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.cursor_pos_), _Internal::kHasBitsOffset + 17, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.cursor_pos_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 composition_cursor = 11;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_cursor_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_cursor_), _Internal::kHasBitsOffset + 19, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 candidate_cursor = 12;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_cursor_), _Internal::kHasBitsOffset + 19, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_cursor_), _Internal::kHasBitsOffset + 20, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 sel_start = 13;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_start_), _Internal::kHasBitsOffset + 20, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_start_), _Internal::kHasBitsOffset + 21, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 sel_end = 14;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_end_), _Internal::kHasBitsOffset + 25, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_end_), _Internal::kHasBitsOffset + 26, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // string set_sel_keys = 15;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.set_sel_keys_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.set_sel_keys_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // optional .moqi.protocol.CustomizeUi customize_ui = 16;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.customize_ui_), _Internal::kHasBitsOffset + 12, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.customize_ui_), _Internal::kHasBitsOffset + 13, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // repeated .moqi.protocol.ButtonInfo add_button = 17;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.add_button_), _Internal::kHasBitsOffset + 2, 2, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     // repeated string remove_button = 18;
@@ -5047,19 +5454,21 @@ ServerResponse::_table_ = {
     // repeated .moqi.protocol.ButtonInfo change_button = 19;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.change_button_), _Internal::kHasBitsOffset + 4, 3, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     // optional .moqi.protocol.MessageWindow show_message = 20;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_message_), _Internal::kHasBitsOffset + 13, 4, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.show_message_), _Internal::kHasBitsOffset + 14, 4, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // bool hide_message = 21;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.hide_message_), _Internal::kHasBitsOffset + 23, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.hide_message_), _Internal::kHasBitsOffset + 24, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // bool open_keyboard = 22;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.open_keyboard_), _Internal::kHasBitsOffset + 24, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.open_keyboard_), _Internal::kHasBitsOffset + 25, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // repeated .moqi.protocol.PreservedKey add_preserved_key = 23;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.add_preserved_key_), _Internal::kHasBitsOffset + 5, 5, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     // repeated string remove_preserved_key = 24;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.remove_preserved_key_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
     // string error = 25;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.error_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.error_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // optional .moqi.protocol.TrayNotification tray_notification = 26;
-    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.tray_notification_), _Internal::kHasBitsOffset + 14, 6, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.tray_notification_), _Internal::kHasBitsOffset + 15, 6, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // repeated .moqi.protocol.CandidateEntry candidate_entries = 27;
+    {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_entries_), _Internal::kHasBitsOffset + 7, 7, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::moqi::protocol::MenuItem>()},
@@ -5069,6 +5478,7 @@ ServerResponse::_table_ = {
       {::_pbi::TcParser::GetTable<::moqi::protocol::MessageWindow>()},
       {::_pbi::TcParser::GetTable<::moqi::protocol::PreservedKey>()},
       {::_pbi::TcParser::GetTable<::moqi::protocol::TrayNotification>()},
+      {::_pbi::TcParser::GetTable<::moqi::protocol::CandidateEntry>()},
   }},
   {{
     "\34\11\0\0\0\0\22\15\16\0\0\0\0\0\0\14\0\0\15\0\0\0\0\0\24\5\0\0\0\0\0\0"
@@ -5113,46 +5523,48 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000040U)) {
       _impl_.remove_preserved_key_.Clear();
     }
-    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      _impl_.client_id_.ClearNonDefaultToEmpty();
+    if (CheckHasBitForRepeated(cached_has_bits, 0x00000080U)) {
+      _impl_.candidate_entries_.Clear();
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
-      _impl_.composition_string_.ClearNonDefaultToEmpty();
+      _impl_.client_id_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00000200U)) {
-      _impl_.commit_string_.ClearNonDefaultToEmpty();
+      _impl_.composition_string_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00000400U)) {
-      _impl_.set_sel_keys_.ClearNonDefaultToEmpty();
+      _impl_.commit_string_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00000800U)) {
-      _impl_.error_.ClearNonDefaultToEmpty();
+      _impl_.set_sel_keys_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      _impl_.error_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       ABSL_DCHECK(_impl_.customize_ui_ != nullptr);
       _impl_.customize_ui_->Clear();
     }
-    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
       ABSL_DCHECK(_impl_.show_message_ != nullptr);
       _impl_.show_message_->Clear();
     }
-    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
       ABSL_DCHECK(_impl_.tray_notification_ != nullptr);
       _impl_.tray_notification_->Clear();
     }
   }
-  _impl_.seq_num_ = 0u;
   if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
-    ::memset(&_impl_.return_value_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.hide_message_) -
-        reinterpret_cast<char*>(&_impl_.return_value_)) + sizeof(_impl_.hide_message_));
+    ::memset(&_impl_.seq_num_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.show_candidates_) -
+        reinterpret_cast<char*>(&_impl_.seq_num_)) + sizeof(_impl_.show_candidates_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x03000000U)) {
-    ::memset(&_impl_.open_keyboard_, 0, static_cast<::size_t>(
+  if (BatchCheckHasBit(cached_has_bits, 0x07000000U)) {
+    ::memset(&_impl_.hide_message_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.sel_end_) -
-        reinterpret_cast<char*>(&_impl_.open_keyboard_)) + sizeof(_impl_.sel_end_));
+        reinterpret_cast<char*>(&_impl_.hide_message_)) + sizeof(_impl_.sel_end_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -5178,7 +5590,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // optional string client_id = 1;
-  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
     const ::std::string& _s = this_._internal_client_id();
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
         _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "moqi.protocol.ServerResponse.client_id");
@@ -5186,7 +5598,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // uint32 seq_num = 2;
-  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
     if (this_._internal_seq_num() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
@@ -5195,7 +5607,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // bool success = 3;
-  if (CheckHasBit(cached_has_bits, 0x00200000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00400000U)) {
     if (this_._internal_success() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -5204,7 +5616,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 return_value = 4;
-  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00020000U)) {
     if (this_._internal_return_value() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<4>(
@@ -5226,7 +5638,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // string composition_string = 6;
-  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
     if (!this_._internal_composition_string().empty()) {
       const ::std::string& _s = this_._internal_composition_string();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -5236,7 +5648,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // string commit_string = 7;
-  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
     if (!this_._internal_commit_string().empty()) {
       const ::std::string& _s = this_._internal_commit_string();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -5256,7 +5668,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // bool show_candidates = 9;
-  if (CheckHasBit(cached_has_bits, 0x00400000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00800000U)) {
     if (this_._internal_show_candidates() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -5265,7 +5677,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 cursor_pos = 10;
-  if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00040000U)) {
     if (this_._internal_cursor_pos() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<10>(
@@ -5274,7 +5686,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 composition_cursor = 11;
-  if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00080000U)) {
     if (this_._internal_composition_cursor() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<11>(
@@ -5283,7 +5695,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 candidate_cursor = 12;
-  if (CheckHasBit(cached_has_bits, 0x00080000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00100000U)) {
     if (this_._internal_candidate_cursor() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<12>(
@@ -5292,7 +5704,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 sel_start = 13;
-  if (CheckHasBit(cached_has_bits, 0x00100000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00200000U)) {
     if (this_._internal_sel_start() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<13>(
@@ -5301,7 +5713,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // int32 sel_end = 14;
-  if (CheckHasBit(cached_has_bits, 0x02000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x04000000U)) {
     if (this_._internal_sel_end() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<14>(
@@ -5310,7 +5722,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // string set_sel_keys = 15;
-  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
     if (!this_._internal_set_sel_keys().empty()) {
       const ::std::string& _s = this_._internal_set_sel_keys();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -5320,7 +5732,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // optional .moqi.protocol.CustomizeUi customize_ui = 16;
-  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         16, *this_._impl_.customize_ui_, this_._impl_.customize_ui_->GetCachedSize(), target,
         stream);
@@ -5363,14 +5775,14 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // optional .moqi.protocol.MessageWindow show_message = 20;
-  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         20, *this_._impl_.show_message_, this_._impl_.show_message_->GetCachedSize(), target,
         stream);
   }
 
   // bool hide_message = 21;
-  if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
     if (this_._internal_hide_message() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -5379,7 +5791,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // bool open_keyboard = 22;
-  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x02000000U)) {
     if (this_._internal_open_keyboard() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -5411,7 +5823,7 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // string error = 25;
-  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
     if (!this_._internal_error().empty()) {
       const ::std::string& _s = this_._internal_error();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -5421,10 +5833,23 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
   }
 
   // optional .moqi.protocol.TrayNotification tray_notification = 26;
-  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         26, *this_._impl_.tray_notification_, this_._impl_.tray_notification_->GetCachedSize(), target,
         stream);
+  }
+
+  // repeated .moqi.protocol.CandidateEntry candidate_entries = 27;
+  if (CheckHasBitForRepeated(cached_has_bits, 0x00000080U)) {
+    for (unsigned i = 0, n = static_cast<unsigned>(
+                             this_._internal_candidate_entries_size());
+         i < n; i++) {
+      const auto& repfield = this_._internal_candidate_entries().Get(i);
+      target =
+          ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+              27, repfield, repfield.GetCachedSize(),
+              target, stream);
+    }
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -5508,128 +5933,135 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
             this_._internal_remove_preserved_key().Get(i));
       }
     }
-    // optional string client_id = 1;
-    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                      this_._internal_client_id());
+    // repeated .moqi.protocol.CandidateEntry candidate_entries = 27;
+    if (CheckHasBitForRepeated(cached_has_bits, 0x00000080U)) {
+      total_size += 2UL * this_._internal_candidate_entries_size();
+      for (const auto& msg : this_._internal_candidate_entries()) {
+        total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+      }
     }
   }
   if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
-    // string composition_string = 6;
+    // optional string client_id = 1;
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                      this_._internal_client_id());
+    }
+    // string composition_string = 6;
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
       if (!this_._internal_composition_string().empty()) {
         total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_composition_string());
       }
     }
     // string commit_string = 7;
-    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
       if (!this_._internal_commit_string().empty()) {
         total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_commit_string());
       }
     }
     // string set_sel_keys = 15;
-    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (!this_._internal_set_sel_keys().empty()) {
         total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_set_sel_keys());
       }
     }
     // string error = 25;
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (!this_._internal_error().empty()) {
         total_size += 2 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_error());
       }
     }
     // optional .moqi.protocol.CustomizeUi customize_ui = 16;
-    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       total_size += 2 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.customize_ui_);
     }
     // optional .moqi.protocol.MessageWindow show_message = 20;
-    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
       total_size += 2 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.show_message_);
     }
     // optional .moqi.protocol.TrayNotification tray_notification = 26;
-    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
       total_size += 2 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.tray_notification_);
     }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     // uint32 seq_num = 2;
-    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (this_._internal_seq_num() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
             this_._internal_seq_num());
       }
     }
-  }
-  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     // int32 return_value = 4;
-    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
       if (this_._internal_return_value() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_return_value());
       }
     }
     // int32 cursor_pos = 10;
-    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
       if (this_._internal_cursor_pos() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_cursor_pos());
       }
     }
     // int32 composition_cursor = 11;
-    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00080000U)) {
       if (this_._internal_composition_cursor() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_composition_cursor());
       }
     }
     // int32 candidate_cursor = 12;
-    if (CheckHasBit(cached_has_bits, 0x00080000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00100000U)) {
       if (this_._internal_candidate_cursor() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_candidate_cursor());
       }
     }
     // int32 sel_start = 13;
-    if (CheckHasBit(cached_has_bits, 0x00100000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00200000U)) {
       if (this_._internal_sel_start() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_sel_start());
       }
     }
     // bool success = 3;
-    if (CheckHasBit(cached_has_bits, 0x00200000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00400000U)) {
       if (this_._internal_success() != 0) {
         total_size += 2;
       }
     }
     // bool show_candidates = 9;
-    if (CheckHasBit(cached_has_bits, 0x00400000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
       if (this_._internal_show_candidates() != 0) {
         total_size += 2;
       }
     }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x07000000U)) {
     // bool hide_message = 21;
-    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+    if (CheckHasBit(cached_has_bits, 0x01000000U)) {
       if (this_._internal_hide_message() != 0) {
         total_size += 3;
       }
     }
-  }
-  if (BatchCheckHasBit(cached_has_bits, 0x03000000U)) {
     // bool open_keyboard = 22;
-    if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x02000000U)) {
       if (this_._internal_open_keyboard() != 0) {
         total_size += 3;
       }
     }
     // int32 sel_end = 14;
-    if (CheckHasBit(cached_has_bits, 0x02000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x04000000U)) {
       if (this_._internal_sel_end() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_sel_end());
@@ -5691,12 +6123,17 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
           ::google::protobuf::MessageLite::internal_visibility(), arena,
           from._internal_remove_preserved_key());
     }
-    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      _this->_internal_set_client_id(from._internal_client_id());
+    if (CheckHasBitForRepeated(cached_has_bits, 0x00000080U)) {
+      _this->_internal_mutable_candidate_entries()->InternalMergeFromWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), arena,
+          from._internal_candidate_entries());
     }
   }
   if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      _this->_internal_set_client_id(from._internal_client_id());
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
       if (!from._internal_composition_string().empty()) {
         _this->_internal_set_composition_string(from._internal_composition_string());
       } else {
@@ -5705,7 +6142,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         }
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
       if (!from._internal_commit_string().empty()) {
         _this->_internal_set_commit_string(from._internal_commit_string());
       } else {
@@ -5714,7 +6151,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         }
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (!from._internal_set_sel_keys().empty()) {
         _this->_internal_set_set_sel_keys(from._internal_set_sel_keys());
       } else {
@@ -5723,7 +6160,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         }
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (!from._internal_error().empty()) {
         _this->_internal_set_error(from._internal_error());
       } else {
@@ -5732,7 +6169,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         }
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       ABSL_DCHECK(from._impl_.customize_ui_ != nullptr);
       if (_this->_impl_.customize_ui_ == nullptr) {
         _this->_impl_.customize_ui_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.customize_ui_);
@@ -5740,7 +6177,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.customize_ui_->MergeFrom(*from._impl_.customize_ui_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
       ABSL_DCHECK(from._impl_.show_message_ != nullptr);
       if (_this->_impl_.show_message_ == nullptr) {
         _this->_impl_.show_message_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.show_message_);
@@ -5748,7 +6185,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.show_message_->MergeFrom(*from._impl_.show_message_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
       ABSL_DCHECK(from._impl_.tray_notification_ != nullptr);
       if (_this->_impl_.tray_notification_ == nullptr) {
         _this->_impl_.tray_notification_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.tray_notification_);
@@ -5756,61 +6193,61 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.tray_notification_->MergeFrom(*from._impl_.tray_notification_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (from._internal_seq_num() != 0) {
         _this->_impl_.seq_num_ = from._impl_.seq_num_;
       }
     }
-  }
-  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
-    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
       if (from._internal_return_value() != 0) {
         _this->_impl_.return_value_ = from._impl_.return_value_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
       if (from._internal_cursor_pos() != 0) {
         _this->_impl_.cursor_pos_ = from._impl_.cursor_pos_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00080000U)) {
       if (from._internal_composition_cursor() != 0) {
         _this->_impl_.composition_cursor_ = from._impl_.composition_cursor_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00080000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00100000U)) {
       if (from._internal_candidate_cursor() != 0) {
         _this->_impl_.candidate_cursor_ = from._impl_.candidate_cursor_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00100000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00200000U)) {
       if (from._internal_sel_start() != 0) {
         _this->_impl_.sel_start_ = from._impl_.sel_start_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00200000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00400000U)) {
       if (from._internal_success() != 0) {
         _this->_impl_.success_ = from._impl_.success_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00400000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
       if (from._internal_show_candidates() != 0) {
         _this->_impl_.show_candidates_ = from._impl_.show_candidates_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x07000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x01000000U)) {
       if (from._internal_hide_message() != 0) {
         _this->_impl_.hide_message_ = from._impl_.hide_message_;
       }
     }
-  }
-  if (BatchCheckHasBit(cached_has_bits, 0x03000000U)) {
-    if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x02000000U)) {
       if (from._internal_open_keyboard() != 0) {
         _this->_impl_.open_keyboard_ = from._impl_.open_keyboard_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x02000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x04000000U)) {
       if (from._internal_sel_end() != 0) {
         _this->_impl_.sel_end_ = from._impl_.sel_end_;
       }
@@ -5842,6 +6279,7 @@ void ServerResponse::InternalSwap(ServerResponse* PROTOBUF_RESTRICT PROTOBUF_NON
   _impl_.change_button_.InternalSwap(&other->_impl_.change_button_);
   _impl_.add_preserved_key_.InternalSwap(&other->_impl_.add_preserved_key_);
   _impl_.remove_preserved_key_.InternalSwap(&other->_impl_.remove_preserved_key_);
+  _impl_.candidate_entries_.InternalSwap(&other->_impl_.candidate_entries_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.client_id_, &other->_impl_.client_id_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.composition_string_, &other->_impl_.composition_string_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.commit_string_, &other->_impl_.commit_string_, arena);

@@ -282,6 +282,7 @@ TextService::TextService(ImeModule* module):
 	selKeys_(L"1234567890"),
 	candUseCursor_(true),
 	candFontSize_(16),
+	candCommentFontSize_(16),
 	candBackgroundColor_(RGB(255, 255, 255)),
 	candHighlightColor_(RGB(198, 221, 249)),
 	candTextColor_(RGB(0, 0, 0)),
@@ -297,6 +298,8 @@ TextService::TextService(ImeModule* module):
 	lf.lfHeight = candFontHeight(); // FIXME: make this configurable
 	lf.lfWeight = FW_NORMAL;
 	font_ = CreateFontIndirect(&lf);
+	lf.lfHeight = candCommentFontHeight();
+	commentFont_ = CreateFontIndirect(&lf);
 }
 
 TextService::~TextService(void) {
@@ -314,6 +317,8 @@ TextService::~TextService(void) {
 
 	if(font_)
 		::DeleteObject(font_);
+	if(commentFont_)
+		::DeleteObject(commentFont_);
 }
 
 // virtual
@@ -542,6 +547,7 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		candidateWindow_->Release();  // decrease ref count caused by new
 
 		candidateWindow_->setFont(font_);
+		candidateWindow_->setCommentFont(commentFont_);
 		candidateWindow_->setBackgroundColor(candBackgroundColor_);
 		candidateWindow_->setHighlightColor(candHighlightColor_);
 		candidateWindow_->setTextColor(candTextColor_);
@@ -608,15 +614,23 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 		LOGFONT lf;
 		GetObject(font_, sizeof(lf), &lf);
 		::DeleteObject(font_); // delete old font
+		if (commentFont_) {
+			::DeleteObject(commentFont_);
+			commentFont_ = nullptr;
+		}
 		lf.lfHeight = candFontHeight(); // apply the new size
 		if (!candFontName_.empty()) { // apply new font name
 			wcsncpy(lf.lfFaceName, candFontName_.c_str(), 31);
 		}
 		font_ = CreateFontIndirect(&lf); // create new font
+		lf.lfHeight = candCommentFontHeight();
+		commentFont_ = CreateFontIndirect(&lf);
 		// if (messageWindow_)
 		//	messageWindow_->setFont(font_);
-		if (candidateWindow_)
+		if (candidateWindow_) {
 			candidateWindow_->setFont(font_);
+			candidateWindow_->setCommentFont(commentFont_);
+		}
 		updateFont_ = false;
 	}
 
@@ -800,6 +814,17 @@ int TextService::candFontHeight() {
 	{
 		// Match fcitx5-windows: treat configured size as px at 96 DPI.
 		candFontHeight_ = -MulDiv(candFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 96);
+		ReleaseDC(NULL, hdc);
+	}
+	return candFontHeight_;
+}
+
+int TextService::candCommentFontHeight() {
+	int candFontHeight_ = candCommentFontSize_;
+	HDC hdc = GetDC(NULL);
+	if (hdc)
+	{
+		candFontHeight_ = -MulDiv(candCommentFontSize_, GetDeviceCaps(hdc, LOGPIXELSY), 96);
 		ReleaseDC(NULL, hdc);
 	}
 	return candFontHeight_;

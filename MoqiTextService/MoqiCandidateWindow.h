@@ -16,6 +16,18 @@ class EditSession;
 
 namespace Moqi {
 
+struct CandidateUiItem {
+    std::wstring text;
+    std::wstring comment;
+
+    std::wstring combinedText() const {
+        if (comment.empty()) {
+            return text;
+        }
+        return text + L" " + comment;
+    }
+};
+
 class CandidateWindow
     : public Ime::ImeWindow,
       public Ime::ComObject<Ime::ComInterface<ITfCandidateListUIElement>> {
@@ -36,12 +48,13 @@ public:
     STDMETHODIMP SetPageIndex(UINT* puIndex, UINT uPageCnt);
     STDMETHODIMP GetCurrentPage(UINT* puPage);
 
-    void add(std::wstring item, wchar_t selKey);
+    void add(CandidateUiItem item, wchar_t selKey);
     void clear();
     void setCandPerRow(int n);
     void setCurrentSel(int sel);
     void setUseCursor(bool use);
     void setPreeditText(std::wstring text);
+    void setCommentFont(HFONT font);
     void setBackgroundColor(COLORREF color);
     void setHighlightColor(COLORREF color);
     void setTextColor(COLORREF color);
@@ -63,6 +76,7 @@ private:
     BOOL shown_;
     int selKeyWidth_;
     int textWidth_;
+    int commentWidth_;
     int itemHeight_;
     int candPerRow_;
     int colSpacing_;
@@ -70,6 +84,7 @@ private:
     int padX_;
     int padY_;
     int labelGap_;
+    int commentGap_;
     int borderWidth_;
     int borderRadius_;
     int minWidth_;
@@ -81,8 +96,9 @@ private:
     COLORREF textColor_;
     COLORREF highlightTextColor_;
     std::wstring preedit_;
+    HFONT commentFont_;
     std::vector<wchar_t> selKeys_;
-    std::vector<std::wstring> items_;
+    std::vector<CandidateUiItem> items_;
     int currentSel_;
     bool useCursor_;
 };
