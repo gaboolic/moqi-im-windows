@@ -164,9 +164,11 @@ $IssPath = [System.IO.Path]::GetFullPath($IssPath)
 
 $stageWin32Root = Join-Path $StageDir "win32\MoqiIM"
 $stageX64Root = Join-Path $StageDir "x64\MoqiIM"
+$stageWin32X64Root = Join-Path $stageWin32Root "x64"
 New-CleanDirectory -Path $StageDir
 New-Item -ItemType Directory -Path $stageWin32Root -Force | Out-Null
 New-Item -ItemType Directory -Path $stageX64Root -Force | Out-Null
+New-Item -ItemType Directory -Path $stageWin32X64Root -Force | Out-Null
 
 $backends = Join-Path $RepoRoot "backends.json"
 if (-not (Test-Path -LiteralPath $backends)) {
@@ -181,6 +183,13 @@ $launcher = Resolve-ArtifactPath -Label "MoqiLauncher.exe" -Candidates @(
 )
 Copy-IfExists -Source $launcher -Destination (Join-Path $stageWin32Root "MoqiLauncher.exe")
 
+$setupHelper = Resolve-ArtifactPath -Label "SetupHelper.exe" -Candidates @(
+    (Join-Path $Win32BuildDir "SetupHelper.exe"),
+    (Join-Path $Win32BuildDir "Release\SetupHelper.exe"),
+    (Join-Path $Win32BuildDir "SetupHelper\Release\SetupHelper.exe")
+)
+Copy-IfExists -Source $setupHelper -Destination (Join-Path $stageWin32Root "SetupHelper.exe")
+
 $dll32 = Resolve-ArtifactPath -Label "Win32 MoqiTextService.dll" -Candidates @(
     (Join-Path $Win32BuildDir "MoqiTextService.dll"),
     (Join-Path $Win32BuildDir "Release\MoqiTextService.dll"),
@@ -194,6 +203,7 @@ $dll64 = Resolve-ArtifactPath -Label "x64 MoqiTextService.dll" -Candidates @(
     (Join-Path $X64BuildDir "MoqiTextService\Release\MoqiTextService.dll")
 )
 Copy-IfExists -Source $dll64 -Destination (Join-Path $stageX64Root "MoqiTextService.dll")
+Copy-IfExists -Source $dll64 -Destination (Join-Path $stageWin32X64Root "MoqiTextService.dll")
 
 if (-not $SkipMoqiImeCopy) {
     if (-not (Test-Path -LiteralPath $MoqiImeSource)) {

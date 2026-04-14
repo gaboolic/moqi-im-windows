@@ -38,31 +38,55 @@ const GUID g_textServiceClsid = {
     0x4b3e,
     {0x9e, 0x1f, 0x6a, 0x5c, 0x0d, 0x8b, 0x2e, 0x7f}};
 
+namespace {
+
+std::wstring getConfiguredProgramDir() {
+  wchar_t path[MAX_PATH] = {};
+  DWORD len = ::GetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", path, _countof(path));
+  if (len > 0 && len < _countof(path)) {
+    return path;
+  }
+
+  HRESULT result;
+  result = ::SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILESX86, NULL, 0, path);
+  if (result != S_OK) {
+    result = ::SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILES, NULL, 0, path);
+  }
+  if (result == S_OK) {
+    std::wstring programDir = path;
+    programDir += L"\\MoqiIM";
+    return programDir;
+  }
+  return std::wstring();
+}
+
+void loadBackendDirs(const std::wstring& programDir,
+                     std::vector<std::wstring>& backendDirs) {
+  backendDirs.clear();
+  std::ifstream fp(programDir + L"\\backends.json", std::ifstream::binary);
+  if (!fp) {
+    return;
+  }
+
+  Json::Value backendsInfo;
+  fp >> backendsInfo;
+  if (!backendsInfo.isArray()) {
+    return;
+  }
+
+  for (const auto& backend : backendsInfo) {
+    std::wstring name = utf8ToUtf16(backend["name"].asCString());
+    backendDirs.push_back(name);
+  }
+}
+
+}  // namespace
+
 ImeModule::ImeModule(HMODULE module)
     : Ime::ImeModule(module, g_textServiceClsid) {
-  wchar_t path[MAX_PATH];
-  HRESULT result;
-  // get the program data directory
-  // try C:\program files (x86) first
-  result = ::SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILESX86, NULL, 0, path);
-  if (result != S_OK) // failed, fall back to C:\program files
-    result = ::SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILES, NULL, 0, path);
-  if (result == S_OK) { // program files folder is found
-    programDir_ = path;
-    programDir_ += L"\\MoqiIM";
-
-    // load backend information
-    std::ifstream fp(programDir_ + L"\\backends.json", std::ifstream::binary);
-    if (fp) {
-      Json::Value backendsInfo;
-      fp >> backendsInfo;
-      if (backendsInfo.isArray()) {
-        for (const auto &backend : backendsInfo) {
-          std::wstring name = utf8ToUtf16(backend["name"].asCString());
-          backendDirs_.push_back(name);
-        }
-      }
-    }
+  programDir_ = getConfiguredProgramDir();
+  if (!programDir_.empty()) {
+    loadBackendDirs(programDir_, backendDirs_);
   }
 }
 

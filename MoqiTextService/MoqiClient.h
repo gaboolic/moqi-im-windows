@@ -25,6 +25,7 @@
 #include <libIME2/src/EditSession.h>
 #include "MoqiLangBarButton.h"
 
+#include <deque>
 #include <unordered_map>
 #include <string>
 #include <json/json.h>
@@ -85,6 +86,13 @@ private:
     bool isPipeCreatedByMoqiServer(HANDLE pipe);
     bool waitForRpcConnection();
     bool callRpcPipe(HANDLE pipe, const std::string& serializedRequest, std::string& serializedReply);
+	bool readPendingPipeMessage(std::string& serializedReply);
+	void refreshAsyncPollTimer();
+	void pollAsyncResponses();
+	void enqueueAsyncResponse(const moqi::protocol::ServerResponse& response);
+	void flushPendingAsyncResponses(Ime::EditSession* session = nullptr);
+	bool applyAsyncResponse(Json::Value& msg, Ime::EditSession* session = nullptr);
+	static void CALLBACK onAsyncPollTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
     void closeRpcConnection();
 
 	bool init();
@@ -115,6 +123,9 @@ private:
 	unsigned int nextSeqNum_;
 	bool isActivated_;
     bool shouldWaitConnection_;
+	HWND asyncPollTimerWindow_;
+	UINT_PTR asyncPollTimerId_;
+	std::deque<Json::Value> pendingAsyncResponses_;
 };
 
 }

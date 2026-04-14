@@ -25,6 +25,8 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
+CloseApplications=yes
+RestartApplications=no
 WizardStyle=modern
 OutputDir=dist
 OutputBaseFilename=moqi-im-windows-setup
@@ -38,16 +40,14 @@ DisableWelcomePage=no
 Name: "chinesesimplified"; MessagesFile: ".\Inno-Setup-Chinese-Simplified-Translation\ChineseSimplified.isl"
 
 [Files]
-Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "MoqiTextService.dll"
-Source: "{#StageDir}\win32\MoqiIM\MoqiTextService.dll"; DestDir: "{syswow64}"; DestName: "MoqiTextService.dll"; Flags: ignoreversion
-Source: "{#StageDir}\x64\MoqiIM\MoqiTextService.dll"; DestDir: "{sys}"; DestName: "MoqiTextService.dll"; Flags: ignoreversion
+Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{autopf32}\MoqiIM"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
 [Run]
-Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Flags: nowait
+Filename: "{autopf32}\MoqiIM\MoqiLauncher.exe"; Flags: nowait; Check: ShouldLaunchLauncher
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
@@ -57,46 +57,29 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
 
 [InstallDelete]
 Type: filesandordirs; Name: "{autopf32}\MoqiIM\moqi-ime"
-Type: files; Name: "{autopf32}\MoqiIM\MoqiTextService.dll"
-Type: files; Name: "{autopf64}\MoqiIM\MoqiTextService.dll"
-
-[UninstallDelete]
-Type: files; Name: "{syswow64}\MoqiTextService.dll"
-Type: files; Name: "{sys}\MoqiTextService.dll"
-
-[UninstallRun]
-Filename: "{syswow64}\regsvr32.exe"; \
-  Parameters: "/u /s ""{syswow64}\MoqiTextService.dll"""; \
-  WorkingDir: "{syswow64}"; \
-  RunOnceId: "MoqiTsfUnreg32"; \
-  Flags: runhidden waituntilterminated; \
-  Check: Win32ImeDllExists
-Filename: "{sys}\regsvr32.exe"; \
-  Parameters: "/u /s ""{sys}\MoqiTextService.dll"""; \
-  WorkingDir: "{sys}"; \
-  RunOnceId: "MoqiTsfUnreg64"; \
-  Flags: runhidden waituntilterminated; \
-  Check: X64ImeDllExists
+Type: filesandordirs; Name: "{autopf32}\MoqiIM\x64"
 
 [Code]
-function GetWin32ImeDll: string;
-begin
-  Result := ExpandConstant('{syswow64}\MoqiTextService.dll');
-end;
+const
+  SetupHelperExitSuccess = 0;
+  SetupHelperExitRestartRequired = 2;
 
-function GetX64ImeDll: string;
-begin
-  Result := ExpandConstant('{sys}\MoqiTextService.dll');
-end;
+var
+  HelperInstallSucceeded: Boolean;
+  HelperInstallNeedsRestart: Boolean;
+  HelperUninstallNeedsRestart: Boolean;
+  HadExistingInstall: Boolean;
 
-function Win32ImeDllExists: Boolean;
+function ExistingImeInstallationPresent: Boolean;
 begin
-  Result := FileExists(GetWin32ImeDll);
-end;
-
-function X64ImeDllExists: Boolean;
-begin
-  Result := FileExists(GetX64ImeDll);
+  Result :=
+    FileExists(ExpandConstant('{app}\MoqiLauncher.exe')) or
+    FileExists(ExpandConstant('{syswow64}\MoqiTextService.dll')) or
+    FileExists(ExpandConstant('{sys}\MoqiTextService.dll')) or
+    RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\Microsoft\CTF\TIP\{#ImeClsid}') or
+    RegKeyExists(HKEY_CURRENT_USER, 'Software\Microsoft\CTF\TIP\{#ImeClsid}') or
+    RegKeyExists(HKEY_CLASSES_ROOT, 'CLSID\{#ImeClsid}') or
+    RegKeyExists(HKEY_CURRENT_USER, 'Software\Classes\CLSID\{#ImeClsid}');
 end;
 
 procedure RegPurgeMoqiResiduals;
@@ -129,28 +112,99 @@ begin
   TryKillProcessImage('MoqiLauncher.exe');
 end;
 
+function GetSetupHelperPath: string;
+begin
+  Result := ExpandConstant('{app}\SetupHelper.exe');
+end;
+
+procedure EnsureSetupHelperExists;
+begin
+  if not FileExists(GetSetupHelperPath) then
+    RaiseException('SetupHelper.exe not found: ' + GetSetupHelperPath);
+end;
+
+function RunSetupHelper(const Parameters: string; var ResultCode: Integer): Boolean;
+begin
+  EnsureSetupHelperExists;
+  Result := Exec(GetSetupHelperPath, Parameters, ExpandConstant('{app}'),
+    SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not Result then
+    ResultCode := -1;
+end;
+
+procedure HandleSetupHelperResult(const Operation: string; const ResultCode: Integer);
+begin
+  RaiseException(Operation + ' failed (exit code ' + IntToStr(ResultCode) + ').');
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  R: Integer;
+  ResultCode: Integer;
 begin
   if CurStep = ssInstall then
+  begin
+    HadExistingInstall := ExistingImeInstallationPresent;
     StopMoqiProcesses;
+  end;
 
   if CurStep = ssPostInstall then
   begin
-    if Win32ImeDllExists then
-      if (not Exec(ExpandConstant('{syswow64}\regsvr32.exe'), '/s "' + GetWin32ImeDll + '"', ExtractFileDir(GetWin32ImeDll), SW_HIDE, ewWaitUntilTerminated, R)) or (R <> 0) then
-        RaiseException('Win32 regsvr32 failed (code ' + IntToStr(R) + ').');
-    if X64ImeDllExists then
-      if (not Exec(ExpandConstant('{sys}\regsvr32.exe'), '/s "' + GetX64ImeDll + '"', ExtractFileDir(GetX64ImeDll), SW_HIDE, ewWaitUntilTerminated, R)) or (R <> 0) then
-        RaiseException('x64 regsvr32 failed (code ' + IntToStr(R) + ').');
+    if not RunSetupHelper('/i /s --appdir "' + ExpandConstant('{app}') + '"', ResultCode) then
+      HandleSetupHelperResult('SetupHelper install', ResultCode);
+
+    if ResultCode = SetupHelperExitSuccess then
+    begin
+      HelperInstallSucceeded := True;
+      if HadExistingInstall then
+        SuppressibleMsgBox(
+          '检测到这是一次覆盖安装。若当前会话里仍有旧的 TSF 实例，墨奇可能要在注销或重启 Windows 后才能立即恢复正常输入。',
+          mbInformation, MB_OK, IDOK);
+    end
+    else if ResultCode = SetupHelperExitRestartRequired then
+    begin
+      HelperInstallSucceeded := True;
+      HelperInstallNeedsRestart := True;
+      SuppressibleMsgBox(
+        '安装程序已更新应用文件，但 TSF DLL 当前仍被系统占用。' + #13#10#13#10 +
+        '请在安装完成后尽快重启 Windows，然后重新运行安装程序以完成 TSF 注册。',
+        mbInformation, MB_OK, IDOK);
+    end;
+    if (ResultCode <> SetupHelperExitSuccess) and
+       (ResultCode <> SetupHelperExitRestartRequired) then
+      HandleSetupHelperResult('SetupHelper install', ResultCode);
   end;
 end;
 
+function NeedRestart(): Boolean;
+begin
+  Result := HelperInstallNeedsRestart;
+end;
+
+function ShouldLaunchLauncher(): Boolean;
+begin
+  Result := HelperInstallSucceeded and (not HelperInstallNeedsRestart);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
 begin
   if CurUninstallStep = usUninstall then
+  begin
     StopMoqiProcesses;
+    if not RunSetupHelper('/u /s --appdir "' + ExpandConstant('{app}') + '"', ResultCode) then
+      HandleSetupHelperResult('SetupHelper uninstall', ResultCode);
+    if ResultCode = SetupHelperExitRestartRequired then
+      HelperUninstallNeedsRestart := True
+    else if ResultCode <> SetupHelperExitSuccess then
+      HandleSetupHelperResult('SetupHelper uninstall', ResultCode);
+  end;
   if CurUninstallStep = usPostUninstall then
+  begin
     RegPurgeMoqiResiduals;
+    if HelperUninstallNeedsRestart then
+      SuppressibleMsgBox(
+        '部分 TSF DLL 已安排在系统重启后删除。请尽快重启 Windows，以完成卸载清理。',
+        mbInformation, MB_OK, IDOK);
+  end;
 end;

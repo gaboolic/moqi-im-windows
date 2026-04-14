@@ -37,8 +37,10 @@ if (-not (Test-Path -LiteralPath $x64Root)) {
 
 $requiredPaths = @(
     (Join-Path $win32Root 'MoqiLauncher.exe'),
+    (Join-Path $win32Root 'SetupHelper.exe'),
     (Join-Path $win32Root 'MoqiTextService.dll'),
     (Join-Path $win32Root 'backends.json'),
+    (Join-Path $win32Root 'x64\MoqiTextService.dll'),
     (Join-Path $x64Root 'MoqiTextService.dll')
 )
 foreach ($path in $requiredPaths) {

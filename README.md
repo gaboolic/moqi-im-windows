@@ -2,9 +2,9 @@
 
 Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Text Services Framework (TSF)**，并提供候选窗、语言栏按钮、组合串上屏等 Windows 平台能力。
 
-当前状态：已实现 **Rime / 中州韵** 输入法接入，**fcitx5** 输入法接入中。
+当前状态：已实现 **[Rime / 中州韵](https://github.com/rime/librime)** 输入法接入，**fcitx5** 输入法接入中。
 
-项目 TSF 层核心依赖：[`libIME2`](https://github.com/EasyIME/libIME2)。
+项目 TSF 层核心依赖：[`libIME2`](https://github.com/EasyIME/libIME2)。很大程度上参考了[PIME](https://github.com/EasyIME/PIME) 以及 [小狼毫](https://github.com/rime/weasel) 项目。
 
 核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。
 

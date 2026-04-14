@@ -38,6 +38,8 @@ using namespace std;
 
 namespace Moqi {
 
+static constexpr UINT ASYNC_RPC_POLL_INTERVAL_MS = 50;
+
 static moqi::protocol::Method methodNameToProto(const char *methodName) {
   if (strcmp(methodName, "init") == 0)
     return moqi::protocol::METHOD_INIT;
@@ -266,9 +268,15 @@ bool parseHexColor(const std::string &text, COLORREF &result) {
 Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
-      shouldWaitConnection_{true} {}
+      shouldWaitConnection_{true}, asyncPollTimerWindow_(nullptr),
+      asyncPollTimerId_(0) {}
 
 Client::~Client(void) {
+  if (asyncPollTimerId_ != 0) {
+    ::KillTimer(asyncPollTimerWindow_, asyncPollTimerId_);
+    asyncPollTimerId_ = 0;
+    asyncPollTimerWindow_ = nullptr;
+  }
   closeRpcConnection();
   resetTextServiceState();
   LangBarButton::clearIconCache();
@@ -683,6 +691,8 @@ bool Client::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret, session)) {
+    refreshAsyncPollTimer();
+    flushPendingAsyncResponses(session);
     return ret["return"].asBool();
   }
   return false;
@@ -707,6 +717,8 @@ bool Client::onKeyUp(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret, session)) {
+    refreshAsyncPollTimer();
+    flushPendingAsyncResponses(session);
     return ret["return"].asBool();
   }
   return false;
@@ -891,6 +903,130 @@ moqi::protocol::ClientRequest Client::createRpcRequest(const char *methodName) {
   return request;
 }
 
+void CALLBACK Client::onAsyncPollTimer(HWND, UINT, UINT_PTR id, DWORD) {
+  auto *client = reinterpret_cast<Client *>(id);
+  if (client != nullptr) {
+    client->pollAsyncResponses();
+  }
+}
+
+void Client::refreshAsyncPollTimer() {
+  HWND targetWindow = nullptr;
+  if (textService_ != nullptr && textService_->candidateWindow_ != nullptr &&
+      textService_->candidateWindow_->isWindow()) {
+    targetWindow = textService_->candidateWindow_->hwnd();
+  }
+
+  if (asyncPollTimerId_ != 0 &&
+      (targetWindow == nullptr || targetWindow != asyncPollTimerWindow_)) {
+    ::KillTimer(asyncPollTimerWindow_, asyncPollTimerId_);
+    asyncPollTimerId_ = 0;
+    asyncPollTimerWindow_ = nullptr;
+  }
+
+  if (targetWindow != nullptr && asyncPollTimerId_ == 0) {
+    asyncPollTimerId_ =
+        ::SetTimer(targetWindow, reinterpret_cast<UINT_PTR>(this),
+                   ASYNC_RPC_POLL_INTERVAL_MS, &Client::onAsyncPollTimer);
+    asyncPollTimerWindow_ = asyncPollTimerId_ != 0 ? targetWindow : nullptr;
+  }
+}
+
+bool Client::readPendingPipeMessage(std::string &serializedReply) {
+  serializedReply.clear();
+  if (pipe_ == INVALID_HANDLE_VALUE) {
+    return false;
+  }
+
+  DWORD bytesAvailable = 0;
+  if (!::PeekNamedPipe(pipe_, nullptr, 0, nullptr, &bytesAvailable, nullptr) ||
+      bytesAvailable == 0) {
+    return false;
+  }
+
+  char buf[1024];
+  DWORD rlen = 0;
+  bool hasMoreData = false;
+  if (!::ReadFile(pipe_, buf, sizeof(buf), &rlen, nullptr)) {
+    if (::GetLastError() == ERROR_MORE_DATA) {
+      hasMoreData = true;
+    } else {
+      return false;
+    }
+  }
+  serializedReply.append(buf, rlen);
+
+  while (hasMoreData) {
+    if (::ReadFile(pipe_, buf, sizeof(buf), &rlen, nullptr)) {
+      hasMoreData = false;
+    } else if (::GetLastError() != ERROR_MORE_DATA) {
+      return false;
+    }
+    serializedReply.append(buf, rlen);
+  }
+  return true;
+}
+
+void Client::enqueueAsyncResponse(const moqi::protocol::ServerResponse &response) {
+  pendingAsyncResponses_.push_back(responseToJson(response));
+}
+
+bool Client::applyAsyncResponse(Json::Value &msg, Ime::EditSession *session) {
+  if (session != nullptr) {
+    return handleRpcResponse(msg, session);
+  }
+
+  auto context = textService_->currentContext();
+  if (!context) {
+    return false;
+  }
+
+  Json::Value responseCopy = msg;
+  auto *editSession = new Ime::EditSession(
+      context, [this, responseCopy](Ime::EditSession *editSession, TfEditCookie) mutable {
+        handleRpcResponse(responseCopy, editSession);
+      });
+  HRESULT sessionHr = E_FAIL;
+  const HRESULT hr = context->RequestEditSession(
+      textService_->clientId(), editSession, TF_ES_ASYNC | TF_ES_READWRITE,
+      &sessionHr);
+  editSession->Release();
+  return SUCCEEDED(hr) && SUCCEEDED(sessionHr);
+}
+
+void Client::flushPendingAsyncResponses(Ime::EditSession *session) {
+  while (!pendingAsyncResponses_.empty()) {
+    Json::Value msg = pendingAsyncResponses_.front();
+    if (!applyAsyncResponse(msg, session)) {
+      break;
+    }
+    pendingAsyncResponses_.pop_front();
+  }
+}
+
+void Client::pollAsyncResponses() {
+  if (pipe_ == INVALID_HANDLE_VALUE) {
+    return;
+  }
+
+  std::string serializedResponse;
+  while (readPendingPipeMessage(serializedResponse)) {
+    Proto::FrameBuffer responseBuffer;
+    responseBuffer.append(serializedResponse.data(), serializedResponse.size());
+    std::string payload;
+    while (responseBuffer.nextFrame(payload)) {
+      moqi::protocol::ServerResponse protoResponse;
+      if (!Proto::parsePayload(payload, protoResponse)) {
+        closeRpcConnection();
+        return;
+      }
+      enqueueAsyncResponse(protoResponse);
+    }
+  }
+
+  flushPendingAsyncResponses();
+}
+
 bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
                          std::string &serializedReply) {
   char buf[1024];
@@ -926,6 +1062,8 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
     return false;
   }
 
+  pollAsyncResponses();
+
   // Add a sequence number for the request.
   auto seqNum = nextSeqNum_++;
   request.set_seq_num(seqNum);
@@ -938,20 +1076,33 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
   std::string serializedResponse;
   bool success = false;
   if (callRpcPipe(pipe_, serializedRequest, serializedResponse)) {
-    Proto::FrameBuffer responseBuffer;
-    responseBuffer.append(serializedResponse.data(), serializedResponse.size());
-    std::string payload;
-    moqi::protocol::ServerResponse protoResponse;
-    success = responseBuffer.nextFrame(payload) &&
-              Proto::parsePayload(payload, protoResponse);
-    if (success) {
-      response = responseToJson(protoResponse);
-      if (protoResponse.seq_num() != seqNum) // sequence number mismatch
+    while (true) {
+      Proto::FrameBuffer responseBuffer;
+      responseBuffer.append(serializedResponse.data(), serializedResponse.size());
+      std::string payload;
+      moqi::protocol::ServerResponse protoResponse;
+      success = responseBuffer.nextFrame(payload) &&
+                Proto::parsePayload(payload, protoResponse);
+      if (!success) {
+        break;
+      }
+      if (protoResponse.seq_num() == seqNum) {
+        response = responseToJson(protoResponse);
+        break;
+      }
+
+      enqueueAsyncResponse(protoResponse);
+      serializedResponse.clear();
+      if (!readPendingPipeMessage(serializedResponse)) {
         success = false;
+        break;
+      }
     }
   } else {
     success = false;
   }
+
+  flushPendingAsyncResponses();
 
   if (!success) {            // fail to send the request to the server
     closeRpcConnection();    // close the pipe connection since it's broken
@@ -1049,6 +1200,12 @@ void Client::resetTextServiceState() {
 }
 
 void Client::closeRpcConnection() {
+  pendingAsyncResponses_.clear();
+  if (asyncPollTimerId_ != 0) {
+    ::KillTimer(asyncPollTimerWindow_, asyncPollTimerId_);
+    asyncPollTimerId_ = 0;
+    asyncPollTimerWindow_ = nullptr;
+  }
   if (pipe_ != INVALID_HANDLE_VALUE) {
     DisconnectNamedPipe(pipe_);
     CloseHandle(pipe_);

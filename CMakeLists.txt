@@ -153,4 +153,5 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/Preview")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_subdirectory("${PROJECT_SOURCE_DIR}/MoqLauncher")
+    add_subdirectory("${PROJECT_SOURCE_DIR}/SetupHelper")
 endif()
