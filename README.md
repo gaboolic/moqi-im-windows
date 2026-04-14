@@ -92,10 +92,10 @@ Windows 侧的职责主要是：
 
 ## 技术栈
 
-- **语言**：C++
+- **语言**：C++ 、GO
 - **框架**：Microsoft TSF、Win32 API
 - **进程/IO**：命名管道、子进程 `stdin/stdout` 转发、`libuv`
-- **数据格式**：JSON（`jsoncpp`）
+- **数据格式**：protobuf(见/proto/moqi.proto)
 - **日志**：`spdlog`
 - **构建**：CMake + Visual Studio 2022 / MSBuild
 
@@ -106,58 +106,18 @@ Windows 侧的职责主要是：
 - `libIME2`：IME/TSF 基础库，也是本项目 TSF 层的核心依赖，来源：[`gaboolic/libIME2`](https://github.com/gaboolic/libIME2)
 - `libuv`：Launcher 的事件循环与进程/管道依赖
 - `backends.json`：后端清单，定义后端名称、启动命令和工作目录
-- `scripts/build.ps1`：CMake 构建脚本
-- `scripts/install.ps1`：准备安装器 stage 并调用安装器构建脚本
+- `scripts`：构建脚本
 - `installer/`：Inno Setup 安装器脚本与输出目录
 
 ## 构建
 
 前置：**Visual Studio 2022**、**CMake 3.21+**、Windows SDK。
 
-1. 先在 `moqi-ime` 仓库构建后端，例如生成 `server.exe`
-2. 在本仓库根目录执行：
+在本仓库根目录执行：
 
-   `powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
+   `powershell -ExecutionPolicy Bypass -File .\scripts\_all_in_package.ps1`
 
-该脚本会生成：
-
-- `build-vs32\Release\MoqiLauncher.exe`
-- `build-vs32\Release\MoqiTextService.dll`（Win32）
-- `build-vs64\Release\MoqiTextService.dll`（x64）
-
-## 安装部署
-
-在仓库根执行：
-
-`powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1`
-
-常用参数：
-
-- `-MoqiImeSource <path>`：指定要复制的 `moqi-ime` 源码树
-- `-SkipMoqiImeCopy`：生成安装器时不打包 `moqi-ime` 后端目录
-
-该脚本不会直接把文件安装到 `Program Files`，而是会：
-
-- 准备 `installer\stage\` 目录
-- 调用 `installer\build-installer.ps1`
-- 生成 Inno Setup 安装器：`installer\dist\moqi-im-windows-setup.exe`
-
-安装器在 64 位 Windows 上会部署为：
-
-- `MoqiLauncher.exe`、Win32 `MoqiTextService.dll`、`backends.json`、`moqi-ime\` 安装到 `%ProgramFiles(x86)%\MoqiIM\`
-- x64 `MoqiTextService.dll` 安装到 `%ProgramFiles%\MoqiIM\`
-
-安装器会：
-
-- 复制上述文件
-- 对已有 DLL 调用对应位数的 `regsvr32`
-- 将 `MoqiLauncher.exe` 写入当前用户的开机启动项
-
-## 说明
-
-- `backends.json` 目前默认内容为 `moqi-ime\server.exe`，其 `workingDir` 也是 `moqi-ime`
-- 更换 TSF CLSID 或显示名称后，通常需要在系统“语言”设置中重新添加输入法
-- 如果只更新后端实现而不重装 DLL，可配合 `-SkipMoqiImeCopy` 或直接替换已安装后端目录
+该脚本会生成安装器：`installer\dist\moqi-im-windows-setup.exe`
 
 ## 参考文档
 
