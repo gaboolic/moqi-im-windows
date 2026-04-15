@@ -107,7 +107,7 @@ private:
     // Update text service and UI status based on RPC responses.
     void updateSelectionKeys(Json::Value& msg);
     void updateMessageWindow(Json::Value& msg, Ime::EditSession* session, bool& endComposition);
-	void updateCommitString(Json::Value& msg, Ime::EditSession* session);
+	void updateCommitString(Json::Value& msg, Ime::EditSession* session, bool suppressTerminationNotification);
 	void updateComposition(Json::Value& msg, Ime::EditSession* session, bool& endComposition);
 	void updateLanguageButtons(Json::Value& msg);
 	void updatePreservedKeys(Json::Value& msg);

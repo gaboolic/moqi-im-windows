@@ -19,6 +19,7 @@
 
 #include "MoqiClient.h"
 #include "libIME2/src/Utils.h"
+#include "libIME2/src/DebugLogConfig.h"
 #include "../proto/ProtoFraming.h"
 #include "proto/moqi.pb.h"
 #include <algorithm>
@@ -33,6 +34,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <memory>
@@ -44,6 +46,7 @@ using namespace std;
 namespace Moqi {
 
 static constexpr UINT ASYNC_RPC_POLL_INTERVAL_MS = 50;
+static constexpr UINT INPUT_AUTO_PAIR_QUOTES_COMMAND_ID = 220;
 
 namespace {
 
@@ -55,7 +58,45 @@ std::wstring quotePairLogPath() {
   return std::wstring(localAppData) + L"\\MoqiIM\\Log\\quote-pair-debug.log";
 }
 
+std::wstring appearanceConfigPath() {
+  const wchar_t *appData = _wgetenv(L"APPDATA");
+  if (!appData || !*appData) {
+    return L"";
+  }
+  return std::wstring(appData) + L"\\Moqi\\appearance_config.json";
+}
+
+bool loadAutoPairQuotesSetting(bool &enabled) {
+  const std::wstring configPath = appearanceConfigPath();
+  if (configPath.empty()) {
+    return false;
+  }
+
+  std::ifstream stream(std::filesystem::path(configPath), std::ios::binary);
+  if (!stream.is_open()) {
+    return false;
+  }
+
+  Json::CharReaderBuilder builder;
+  Json::Value root;
+  std::string errs;
+  if (!Json::parseFromStream(builder, stream, &root, &errs)) {
+    return false;
+  }
+
+  const Json::Value &value = root["auto_pair_quotes"];
+  if (!value.isBool()) {
+    return false;
+  }
+
+  enabled = value.asBool();
+  return true;
+}
+
 void appendQuotePairLog(const std::wstring &message) {
+  if (!Ime::isDebugLoggingEnabled()) {
+    return;
+  }
   const std::wstring logPath = quotePairLogPath();
   if (logPath.empty()) {
     return;
@@ -89,26 +130,6 @@ std::wstring formatCodePoints(const std::wstring &text) {
            << static_cast<unsigned int>(text[i]);
   }
   return stream.str();
-}
-
-bool loadAutoPairQuotesSetting(bool fallbackValue) {
-  const wchar_t *appData = _wgetenv(L"APPDATA");
-  if (!appData || !*appData) {
-    return fallbackValue;
-  }
-
-  Json::Value config;
-  std::ifstream stream(std::wstring(appData) + L"\\Moqi\\appearance_config.json",
-                       std::ifstream::binary);
-  if (!stream) {
-    return fallbackValue;
-  }
-  stream >> config;
-  const Json::Value &value = config["auto_pair_quotes"];
-  if (value.isBool()) {
-    return value.asBool();
-  }
-  return fallbackValue;
 }
 
 bool shouldAutoPairQuote(const std::wstring &commitString,
@@ -230,6 +251,10 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
     result["candTextColor"] = ui.cand_text_color();
   if (ui.has_cand_highlight_text_color())
     result["candHighlightTextColor"] = ui.cand_highlight_text_color();
+  if (ui.has_auto_pair_quotes())
+    result["autoPairQuotes"] = ui.auto_pair_quotes();
+  if (ui.has_semicolon_select_second())
+    result["semicolonSelectSecond"] = ui.semicolon_select_second();
   return result;
 }
 
@@ -514,13 +539,13 @@ void Client::updateMessageWindow(Json::Value &msg, Ime::EditSession *session,
   }
 }
 
-void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
+void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session,
+                                bool suppressTerminationNotification) {
   // handle comosition and commit strings
   const auto &commitStringVal = msg["commitString"];
   if (commitStringVal.isString()) {
     const std::wstring rawCommitString = utf8ToUtf16(commitStringVal.asCString());
-    const bool autoPairQuotesEnabled =
-        loadAutoPairQuotesSetting(textService_->autoPairQuotes());
+    const bool autoPairQuotesEnabled = textService_->autoPairQuotes();
     std::wstring commitString = rawCommitString;
     const bool isQuoteLikeCommit = rawCommitString == L"“" || rawCommitString == L"”" ||
                                    rawCommitString == L"‘" || rawCommitString == L"’";
@@ -556,6 +581,9 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
       }
       if (textService_->messageWindow_ != nullptr) {
         textService_->updateMessageWindow(session);
+      }
+      if (suppressTerminationNotification) {
+        textService_->suppressNextCompositionTerminatedNotification();
       }
       textService_->endComposition(session->context());
       if (autoPairedQuotes) {
@@ -756,11 +784,26 @@ void Client::updateStatus(Json::Value &msg, Ime::EditSession *session) {
   updateMessageWindow(msg, session, endComposition);
 
   if (session != nullptr) { // if an edit session is available
-    updateCandidateList(msg, session);
+    const bool hasCommitString =
+        msg["commitString"].isString() &&
+        !utf8ToUtf16(msg["commitString"].asCString()).empty();
+    const bool hasNonEmptyComposition =
+        msg["compositionString"].isString() &&
+        !utf8ToUtf16(msg["compositionString"].asCString()).empty();
 
-    updateCommitString(msg, session);
-
-    updateComposition(msg, session, endComposition);
+    // Fixed-length schemas may commit current code and immediately start the
+    // next composition in the same response, e.g. "ggtts" -> commit "五笔"
+    // while leaving "s" active. In that case, update the new composition
+    // first, then bind the candidate list to that new composition.
+    if (hasCommitString && hasNonEmptyComposition) {
+      updateCommitString(msg, session, true);
+      updateComposition(msg, session, endComposition);
+      updateCandidateList(msg, session);
+    } else {
+      updateCandidateList(msg, session);
+      updateCommitString(msg, session, false);
+      updateComposition(msg, session, endComposition);
+    }
   }
 
   updateLanguageButtons(msg);
@@ -843,6 +886,12 @@ void Client::onActivate() {
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret)) {
+  }
+  bool autoPairQuotesEnabled = false;
+  if (loadAutoPairQuotesSetting(autoPairQuotesEnabled)) {
+    textService_->setAutoPairQuotes(autoPairQuotesEnabled);
+    appendQuotePairLog(L"[settings] activate auto_pair_quotes=" +
+                       std::wstring(autoPairQuotesEnabled ? L"true" : L"false"));
   }
   isActivated_ = true;
 }
@@ -932,6 +981,18 @@ bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret)) {
+    if (id == INPUT_AUTO_PAIR_QUOTES_COMMAND_ID) {
+      bool autoPairQuotesEnabled = false;
+      if (loadAutoPairQuotesSetting(autoPairQuotesEnabled)) {
+        textService_->setAutoPairQuotes(autoPairQuotesEnabled);
+      } else {
+        textService_->setAutoPairQuotes(!textService_->autoPairQuotes());
+      }
+      appendQuotePairLog(L"[settings] command auto_pair_quotes=" +
+                         std::wstring(textService_->autoPairQuotes()
+                                          ? L"true"
+                                          : L"false"));
+    }
     return ret["return"].asBool();
   }
   return false;

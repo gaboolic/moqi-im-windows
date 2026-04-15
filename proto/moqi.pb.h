@@ -1573,6 +1573,8 @@ class CustomizeUi final : public ::google::protobuf::Message
     kCandPerRowFieldNumber = 3,
     kCandUseCursorFieldNumber = 4,
     kInlinePreeditFieldNumber = 5,
+    kAutoPairQuotesFieldNumber = 11,
+    kSemicolonSelectSecondFieldNumber = 12,
     kCandCommentFontSizeFieldNumber = 10,
   };
   // optional string cand_font_name = 1;
@@ -1699,6 +1701,28 @@ class CustomizeUi final : public ::google::protobuf::Message
   void _internal_set_inline_preedit(bool value);
 
   public:
+  // optional bool auto_pair_quotes = 11;
+  bool has_auto_pair_quotes() const;
+  void clear_auto_pair_quotes() ;
+  bool auto_pair_quotes() const;
+  void set_auto_pair_quotes(bool value);
+
+  private:
+  bool _internal_auto_pair_quotes() const;
+  void _internal_set_auto_pair_quotes(bool value);
+
+  public:
+  // optional bool semicolon_select_second = 12;
+  bool has_semicolon_select_second() const;
+  void clear_semicolon_select_second() ;
+  bool semicolon_select_second() const;
+  void set_semicolon_select_second(bool value);
+
+  private:
+  bool _internal_semicolon_select_second() const;
+  void _internal_set_semicolon_select_second(bool value);
+
+  public:
   // optional uint32 cand_comment_font_size = 10;
   bool has_cand_comment_font_size() const;
   void clear_cand_comment_font_size() ;
@@ -1714,7 +1738,7 @@ class CustomizeUi final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 10,
+  static const ::google::protobuf::internal::TcParseTable<4, 12,
                                    0, 137,
                                    2>
       _table_;
@@ -1745,6 +1769,8 @@ class CustomizeUi final : public ::google::protobuf::Message
     ::uint32_t cand_per_row_;
     bool cand_use_cursor_;
     bool inline_preedit_;
+    bool auto_pair_quotes_;
+    bool semicolon_select_second_;
     ::uint32_t cand_comment_font_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -4923,14 +4949,14 @@ inline void CustomizeUi::set_allocated_cand_highlight_text_color(::std::string* 
 
 // optional uint32 cand_comment_font_size = 10;
 inline bool CustomizeUi::has_cand_comment_font_size() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_font_size() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_font_size_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000200U);
+                  0x00000800U);
 }
 inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_font_size)
@@ -4938,7 +4964,7 @@ inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
 }
 inline void CustomizeUi::set_cand_comment_font_size(::uint32_t value) {
   _internal_set_cand_comment_font_size(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_font_size)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_comment_font_size() const {
@@ -4948,6 +4974,64 @@ inline ::uint32_t CustomizeUi::_internal_cand_comment_font_size() const {
 inline void CustomizeUi::_internal_set_cand_comment_font_size(::uint32_t value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_font_size_ = value;
+}
+
+// optional bool auto_pair_quotes = 11;
+inline bool CustomizeUi::has_auto_pair_quotes() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  return value;
+}
+inline void CustomizeUi::clear_auto_pair_quotes() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.auto_pair_quotes_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000200U);
+}
+inline bool CustomizeUi::auto_pair_quotes() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.auto_pair_quotes)
+  return _internal_auto_pair_quotes();
+}
+inline void CustomizeUi::set_auto_pair_quotes(bool value) {
+  _internal_set_auto_pair_quotes(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.auto_pair_quotes)
+}
+inline bool CustomizeUi::_internal_auto_pair_quotes() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.auto_pair_quotes_;
+}
+inline void CustomizeUi::_internal_set_auto_pair_quotes(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.auto_pair_quotes_ = value;
+}
+
+// optional bool semicolon_select_second = 12;
+inline bool CustomizeUi::has_semicolon_select_second() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  return value;
+}
+inline void CustomizeUi::clear_semicolon_select_second() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.semicolon_select_second_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000400U);
+}
+inline bool CustomizeUi::semicolon_select_second() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.semicolon_select_second)
+  return _internal_semicolon_select_second();
+}
+inline void CustomizeUi::set_semicolon_select_second(bool value) {
+  _internal_set_semicolon_select_second(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.semicolon_select_second)
+}
+inline bool CustomizeUi::_internal_semicolon_select_second() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.semicolon_select_second_;
+}
+inline void CustomizeUi::_internal_set_semicolon_select_second(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.semicolon_select_second_ = value;
 }
 
 // -------------------------------------------------------------------

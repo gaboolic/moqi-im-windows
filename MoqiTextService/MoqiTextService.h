@@ -212,6 +212,10 @@ public:
 		autoPairQuotes_ = autoPairQuotes;
 	}
 
+	void suppressNextCompositionTerminatedNotification() {
+		suppressNextCompositionTerminatedNotification_ = true;
+	}
+
 	const std::wstring& candidatePreedit() const {
 		return candidatePreedit_;
 	}
@@ -291,6 +295,7 @@ private:
 	COLORREF candHighlightTextColor_;
 	bool inlinePreedit_;
 	bool autoPairQuotes_;
+	bool suppressNextCompositionTerminatedNotification_;
 	std::wstring candidatePreedit_;
 
 	HMENU popupMenu_;

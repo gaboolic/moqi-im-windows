@@ -71,7 +71,7 @@ std::wstring formatCandidateWindowLogLine(const std::wstring& message) {
 }
 
 void appendCandidateWindowLog(const std::wstring& message) {
-    if (!Ime::isDebugLoggingEnabled()) {
+    if (!Ime::isTraceLoggingEnabled()) {
         return;
     }
 

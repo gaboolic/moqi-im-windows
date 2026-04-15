@@ -51,7 +51,7 @@ const GUID kToggleUiLessOverrideGuid = {
 };
 
 void appendCandidateWindowLog(const std::wstring& message) {
-	if (!Ime::isDebugLoggingEnabled()) {
+	if (!Ime::isTraceLoggingEnabled()) {
 		return;
 	}
 
@@ -75,7 +75,7 @@ void appendCandidateWindowLog(const std::wstring& message) {
 }
 
 void appendTsfDebugLog(const std::wstring& message) {
-	if (!Ime::isDebugLoggingEnabled()) {
+	if (!Ime::isTraceLoggingEnabled()) {
 		return;
 	}
 
@@ -185,7 +185,7 @@ std::wstring formatDebugLogLine(const std::wstring& message) {
 }
 
 void logDebug(const std::wstring& message) {
-	if (!Ime::isDebugLoggingEnabled()) {
+	if (!Ime::isTraceLoggingEnabled()) {
 		return;
 	}
 	const std::wstring formatted = formatDebugLogLine(message);
@@ -288,7 +288,8 @@ TextService::TextService(ImeModule* module):
 	candTextColor_(RGB(0, 0, 0)),
 	candHighlightTextColor_(RGB(0, 0, 0)),
 	inlinePreedit_(true),
-	autoPairQuotes_(false) {
+	autoPairQuotes_(false),
+	suppressNextCompositionTerminatedNotification_(false) {
 	addPreservedKey('P', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
 	shouldShowCandidateWindowUI_ = !effectiveUiLess();
 
@@ -501,6 +502,10 @@ void TextService::onKeyboardStatusChanged(bool opened) {
 // virtual
 void TextService::onCompositionTerminated(bool forced) {
 	// we do special handling here for forced composition termination.
+	if (!forced && suppressNextCompositionTerminatedNotification_) {
+		suppressNextCompositionTerminatedNotification_ = false;
+		return;
+	}
 	if(forced) {
 		// we're still editing our composition and have something in the preedit buffer.
 		// however, some other applications grabs the focus and force us to terminate
