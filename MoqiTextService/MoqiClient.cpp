@@ -98,7 +98,7 @@ bool loadAutoPairQuotesSetting(bool fallbackValue) {
   }
 
   Json::Value config;
-  std::ifstream stream(std::wstring(appData) + L"\\Moqi\\Rime\\appearance_config.json",
+  std::ifstream stream(std::wstring(appData) + L"\\Moqi\\appearance_config.json",
                        std::ifstream::binary);
   if (!stream) {
     return fallbackValue;
