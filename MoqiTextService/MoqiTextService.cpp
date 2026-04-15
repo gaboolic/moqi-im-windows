@@ -287,7 +287,8 @@ TextService::TextService(ImeModule* module):
 	candHighlightColor_(RGB(198, 221, 249)),
 	candTextColor_(RGB(0, 0, 0)),
 	candHighlightTextColor_(RGB(0, 0, 0)),
-	inlinePreedit_(true) {
+	inlinePreedit_(true),
+	autoPairQuotes_(false) {
 	addPreservedKey('P', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
 	shouldShowCandidateWindowUI_ = !effectiveUiLess();
 

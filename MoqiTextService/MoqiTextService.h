@@ -204,6 +204,14 @@ public:
 		}
 	}
 
+	bool autoPairQuotes() const {
+		return autoPairQuotes_;
+	}
+
+	void setAutoPairQuotes(bool autoPairQuotes) {
+		autoPairQuotes_ = autoPairQuotes;
+	}
+
 	const std::wstring& candidatePreedit() const {
 		return candidatePreedit_;
 	}
@@ -282,6 +290,7 @@ private:
 	COLORREF candTextColor_;
 	COLORREF candHighlightTextColor_;
 	bool inlinePreedit_;
+	bool autoPairQuotes_;
 	std::wstring candidatePreedit_;
 
 	HMENU popupMenu_;

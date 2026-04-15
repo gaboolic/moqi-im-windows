@@ -34,13 +34,127 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <memory>
+#include <sstream>
+#include <thread>
 
 using namespace std;
 
 namespace Moqi {
 
 static constexpr UINT ASYNC_RPC_POLL_INTERVAL_MS = 50;
+
+namespace {
+
+std::wstring quotePairLogPath() {
+  const wchar_t *localAppData = _wgetenv(L"LOCALAPPDATA");
+  if (!localAppData || !*localAppData) {
+    return L"";
+  }
+  return std::wstring(localAppData) + L"\\MoqiIM\\Log\\quote-pair-debug.log";
+}
+
+void appendQuotePairLog(const std::wstring &message) {
+  const std::wstring logPath = quotePairLogPath();
+  if (logPath.empty()) {
+    return;
+  }
+
+  SYSTEMTIME now{};
+  ::GetLocalTime(&now);
+  wchar_t timestamp[32] = {};
+  swprintf_s(timestamp, L"%04d-%02d-%02d %02d:%02d:%02d", now.wYear,
+             now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond);
+
+  std::wofstream stream(logPath, std::ios::app);
+  if (!stream.is_open()) {
+    return;
+  }
+  stream << L"[" << timestamp << L"] " << message << L"\n";
+}
+
+std::wstring formatCodePoints(const std::wstring &text) {
+  if (text.empty()) {
+    return L"(empty)";
+  }
+
+  std::wostringstream stream;
+  stream << std::uppercase << std::hex;
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (i != 0) {
+      stream << L" ";
+    }
+    stream << L"U+" << std::setw(4) << std::setfill(L'0')
+           << static_cast<unsigned int>(text[i]);
+  }
+  return stream.str();
+}
+
+bool loadAutoPairQuotesSetting(bool fallbackValue) {
+  const wchar_t *appData = _wgetenv(L"APPDATA");
+  if (!appData || !*appData) {
+    return fallbackValue;
+  }
+
+  Json::Value config;
+  std::ifstream stream(std::wstring(appData) + L"\\Moqi\\Rime\\appearance_config.json",
+                       std::ifstream::binary);
+  if (!stream) {
+    return fallbackValue;
+  }
+  stream >> config;
+  const Json::Value &value = config["auto_pair_quotes"];
+  if (value.isBool()) {
+    return value.asBool();
+  }
+  return fallbackValue;
+}
+
+bool shouldAutoPairQuote(const std::wstring &commitString,
+                         std::wstring &pairedString) {
+  if (commitString == L"“" || commitString == L"”") {
+    pairedString = L"“”";
+    return true;
+  }
+  if (commitString == L"‘" || commitString == L"’") {
+    pairedString = L"‘’";
+    return true;
+  }
+  return false;
+}
+
+void sendDelayedLeftArrow(HWND targetWindow) {
+  if (targetWindow == nullptr) {
+    appendQuotePairLog(L"[caretMove] skipped target_window=null");
+    return;
+  }
+
+  std::thread([targetWindow]() {
+    ::Sleep(25);
+    HWND foreground = ::GetForegroundWindow();
+    if (foreground != targetWindow) {
+      appendQuotePairLog(L"[caretMove] skipped foreground_changed");
+      return;
+    }
+
+    INPUT inputs[2] = {};
+    inputs[0].type = INPUT_KEYBOARD;
+    inputs[0].ki.wVk = VK_LEFT;
+    inputs[1].type = INPUT_KEYBOARD;
+    inputs[1].ki.wVk = VK_LEFT;
+    inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    const UINT sent = ::SendInput(2, inputs, sizeof(INPUT));
+    if (sent == 2) {
+      appendQuotePairLog(L"[caretMove] sent VK_LEFT");
+    } else {
+      appendQuotePairLog(L"[caretMove] SendInput failed");
+    }
+  }).detach();
+}
+
+} // namespace
 
 static moqi::protocol::Method methodNameToProto(const char *methodName) {
   if (strcmp(methodName, "init") == 0)
@@ -339,6 +453,8 @@ void Client::updateUI(const Json::Value &data) {
       textService_->setCandUseCursor(value.asBool());
     } else if (value.isBool() && strcmp(name, "inlinePreedit") == 0) {
       textService_->setInlinePreedit(value.asBool());
+    } else if (value.isBool() && strcmp(name, "autoPairQuotes") == 0) {
+      textService_->setAutoPairQuotes(value.asBool());
     } else if (value.isString() && strcmp(name, "candBackgroundColor") == 0) {
       COLORREF color = textService_->candBackgroundColor();
       if (parseHexColor(value.asCString(), color)) {
@@ -402,13 +518,37 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
   // handle comosition and commit strings
   const auto &commitStringVal = msg["commitString"];
   if (commitStringVal.isString()) {
-    std::wstring commitString = utf8ToUtf16(commitStringVal.asCString());
+    const std::wstring rawCommitString = utf8ToUtf16(commitStringVal.asCString());
+    const bool autoPairQuotesEnabled =
+        loadAutoPairQuotesSetting(textService_->autoPairQuotes());
+    std::wstring commitString = rawCommitString;
+    const bool isQuoteLikeCommit = rawCommitString == L"“" || rawCommitString == L"”" ||
+                                   rawCommitString == L"‘" || rawCommitString == L"’";
+    if (isQuoteLikeCommit) {
+      appendQuotePairLog(L"[updateCommitString] raw=" +
+                         formatCodePoints(rawCommitString) + L" auto_pair_quotes=" +
+                         (autoPairQuotesEnabled ? L"true" : L"false"));
+    }
+
+    std::wstring pairedCommitString;
+    const bool autoPairedQuotes =
+        autoPairQuotesEnabled &&
+        shouldAutoPairQuote(rawCommitString, pairedCommitString);
+    if (autoPairedQuotes) {
+      commitString = pairedCommitString;
+      appendQuotePairLog(L"[updateCommitString] paired=" +
+                         formatCodePoints(commitString));
+    }
     if (!commitString.empty()) {
+      HWND targetWindow = ::GetForegroundWindow();
       if (!textService_->isComposing()) {
         textService_->startComposition(session->context());
       }
       textService_->setCompositionString(session, commitString.c_str(),
                                          commitString.length());
+      if (autoPairedQuotes) {
+        textService_->setCompositionCursor(session, 1);
+      }
       // FIXME: update the position of candidate and message window when the
       // composition string is changed.
       if (textService_->hasCandidateWindow()) {
@@ -418,6 +558,9 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session) {
         textService_->updateMessageWindow(session);
       }
       textService_->endComposition(session->context());
+      if (autoPairedQuotes) {
+        sendDelayedLeftArrow(targetWindow);
+      }
     }
   }
 }

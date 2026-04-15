@@ -548,8 +548,10 @@ int RunInstall(const Options& options) {
   }
 
   DeleteReregisterTask();
-  RunRegsvr(regsvr32, dest32, app_dir, true);
-  RunRegsvr(regsvr64, dest64_for_regsvr, app_dir, true);
+  // During an in-place reinstall/upgrade, unregistering first removes the TIP
+  // from the user's language profile list. Re-registering the DLL does not
+  // always restore that list entry reliably, so keep the existing registration
+  // in place and overwrite the system DLLs before registering again.
 
   bool reboot_required = false;
   if (!CopyFileWithFallback(source32, dest32, reboot_required)) {
