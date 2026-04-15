@@ -85,7 +85,9 @@ static void copyNotifyText(wchar_t *dest, size_t destCount, const std::wstring &
 }
 
 PipeServer::PipeServer()
-    : quitExistingLauncher_(false), singleInstanceMutex_(nullptr),
+    : quitExistingLauncher_(false), hwnd_(nullptr),
+      singleInstanceMutex_(nullptr),
+      shutdownRequested_(false),
       logLevel_{spdlog::level::err} {
 
   // this can only be assigned once
@@ -260,6 +262,51 @@ void PipeServer::asyncTerminateAllBackends() {
   uv_async_send(asyncTask);
 }
 
+void PipeServer::shutdown() {
+  logger_->info("Shutting down launcher");
+
+  auto clients = clients_;
+  for (auto client : clients) {
+    client->close();
+  }
+
+  terminateAllBackends();
+
+  if (!uv_is_closing(reinterpret_cast<uv_handle_t *>(&serverPipe_))) {
+    uv_close(reinterpret_cast<uv_handle_t *>(&serverPipe_), nullptr);
+  }
+}
+
+void PipeServer::asyncShutdown() {
+  auto callback = [](uv_async_t *asyncTask) {
+    auto this_ = reinterpret_cast<PipeServer *>(asyncTask->data);
+    this_->shutdown();
+
+    uv_close(reinterpret_cast<uv_handle_t *>(asyncTask),
+             [](uv_handle_t *handle) {
+               delete reinterpret_cast<uv_async_t *>(handle);
+             });
+  };
+  auto asyncTask = new uv_async_t{};
+  asyncTask->data = this;
+  uv_async_init(uv_default_loop(), asyncTask, callback);
+  uv_async_send(asyncTask);
+}
+
+void PipeServer::requestShutdown() {
+  if (shutdownRequested_) {
+    return;
+  }
+
+  shutdownRequested_ = true;
+  logger_->info("Shutdown requested");
+  asyncShutdown();
+
+  if (hwnd_ != nullptr && ::IsWindow(hwnd_)) {
+    ::DestroyWindow(hwnd_);
+  }
+}
+
 BackendServer *PipeServer::backendFromName(const char *name) {
   // for such a small list, linear search is often faster than hash table or map
   for (auto &backend : backends_) {
@@ -316,8 +363,7 @@ void PipeServer::parseCommandLine(LPSTR cmd) {
 
 // send IPC message "quit" to the existing Moqi Launcher process.
 void PipeServer::terminateExistingLauncher(HWND existingHwnd) {
-  PostMessage(existingHwnd, WM_QUIT, 0, 0);
-  ::DestroyWindow(existingHwnd);
+  ::PostMessage(existingHwnd, WM_CLOSE, 0, 0);
 }
 
 PipeClient *PipeServer::clientFromId(const std::string &clientId) {
@@ -450,6 +496,15 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
   case WM_CREATE:
     return TRUE;
+  case WM_QUERYENDSESSION:
+    logger_->info("Received WM_QUERYENDSESSION");
+    return TRUE;
+  case WM_ENDSESSION:
+    if (wp) {
+      logger_->info("Received WM_ENDSESSION");
+      requestShutdown();
+    }
+    return 0;
   case WM_SHELL_NOTIFY_ICON:
     // shell tray notification icon events
     // reference:
@@ -485,6 +540,14 @@ LRESULT PipeServer::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
       break;
     }
     break;
+  case WM_CLOSE:
+    logger_->info("Received WM_CLOSE");
+    requestShutdown();
+    return 0;
+  case WM_DESTROY:
+    hwnd_ = nullptr;
+    ::PostQuitMessage(0);
+    return 0;
   default:
     return ::DefWindowProc(hwnd_, msg, wp, lp);
   }
@@ -612,8 +675,6 @@ void PipeServer::runGuiThread() {
   }
 
   destroyShellNotifyIcon();
-
-  ::ExitProcess(0);
 }
 
 } // namespace Moqi

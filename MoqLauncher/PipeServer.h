@@ -84,6 +84,7 @@ private:
 	void runGuiThread();
 	LPCTSTR registerWndClass(WNDCLASSEX& wndClass) const;
 	LRESULT wndProc(UINT msg, WPARAM wp, LPARAM lp);
+	void requestShutdown();
 	void createShellNotifyIcon();
 	void destroyShellNotifyIcon();
 	void showPopupMenu() const;
@@ -109,6 +110,8 @@ private:
 	void initPipe(uv_pipe_t* pipe, const wchar_t* appName, SECURITY_ATTRIBUTES* sa = nullptr);
 	void terminateExistingLauncher(HWND existingHwnd);
 	void parseCommandLine(LPSTR cmd);
+	void asyncShutdown();
+	void shutdown();
 
 	// client handling
 	void onNewClientConnected(uv_stream_t* server, int status);
@@ -131,6 +134,7 @@ private:
 	HWND hwnd_; // handle of the window
 	static wchar_t wndClassName_[];
 	NOTIFYICONDATA shellNotifyIconData_;
+	bool shutdownRequested_;
 	struct TrayNotificationRequest {
 		std::wstring title;
 		std::wstring message;
