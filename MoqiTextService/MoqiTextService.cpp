@@ -265,6 +265,11 @@ bool shouldUseFallbackCandidatePositionForProcess(const std::wstring& imagePath)
 	return lowerBaseName == L"dota2.exe";
 }
 
+bool shouldForceSelfRedrawCandidateUiForProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"dota2.exe";
+}
+
 HWND resolveCandidateFallbackWindow(Ime::EditSession* session) {
 	HWND hwnd = nullptr;
 	if (session != nullptr) {
@@ -609,9 +614,13 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 			BOOL pbShow = shouldShowCandidateWindowUI_ ? TRUE : FALSE;
 			if (validCandidateListElementId_ =
 				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
-				shouldShowCandidateWindowUI_ = !effectiveUiLess() && pbShow != FALSE;
+				const bool forceSelfRedraw = shouldForceSelfRedrawCandidateUiForProcess(currentProcessPath());
+				shouldShowCandidateWindowUI_ =
+					!effectiveUiLess() && (pbShow != FALSE || forceSelfRedraw);
 				std::wostringstream log;
 				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
+					<< L" forceSelfRedraw=" << boolText(forceSelfRedraw)
+					<< L" shouldShowCandidateWindowUI=" << boolText(shouldShowCandidateWindowUI_)
 					<< L" elementId=" << candidateListElementId_;
 				appendCandidateWindowLog(log.str());
 			}
