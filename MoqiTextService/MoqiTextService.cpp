@@ -260,6 +260,51 @@ bool shouldDisableTsfCandidateUiForProcess(const std::wstring& imagePath) {
 	return lowerBaseName == L"cs2.exe" || lowerBaseName == L"csgo.exe";
 }
 
+bool shouldUseFallbackCandidatePositionForProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"dota2.exe";
+}
+
+HWND resolveCandidateFallbackWindow(Ime::EditSession* session) {
+	HWND hwnd = nullptr;
+	if (session != nullptr) {
+		if (ITfContext* context = session->context()) {
+			ITfContextView* view = nullptr;
+			if (SUCCEEDED(context->GetActiveView(&view)) && view != nullptr) {
+				view->GetWnd(&hwnd);
+				view->Release();
+			}
+		}
+	}
+	if (hwnd == nullptr) {
+		hwnd = ::GetFocus();
+	}
+	if (hwnd == nullptr) {
+		hwnd = ::GetForegroundWindow();
+	}
+	return hwnd;
+}
+
+bool tryResolveFallbackCandidatePoint(Ime::EditSession* session, POINT* point) {
+	if (point == nullptr) {
+		return false;
+	}
+	const HWND hwnd = resolveCandidateFallbackWindow(session);
+	if (hwnd == nullptr) {
+		return false;
+	}
+	RECT clientRect{};
+	if (!::GetClientRect(hwnd, &clientRect)) {
+		return false;
+	}
+	POINT anchor{clientRect.left, clientRect.bottom};
+	if (!::ClientToScreen(hwnd, &anchor)) {
+		return false;
+	}
+	*point = anchor;
+	return true;
+}
+
 }
 
 TextService::TextService(ImeModule* module):
@@ -640,6 +685,16 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 		// FIXME: where should we put the candidate window?
 		candidateWindow_->move(textRect.left, textRect.bottom);
 	}
+	else if (shouldUseFallbackCandidatePositionForProcess(currentProcessPath())) {
+		POINT fallbackPoint{};
+		if (tryResolveFallbackCandidatePoint(session, &fallbackPoint)) {
+			candidateWindow_->move(fallbackPoint.x, fallbackPoint.y);
+			std::wostringstream log;
+			log << L"[TextService::updateCandidates] using dota2 fallback position x="
+			    << fallbackPoint.x << L" y=" << fallbackPoint.y;
+			appendCandidateWindowLog(log.str());
+		}
+	}
 
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
@@ -660,6 +715,16 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
         if (inputRect(session, &textRect)) {
             // FIXME: where should we put the candidate window?
             candidateWindow_->move(textRect.left, textRect.bottom);
+        }
+        else if (shouldUseFallbackCandidatePositionForProcess(currentProcessPath())) {
+            POINT fallbackPoint{};
+            if (tryResolveFallbackCandidatePoint(session, &fallbackPoint)) {
+                candidateWindow_->move(fallbackPoint.x, fallbackPoint.y);
+                std::wostringstream log;
+                log << L"[TextService::updateCandidatesWindow] using dota2 fallback position x="
+                    << fallbackPoint.x << L" y=" << fallbackPoint.y;
+                appendCandidateWindowLog(log.str());
+            }
         }
     }
 }
