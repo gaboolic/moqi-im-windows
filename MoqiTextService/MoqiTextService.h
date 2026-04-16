@@ -186,8 +186,31 @@ public:
 		return !effectiveInlinePreedit();
 	}
 
-	bool tsfCandidateUiEnabled() const {
+	bool source2CompatEnabled() const {
+		return autoSource2Compat_;
+	}
+
+	bool dota2CompatEnabled() const {
+		return autoDota2Compat_;
+	}
+
+	bool shouldRegisterCandidateUiElement() const {
 		return !autoDisableTsfCandidateUi_;
+	}
+
+	bool shouldForceLocalCandidateWindow() const {
+		return autoSource2Compat_;
+	}
+
+	bool shouldUseFallbackCandidatePosition() const {
+		return autoDota2Compat_;
+	}
+
+	bool shouldShowLocalCandidateWindow(BOOL hostPbShow = TRUE) const {
+		if (shouldForceLocalCandidateWindow()) {
+			return true;
+		}
+		return !effectiveUiLess() && hostPbShow != FALSE;
 	}
 
 	virtual bool inlinePreeditEnabledForComposition() const override {
@@ -269,6 +292,9 @@ private:
 	void applyCandidateAppearanceNow();
 	void refreshCandidateAppearance();
 	void applyUiLessOverrideState();
+	bool resolveCandidateAnchor(Ime::EditSession* session, POINT* point, const wchar_t* logTag = nullptr);
+	bool tryGetInputRectAnchor(Ime::EditSession* session, POINT* point);
+	bool tryGetFallbackCandidateAnchor(POINT* point);
 	bool withCurrentEditSession(const std::function<bool(Ime::EditSession*)>& action);
 
 	void closeClient();
@@ -279,9 +305,13 @@ private:
 	bool shouldShowCandidateWindowUI_;
 	bool manualUiLessOverride_;
 	bool autoUiLessOverride_;
+	bool autoSource2Compat_;
+	bool autoDota2Compat_;
 	bool autoDummyAnchorCompat_;
 	bool autoInlinePreeditDisabled_;
 	bool autoDisableTsfCandidateUi_;
+	bool candidateFallbackAnchorInitialized_;
+	POINT candidateFallbackAnchor_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
 	std::vector<CandidateUiItem> candidates_; // current candidate list

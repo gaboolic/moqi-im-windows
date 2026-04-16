@@ -241,18 +241,28 @@ bool shouldForceUiLessForProcess(const std::wstring& imagePath) {
 	return false;
 }
 
+bool isSource2GameProcess(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"dota2.exe" ||
+	       lowerBaseName == L"cs2.exe" ||
+	       lowerBaseName == L"csgo.exe";
+}
+
+bool isDota2Process(const std::wstring& imagePath) {
+	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
+	return lowerBaseName == L"dota2.exe";
+}
+
 bool shouldEnableDummyAnchorCompatForProcess(const std::wstring& imagePath) {
 	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
 	return lowerBaseName == L"steamwebhelper.exe" ||
 	       lowerBaseName == L"steam.exe" ||
 	       lowerBaseName == L"gameoverlayui.exe" ||
-	       lowerBaseName == L"cs2.exe" ||
-	       lowerBaseName == L"csgo.exe";
+	       isSource2GameProcess(imagePath);
 }
 
 bool shouldDisableInlinePreeditForProcess(const std::wstring& imagePath) {
-	const std::wstring lowerBaseName = processBaseName(toLowerCopy(imagePath));
-	return lowerBaseName == L"cs2.exe" || lowerBaseName == L"csgo.exe";
+	return isSource2GameProcess(imagePath);
 }
 
 bool shouldDisableTsfCandidateUiForProcess(const std::wstring& imagePath) {
@@ -272,9 +282,13 @@ TextService::TextService(ImeModule* module):
 	shouldShowCandidateWindowUI_(true),
 	manualUiLessOverride_(false),
 	autoUiLessOverride_(shouldForceUiLessForProcess(currentProcessPath())),
+	autoSource2Compat_(isSource2GameProcess(currentProcessPath())),
+	autoDota2Compat_(isDota2Process(currentProcessPath())),
 	autoDummyAnchorCompat_(shouldEnableDummyAnchorCompatForProcess(currentProcessPath())),
 	autoInlinePreeditDisabled_(shouldDisableInlinePreeditForProcess(currentProcessPath())),
 	autoDisableTsfCandidateUi_(shouldDisableTsfCandidateUiForProcess(currentProcessPath())),
+	candidateFallbackAnchorInitialized_(false),
+	candidateFallbackAnchor_{},
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	updateFont_(false),
@@ -291,7 +305,7 @@ TextService::TextService(ImeModule* module):
 	autoPairQuotes_(false),
 	suppressNextCompositionTerminatedNotification_(false) {
 	addPreservedKey('P', TF_MOD_CONTROL | TF_MOD_SHIFT, kToggleUiLessOverrideGuid);
-	shouldShowCandidateWindowUI_ = !effectiveUiLess();
+	shouldShowCandidateWindowUI_ = shouldShowLocalCandidateWindow();
 
 	// font for candidate and mesasge windows
 	font_ = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -332,10 +346,14 @@ void TextService::onActivate() {
 	    << L" is_ui_less=" << boolText(isUiLess())
 	    << L" effective_ui_less=" << boolText(effectiveUiLess())
 	    << L" auto_ui_less=" << boolText(autoUiLessOverride_)
+	    << L" source2_compat=" << boolText(source2CompatEnabled())
+	    << L" dota2_compat=" << boolText(dota2CompatEnabled())
 	    << L" inline_preedit=" << boolText(inlinePreedit_)
 	    << L" effective_inline_preedit=" << boolText(effectiveInlinePreedit())
 	    << L" auto_inline_preedit_disabled=" << boolText(autoInlinePreeditDisabled_)
 	    << L" auto_disable_tsf_candidate_ui=" << boolText(autoDisableTsfCandidateUi_)
+	    << L" register_candidate_ui_element=" << boolText(shouldRegisterCandidateUiElement())
+	    << L" force_local_candidate_window=" << boolText(shouldForceLocalCandidateWindow())
 	    << L" dummy_anchor_compat=" << boolText(autoDummyAnchorCompat_)
 	    << L" manual_ui_less=" << boolText(manualUiLessOverride_)
 	    << L" " << foregroundWindowSummary();
@@ -542,13 +560,9 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 }
 
 void TextService::createCandidateWindow(Ime::EditSession* session) {
-	if (!tsfCandidateUiEnabled()) {
-		appendCandidateWindowLog(L"[TextService::createCandidateWindow] skipped by process policy");
-		return;
-	}
 	if (!candidateWindow_) {
 		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
-		shouldShowCandidateWindowUI_ = !effectiveUiLess();
+		shouldShowCandidateWindowUI_ = shouldShowLocalCandidateWindow();
 		candidateWindow_ = new Moqi::CandidateWindow(this, session); // assigning to smart ptr also inrease ref count
 		candidateWindow_->Release();  // decrease ref count caused by new
 
@@ -559,31 +573,47 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		candidateWindow_->setTextColor(candTextColor_);
 		candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
 		candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
-		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
-		if (elementMgr) {
-			BOOL pbShow = shouldShowCandidateWindowUI_ ? TRUE : FALSE;
-			if (validCandidateListElementId_ =
-				(elementMgr->BeginUIElement(
-					static_cast<ITfCandidateListUIElement*>(
-						static_cast<Ime::ComInterface<ITfCandidateListUIElement>*>(candidateWindow_)),
-					&pbShow,
-					&candidateListElementId_) == S_OK)) {
-				shouldShowCandidateWindowUI_ = !effectiveUiLess() && pbShow != FALSE;
-				std::wostringstream log;
-				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
-					<< L" elementId=" << candidateListElementId_;
-				appendCandidateWindowLog(log.str());
+		if (shouldRegisterCandidateUiElement()) {
+			auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+			if (elementMgr) {
+				BOOL pbShow = TRUE;
+				if (validCandidateListElementId_ =
+					(elementMgr->BeginUIElement(
+						static_cast<ITfCandidateListUIElement*>(
+							static_cast<Ime::ComInterface<ITfCandidateListUIElement>*>(candidateWindow_)),
+						&pbShow,
+						&candidateListElementId_) == S_OK)) {
+					const BOOL hostPbShow = pbShow;
+					if (dota2CompatEnabled()) {
+						pbShow = TRUE;
+					}
+					shouldShowCandidateWindowUI_ = shouldShowLocalCandidateWindow(pbShow);
+					std::wostringstream log;
+					log << L"[TextService::createCandidateWindow] BeginUIElement success host_pbShow=" << hostPbShow
+						<< L" effective_pbShow=" << pbShow
+						<< L" elementId=" << candidateListElementId_
+						<< L" local_show=" << boolText(shouldShowCandidateWindowUI_)
+						<< L" source2_fallback=" << boolText(shouldForceLocalCandidateWindow())
+						<< L" dota2_pbshow_override=" << boolText(dota2CompatEnabled() && hostPbShow == FALSE);
+					appendCandidateWindowLog(log.str());
+				}
+				else {
+					appendCandidateWindowLog(L"[TextService::createCandidateWindow] BeginUIElement failed");
+				}
 			}
 			else {
-				appendCandidateWindowLog(L"[TextService::createCandidateWindow] BeginUIElement failed");
+				appendCandidateWindowLog(L"[TextService::createCandidateWindow] elementMgr unavailable");
 			}
 		}
 		else {
-			appendCandidateWindowLog(L"[TextService::createCandidateWindow] elementMgr unavailable");
+			std::wostringstream log;
+			log << L"[TextService::createCandidateWindow] BeginUIElement skipped by process policy"
+			    << L" source2_fallback=" << boolText(shouldForceLocalCandidateWindow());
+			appendCandidateWindowLog(log.str());
 		}
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
 		if (!shouldShowCandidateWindowUI_) {
-			appendCandidateWindowLog(L"[TextService::createCandidateWindow] candidate window suppressed by UI-less host");
+			appendCandidateWindowLog(L"[TextService::createCandidateWindow] candidate window suppressed by host policy");
 		}
 	}
 }
@@ -608,10 +638,6 @@ void TextService::destroyCandidateWindow() {
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
-	if (!tsfCandidateUiEnabled()) {
-		appendCandidateWindowLog(L"[TextService::updateCandidates] skipped by process policy");
-		return;
-	}
 	createCandidateWindow(session);
 	if (!candidateWindow_) {
 		return;
@@ -638,11 +664,10 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	candidateWindow_->recalculateSize();
 	candidateWindow_->refresh();
 
-	RECT textRect;
-	// get the position of composition area from TSF
-	if (inputRect(session, &textRect)) {
-		// FIXME: where should we put the candidate window?
-		candidateWindow_->move(textRect.left, textRect.bottom);
+	POINT anchor{};
+	if (resolveCandidateAnchor(session, &anchor, L"updateCandidates")) {
+		candidateWindow_->move(anchor.x, anchor.y);
+		candidateWindow_->forceRedraw();
 	}
 
 	if (validCandidateListElementId_) {
@@ -654,23 +679,20 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 }
 
 void TextService::updateCandidatesWindow(Ime::EditSession* session) {
-    if (!tsfCandidateUiEnabled()) {
-        return;
-    }
     if (candidateWindow_) {
         candidateWindow_->syncOwner(session);
-        RECT textRect;
-        // get the position of composition area from TSF
-        if (inputRect(session, &textRect)) {
-            // FIXME: where should we put the candidate window?
-            candidateWindow_->move(textRect.left, textRect.bottom);
+        POINT anchor{};
+        if (resolveCandidateAnchor(session, &anchor, L"updateCandidatesWindow")) {
+            candidateWindow_->move(anchor.x, anchor.y);
+            candidateWindow_->forceRedraw();
         }
     }
 }
 
 void TextService::refreshCandidates() {
-	if (!tsfCandidateUiEnabled()) {
-		return;
+	if (candidateWindow_) {
+		candidateWindow_->refresh();
+		candidateWindow_->forceRedraw();
 	}
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
@@ -680,10 +702,104 @@ void TextService::refreshCandidates() {
 	}
 }
 
-void TextService::setCandidateCursor(int cursor) {
-	if (!tsfCandidateUiEnabled()) {
-		return;
+bool TextService::tryGetInputRectAnchor(Ime::EditSession* session, POINT* point) {
+	if (!point) {
+		return false;
 	}
+	RECT textRect{};
+	if (!inputRect(session, &textRect)) {
+		return false;
+	}
+	point->x = textRect.left;
+	point->y = textRect.bottom;
+	if (!candidateFallbackAnchorInitialized_) {
+		candidateFallbackAnchor_ = *point;
+		candidateFallbackAnchorInitialized_ = true;
+	}
+	return true;
+}
+
+bool TextService::tryGetFallbackCandidateAnchor(POINT* point) {
+	if (!point) {
+		return false;
+	}
+	if (candidateFallbackAnchorInitialized_) {
+		*point = candidateFallbackAnchor_;
+		return true;
+	}
+
+	HWND foreground = ::GetForegroundWindow();
+	if (!foreground) {
+		return false;
+	}
+
+	RECT windowRect{};
+	if (!::GetWindowRect(foreground, &windowRect)) {
+		return false;
+	}
+
+	const int width = (std::max)(windowRect.right - windowRect.left, 1L);
+	const int height = (std::max)(windowRect.bottom - windowRect.top, 1L);
+	point->x = windowRect.left + (std::max)(32, width / 24);
+	point->y = windowRect.bottom - (std::max)(120, height / 6);
+	candidateFallbackAnchor_ = *point;
+	candidateFallbackAnchorInitialized_ = true;
+	return true;
+}
+
+bool TextService::resolveCandidateAnchor(
+	Ime::EditSession* session, POINT* point, const wchar_t* logTag) {
+	if (!point) {
+		return false;
+	}
+
+	POINT anchor{};
+	const wchar_t* source = L"unresolved";
+	bool resolved = false;
+
+	if (shouldUseFallbackCandidatePosition()) {
+		const bool hadStoredFallback = candidateFallbackAnchorInitialized_;
+		if (tryGetFallbackCandidateAnchor(&anchor)) {
+			source = hadStoredFallback ? L"fallback_anchor" : L"foreground_fallback";
+			resolved = true;
+		}
+	} else if (tryGetInputRectAnchor(session, &anchor)) {
+		source = L"input_rect";
+		resolved = true;
+	}
+
+	if (!resolved && tryGetInputRectAnchor(session, &anchor)) {
+		source = L"input_rect_fallback";
+		resolved = true;
+	}
+
+	if (resolved) {
+		*point = anchor;
+		std::wostringstream log;
+		log << L"[TextService::resolveCandidateAnchor]";
+		if (logTag && *logTag) {
+			log << L" tag=" << logTag;
+		}
+		log << L" source=" << source
+		    << L" x=" << anchor.x
+		    << L" y=" << anchor.y
+		    << L" dota2_compat=" << boolText(dota2CompatEnabled())
+		    << L" fallback_initialized=" << boolText(candidateFallbackAnchorInitialized_);
+		appendCandidateWindowLog(log.str());
+		return true;
+	}
+
+	std::wostringstream log;
+	log << L"[TextService::resolveCandidateAnchor]";
+	if (logTag && *logTag) {
+		log << L" tag=" << logTag;
+	}
+	log << L" source=unavailable dota2_compat=" << boolText(dota2CompatEnabled());
+	appendCandidateWindowLog(log.str());
+	return false;
+}
+
+void TextService::setCandidateCursor(int cursor) {
 	if (candidateWindow_) {
 		candidateWindow_->setCurrentSel(cursor);
 	}
@@ -822,11 +938,6 @@ bool TextService::finalizeExactCompositionStringFromUiElement() {
 
 // show candidate list window
 void TextService::showCandidates(Ime::EditSession* session) {
-	if (!tsfCandidateUiEnabled()) {
-		showingCandidates_ = true;
-		appendCandidateWindowLog(L"[TextService::showCandidates] skipped by process policy");
-		return;
-	}
 	// NOTE: in Windows 8 store apps, candidate window should be owned by
 	// composition window, which can be returned by TextService::compositionWindow().
 	// Otherwise, the candidate window cannot be shown.
@@ -839,17 +950,15 @@ void TextService::showCandidates(Ime::EditSession* session) {
 	if (candidateWindow_) {
 		candidateWindow_->syncOwner(session);
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
+		if (shouldShowCandidateWindowUI_) {
+			candidateWindow_->forceRedraw();
+		}
 	}
 	showingCandidates_ = true;
 }
 
 // hide candidate list window
 void TextService::hideCandidates() {
-	if (!tsfCandidateUiEnabled()) {
-		showingCandidates_ = false;
-		appendCandidateWindowLog(L"[TextService::hideCandidates] skipped by process policy");
-		return;
-	}
 	if (candidateWindow_) {
 		candidateWindow_->setPreeditText(L"");
 		candidateWindow_->Show(FALSE);
@@ -1009,15 +1118,13 @@ void TextService::refreshCandidateAppearance() {
 }
 
 void TextService::applyUiLessOverrideState() {
-	shouldShowCandidateWindowUI_ = !effectiveUiLess();
-	if (!tsfCandidateUiEnabled()) {
-		destroyCandidateWindow();
-		hideMessage();
-		return;
-	}
+	shouldShowCandidateWindowUI_ = shouldShowLocalCandidateWindow();
 	if (candidateWindow_) {
 		candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
+		if (shouldShowCandidateWindowUI_) {
+			candidateWindow_->forceRedraw();
+		}
 	}
 	if (effectiveUiLess()) {
 		hideMessage();

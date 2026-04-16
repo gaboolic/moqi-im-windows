@@ -146,13 +146,19 @@ void appendCandidateWindowLog(const std::wstring& message) {
     stream << formatCandidateWindowLogLine(message) << L"\n";
 }
 
-HWND resolveCandidateOwnerWindow(Ime::EditSession* session) {
+HWND resolveCandidateOwnerWindow(Ime::EditSession* session, bool preferForegroundWindow) {
     HWND hwnd = nullptr;
+    if (preferForegroundWindow) {
+        hwnd = ::GetForegroundWindow();
+    }
     if (session != nullptr) {
         if (ITfContext* context = session->context()) {
             ITfContextView* view = nullptr;
-            if (SUCCEEDED(context->GetActiveView(&view)) && view != nullptr) {
+            if (hwnd == nullptr &&
+                SUCCEEDED(context->GetActiveView(&view)) && view != nullptr) {
                 view->GetWnd(&hwnd);
+            }
+            if (view != nullptr) {
                 view->Release();
             }
         }
@@ -200,7 +206,9 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       integrationStyle_(GUID_NULL) {
     margin_ = 0;
 
-    HWND parent = resolveCandidateOwnerWindow(session);
+    auto* serviceImpl = static_cast<TextService*>(textService_);
+    HWND parent = resolveCandidateOwnerWindow(
+        session, serviceImpl && serviceImpl->source2CompatEnabled());
     create(parent, WS_POPUP | WS_CLIPCHILDREN,
            WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE);
 
@@ -254,6 +262,9 @@ STDMETHODIMP CandidateWindow::Show(BOOL bShow) {
     }
     if (shown_) {
         show();
+        ::SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, 0, 0,
+                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        forceRedraw();
     } else {
         hide();
     }
@@ -488,7 +499,7 @@ void CandidateWindow::setCurrentSel(int sel) {
     if (currentSel_ != sel) {
         currentSel_ = sel;
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -496,7 +507,7 @@ void CandidateWindow::setCurrentSel(int sel) {
 void CandidateWindow::setUseCursor(bool use) {
     useCursor_ = use;
     if (isVisible()) {
-        ::InvalidateRect(hwnd_, NULL, TRUE);
+        forceRedraw();
     }
 }
 
@@ -505,7 +516,7 @@ void CandidateWindow::setPreeditText(std::wstring text) {
         preedit_ = std::move(text);
         recalculateSize();
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -515,7 +526,7 @@ void CandidateWindow::setCommentFont(HFONT font) {
         commentFont_ = font;
         recalculateSize();
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -524,7 +535,7 @@ void CandidateWindow::setBackgroundColor(COLORREF color) {
     if (backgroundColor_ != color) {
         backgroundColor_ = color;
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -533,7 +544,7 @@ void CandidateWindow::setHighlightColor(COLORREF color) {
     if (highlightColor_ != color) {
         highlightColor_ = color;
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -542,7 +553,7 @@ void CandidateWindow::setTextColor(COLORREF color) {
     if (textColor_ != color) {
         textColor_ = color;
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -551,7 +562,7 @@ void CandidateWindow::setHighlightTextColor(COLORREF color) {
     if (highlightTextColor_ != color) {
         highlightTextColor_ = color;
         if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
+            forceRedraw();
         }
     }
 }
@@ -561,7 +572,10 @@ void CandidateWindow::syncOwner(Ime::EditSession* session) {
         return;
     }
 
-    HWND owner = resolveCandidateOwnerWindow(session);
+    auto* service = static_cast<TextService*>(textService_);
+    const bool preferForegroundWindow =
+        service != nullptr && service->source2CompatEnabled();
+    HWND owner = resolveCandidateOwnerWindow(session, preferForegroundWindow);
     if (owner == nullptr) {
         return;
     }
@@ -569,15 +583,42 @@ void CandidateWindow::syncOwner(Ime::EditSession* session) {
     HWND currentOwner =
         reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd_, GWLP_HWNDPARENT));
     if (currentOwner == owner) {
+        if (preferForegroundWindow && isVisible()) {
+            ::SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, 0, 0,
+                           SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            forceRedraw();
+        }
         return;
     }
 
     ::SetWindowLongPtr(hwnd_, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+    ::SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
     std::wostringstream log;
     log << L"[CandidateWindow::syncOwner] hwnd=" << hwnd_
         << L" old_owner=" << currentOwner
-        << L" new_owner=" << owner;
+        << L" new_owner=" << owner
+        << L" prefer_foreground=" << preferForegroundWindow;
+    appendCandidateWindowLog(log.str());
+    if (isVisible()) {
+        forceRedraw();
+    }
+}
+
+void CandidateWindow::forceRedraw() {
+    if (!hwnd_) {
+        return;
+    }
+
+    ::InvalidateRect(hwnd_, NULL, TRUE);
+    ::RedrawWindow(hwnd_, NULL, NULL,
+                   RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
+
+    std::wostringstream log;
+    log << L"[CandidateWindow::forceRedraw] hwnd=" << hwnd_
+        << L" visible=" << ::IsWindowVisible(hwnd_)
+        << L" shown=" << shown_;
     appendCandidateWindowLog(log.str());
 }
 
