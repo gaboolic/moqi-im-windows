@@ -3,6 +3,7 @@
 //
 
 #include "MoqiCandidateWindow.h"
+#include "MoqiTextService.h"
 
 #include <LibIME2/src/DebugLogConfig.h>
 #include <LibIME2/src/DebugLogFile.h>
@@ -12,6 +13,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cwctype>
 #include <fstream>
 #include <sstream>
 
@@ -25,6 +27,10 @@ constexpr COLORREF kItemAuxText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
 constexpr COLORREF kSelectedText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedAuxText = RGB(0, 0, 0);
+const GUID kIntegrationStyleSearchBox = {0xe6d1bd11,
+                                         0x82f7,
+                                         0x4903,
+                                         {0xae, 0x21, 0x1a, 0x63, 0x97, 0xcd, 0xe2, 0xeb}};
 
 std::wstring currentProcessPath() {
     std::wstring buffer(MAX_PATH, L'\0');
@@ -68,6 +74,52 @@ std::wstring formatCandidateWindowLogLine(const std::wstring& message) {
          << L"[exe=" << (exeName.empty() ? L"<unknown>" : exeName) << L"] "
          << message;
     return line.str();
+}
+
+std::wstring guidToString(REFGUID guid) {
+    wchar_t buffer[64] = {0};
+    const int len = ::StringFromGUID2(guid, buffer, static_cast<int>(_countof(buffer)));
+    if (len <= 0) {
+        return L"<guid-format-failed>";
+    }
+    return std::wstring(buffer);
+}
+
+const wchar_t* queryInterfaceName(REFIID riid) {
+    if (InlineIsEqualGUID(riid, IID_IUnknown)) {
+        return L"IUnknown";
+    }
+    if (InlineIsEqualGUID(riid, IID_ITfUIElement)) {
+        return L"ITfUIElement";
+    }
+    if (InlineIsEqualGUID(riid, IID_ITfCandidateListUIElement)) {
+        return L"ITfCandidateListUIElement";
+    }
+    if (InlineIsEqualGUID(riid, IID_ITfCandidateListUIElementBehavior)) {
+        return L"ITfCandidateListUIElementBehavior";
+    }
+    if (InlineIsEqualGUID(riid, IID_ITfIntegratableCandidateListUIElement)) {
+        return L"ITfIntegratableCandidateListUIElement";
+    }
+    return L"<unknown>";
+}
+
+int syntheticCharCodeFromKey(WPARAM wParam) {
+    if (wParam >= '0' && wParam <= '9') {
+        return static_cast<int>(wParam);
+    }
+    if (wParam >= 'A' && wParam <= 'Z') {
+        return static_cast<int>(wParam - 'A' + 'a');
+    }
+    if (wParam >= VK_NUMPAD0 && wParam <= VK_NUMPAD9) {
+        return static_cast<int>('0' + (wParam - VK_NUMPAD0));
+    }
+    switch (wParam) {
+    case VK_SPACE:
+        return VK_SPACE;
+    default:
+        return 0;
+    }
 }
 
 void appendCandidateWindowLog(const std::wstring& message) {
@@ -142,9 +194,10 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       highlightColor_(kSelectedBackground),
       textColor_(kItemText),
       highlightTextColor_(kSelectedText),
+      commentFont_(nullptr),
       currentSel_(0),
       useCursor_(false),
-      commentFont_(nullptr) {
+      integrationStyle_(GUID_NULL) {
     margin_ = 0;
 
     HWND parent = resolveCandidateOwnerWindow(session);
@@ -157,6 +210,23 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
 }
 
 CandidateWindow::~CandidateWindow(void) {
+}
+
+STDMETHODIMP CandidateWindow::QueryInterface(REFIID riid, void** ppvObj) {
+    const HRESULT hr = CandidateWindowComObject::QueryInterface(riid, ppvObj);
+
+    std::wostringstream log;
+    log << L"[CandidateWindow::QueryInterface] iid=" << guidToString(riid)
+        << L" name=" << queryInterfaceName(riid)
+        << L" tracked_behavior="
+        << (InlineIsEqualGUID(riid, IID_ITfCandidateListUIElementBehavior) ? 1 : 0)
+        << L" tracked_integratable="
+        << (InlineIsEqualGUID(riid, IID_ITfIntegratableCandidateListUIElement) ? 1 : 0)
+        << L" hr=0x" << std::hex << static_cast<unsigned long>(hr)
+        << std::dec << L" result_ptr=" << (ppvObj && *ppvObj ? *ppvObj : nullptr);
+    appendCandidateWindowLog(log.str());
+
+    return hr;
 }
 
 STDMETHODIMP CandidateWindow::GetDescription(BSTR* pbstrDescription) {
@@ -218,7 +288,7 @@ STDMETHODIMP CandidateWindow::GetCount(UINT* puCount) {
     if (!puCount) {
         return E_INVALIDARG;
     }
-    *puCount = (std::min<UINT>)(10, static_cast<UINT>(items_.size()));
+    *puCount = static_cast<UINT>(items_.size());
     return S_OK;
 }
 
@@ -238,7 +308,7 @@ STDMETHODIMP CandidateWindow::GetString(UINT uIndex, BSTR* pbstr) {
     if (uIndex >= items_.size()) {
         return E_INVALIDARG;
     }
-    *pbstr = SysAllocString(items_[uIndex].combinedText().c_str());
+    *pbstr = SysAllocString(items_[uIndex].text.c_str());
     return S_OK;
 }
 
@@ -270,6 +340,122 @@ STDMETHODIMP CandidateWindow::GetCurrentPage(UINT* puPage) {
     }
     *puPage = 0;
     return S_OK;
+}
+
+STDMETHODIMP CandidateWindow::SetSelection(UINT nIndex) {
+    if (nIndex >= items_.size()) {
+        return E_INVALIDARG;
+    }
+
+    {
+        std::wostringstream log;
+        log << L"[CandidateWindow::SetSelection] index=" << nIndex
+            << L" item_count=" << items_.size();
+        appendCandidateWindowLog(log.str());
+    }
+
+    auto* service = static_cast<TextService*>(textService_);
+    if (!service) {
+        return E_FAIL;
+    }
+    const bool updated = service->setCandidateSelectionFromUiElement(nIndex);
+    if (updated) {
+        setCurrentSel(static_cast<int>(nIndex));
+    }
+    return updated ? S_OK : E_FAIL;
+}
+
+STDMETHODIMP CandidateWindow::Finalize() {
+    appendCandidateWindowLog(L"[CandidateWindow::Finalize]");
+    auto* service = static_cast<TextService*>(textService_);
+    if (!service) {
+        return E_FAIL;
+    }
+    return service->finalizeCandidateSelectionFromUiElement() ? S_OK : E_FAIL;
+}
+
+STDMETHODIMP CandidateWindow::Abort() {
+    appendCandidateWindowLog(L"[CandidateWindow::Abort]");
+    auto* service = static_cast<TextService*>(textService_);
+    if (!service) {
+        return E_FAIL;
+    }
+    return service->abortCandidateSelectionFromUiElement() ? S_OK : E_FAIL;
+}
+
+STDMETHODIMP CandidateWindow::SetIntegrationStyle(GUID guidIntegrationStyle) {
+    integrationStyle_ = guidIntegrationStyle;
+    std::wostringstream log;
+    log << L"[CandidateWindow::SetIntegrationStyle] guid="
+        << guidToString(guidIntegrationStyle);
+    appendCandidateWindowLog(log.str());
+    if (InlineIsEqualGUID(guidIntegrationStyle, kIntegrationStyleSearchBox) ||
+        InlineIsEqualGUID(guidIntegrationStyle, GUID_NULL)) {
+        return S_OK;
+    }
+    return E_NOTIMPL;
+}
+
+STDMETHODIMP CandidateWindow::GetSelectionStyle(
+    TfIntegratableCandidateListSelectionStyle* ptfSelectionStyle) {
+    if (!ptfSelectionStyle) {
+        return E_INVALIDARG;
+    }
+    *ptfSelectionStyle =
+        useCursor_ ? STYLE_ACTIVE_SELECTION : STYLE_IMPLIED_SELECTION;
+    appendCandidateWindowLog(useCursor_
+                                 ? L"[CandidateWindow::GetSelectionStyle] style=STYLE_ACTIVE_SELECTION"
+                                 : L"[CandidateWindow::GetSelectionStyle] style=STYLE_IMPLIED_SELECTION");
+    return S_OK;
+}
+
+STDMETHODIMP CandidateWindow::OnKeyDown(WPARAM wParam, LPARAM lParam, BOOL* pfEaten) {
+    if (!pfEaten) {
+        return E_INVALIDARG;
+    }
+
+    auto* service = static_cast<TextService*>(textService_);
+    if (!service) {
+        *pfEaten = FALSE;
+        return E_FAIL;
+    }
+
+    const int charCode = syntheticCharCodeFromKey(wParam);
+    const bool handled = service->onIntegratableCandidateListKeyDown(wParam, lParam, pfEaten);
+
+    std::wostringstream log;
+    log << L"[CandidateWindow::OnKeyDown] vk=0x" << std::hex
+        << static_cast<unsigned long long>(wParam)
+        << L" lParam=0x" << static_cast<unsigned long long>(lParam)
+        << std::dec << L" charCode=" << charCode << L" eaten=" << *pfEaten
+        << L" handled=" << handled;
+    appendCandidateWindowLog(log.str());
+
+    return S_OK;
+}
+
+STDMETHODIMP CandidateWindow::ShowCandidateNumbers(BOOL* pfShow) {
+    if (!pfShow) {
+        return E_INVALIDARG;
+    }
+    const bool showNumbers = !selKeys_.empty() &&
+                             std::all_of(selKeys_.begin(), selKeys_.end(), [](wchar_t key) {
+                                 return std::iswdigit(static_cast<wint_t>(key)) != 0;
+                             });
+    *pfShow = showNumbers ? TRUE : FALSE;
+    std::wostringstream log;
+    log << L"[CandidateWindow::ShowCandidateNumbers] show=" << *pfShow;
+    appendCandidateWindowLog(log.str());
+    return S_OK;
+}
+
+STDMETHODIMP CandidateWindow::FinalizeExactCompositionString() {
+    appendCandidateWindowLog(L"[CandidateWindow::FinalizeExactCompositionString]");
+    auto* service = static_cast<TextService*>(textService_);
+    if (!service) {
+        return E_FAIL;
+    }
+    return service->finalizeExactCompositionStringFromUiElement() ? S_OK : E_FAIL;
 }
 
 void CandidateWindow::add(CandidateUiItem item, wchar_t selKey) {

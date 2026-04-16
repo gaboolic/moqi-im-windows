@@ -28,6 +28,7 @@
 #include "MoqiCandidateWindow.h"
 #include <sys/types.h>
 #include "MoqiClient.h"
+#include <functional>
 #include <memory>
 
 
@@ -242,6 +243,11 @@ public:
 	bool hasCandidateWindow() const {
 		return candidateWindow_ != nullptr;
 	}
+	bool setCandidateSelectionFromUiElement(UINT index);
+	bool finalizeCandidateSelectionFromUiElement();
+	bool abortCandidateSelectionFromUiElement();
+	bool onIntegratableCandidateListKeyDown(WPARAM wParam, LPARAM lParam, BOOL* eaten);
+	bool finalizeExactCompositionStringFromUiElement();
 
 	// message window
 	void showMessage(Ime::EditSession* session, std::wstring message, int duration = 3);
@@ -263,6 +269,7 @@ private:
 	void applyCandidateAppearanceNow();
 	void refreshCandidateAppearance();
 	void applyUiLessOverrideState();
+	bool withCurrentEditSession(const std::function<bool(Ime::EditSession*)>& action);
 
 	void closeClient();
 

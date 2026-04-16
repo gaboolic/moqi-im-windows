@@ -76,6 +76,11 @@ public:
 	// called just before current composition is terminated for doing cleanup.
 	void onCompositionTerminated(bool forced);
 
+	bool setCandidateSelectionFromUiElement(UINT index, Ime::EditSession* session);
+	bool finalizeCandidateSelectionFromUiElement(Ime::EditSession* session);
+	bool abortCandidateSelectionFromUiElement(Ime::EditSession* session);
+	bool onIntegratableCandidateListKeyDown(UINT keyCode, int charCode, Ime::EditSession* session);
+
 private:
     static std::wstring getPipeName(const wchar_t* base_name);
     HANDLE connectPipe(const wchar_t* pipeName, int timeoutMs);
@@ -115,6 +120,8 @@ private:
     void updateCandidateList(Json::Value& msg, Ime::EditSession* session);
     void updateUI(const Json::Value& data);
     void updateStatus(Json::Value& msg, Ime::EditSession* session = nullptr);
+	bool sendSyntheticKeyEvent(const char* methodName, UINT keyCode, int charCode, Ime::EditSession* session);
+	bool sendSyntheticKeyDown(UINT keyCode, int charCode, Ime::EditSession* session);
 
 private:
 	TextService* textService_;

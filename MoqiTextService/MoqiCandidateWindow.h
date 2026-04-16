@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ctffunc.h>
 #include <LibIME2/src/ComObject.h>
 #include <LibIME2/src/ImeWindow.h>
 
@@ -28,11 +29,17 @@ struct CandidateUiItem {
     }
 };
 
+using CandidateWindowComObject = Ime::ComObject<
+    Ime::ComInterface<ITfCandidateListUIElement>,
+    Ime::ComInterface<ITfCandidateListUIElementBehavior>,
+    Ime::ComInterface<ITfIntegratableCandidateListUIElement>>;
+
 class CandidateWindow
     : public Ime::ImeWindow,
-      public Ime::ComObject<Ime::ComInterface<ITfCandidateListUIElement>> {
+      public CandidateWindowComObject {
 public:
     CandidateWindow(Ime::TextService* service, Ime::EditSession* session);
+    STDMETHODIMP QueryInterface(REFIID riid, void** ppvObj) override;
 
     STDMETHODIMP GetDescription(BSTR* pbstrDescription);
     STDMETHODIMP GetGUID(GUID* pguid);
@@ -47,12 +54,23 @@ public:
     STDMETHODIMP GetPageIndex(UINT* puIndex, UINT uSize, UINT* puPageCnt);
     STDMETHODIMP SetPageIndex(UINT* puIndex, UINT uPageCnt);
     STDMETHODIMP GetCurrentPage(UINT* puPage);
+    STDMETHODIMP SetSelection(UINT nIndex);
+    STDMETHODIMP Finalize();
+    STDMETHODIMP Abort();
+    STDMETHODIMP SetIntegrationStyle(GUID guidIntegrationStyle);
+    STDMETHODIMP GetSelectionStyle(TfIntegratableCandidateListSelectionStyle* ptfSelectionStyle);
+    STDMETHODIMP OnKeyDown(WPARAM wParam, LPARAM lParam, BOOL* pfEaten);
+    STDMETHODIMP ShowCandidateNumbers(BOOL* pfShow);
+    STDMETHODIMP FinalizeExactCompositionString();
 
     void add(CandidateUiItem item, wchar_t selKey);
     void clear();
     void setCandPerRow(int n);
     void setCurrentSel(int sel);
     void setUseCursor(bool use);
+    int currentSel() const {
+        return currentSel_;
+    }
     void setPreeditText(std::wstring text);
     void setCommentFont(HFONT font);
     void setBackgroundColor(COLORREF color);
@@ -102,6 +120,7 @@ private:
     std::vector<CandidateUiItem> items_;
     int currentSel_;
     bool useCursor_;
+    GUID integrationStyle_;
 };
 
 } // namespace Moqi

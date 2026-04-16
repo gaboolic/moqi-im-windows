@@ -419,6 +419,41 @@ bool parseHexColor(const std::string &text, COLORREF &result) {
   return true;
 }
 
+bool isExtendedKeyCode(UINT keyCode) {
+  switch (keyCode) {
+  case VK_UP:
+  case VK_DOWN:
+  case VK_LEFT:
+  case VK_RIGHT:
+  case VK_HOME:
+  case VK_END:
+  case VK_PRIOR:
+  case VK_NEXT:
+  case VK_INSERT:
+  case VK_DELETE:
+  case VK_DIVIDE:
+  case VK_NUMLOCK:
+  case VK_RCONTROL:
+  case VK_RMENU:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void addSyntheticKeyEventToRpcRequest(moqi::protocol::ClientRequest &request,
+                                      UINT keyCode, int charCode) {
+  auto *protoKeyEvent = request.mutable_key_event();
+  protoKeyEvent->set_key_code(keyCode);
+  protoKeyEvent->set_char_code(charCode);
+  protoKeyEvent->set_repeat_count(1);
+  protoKeyEvent->set_scan_code(::MapVirtualKeyW(keyCode, MAPVK_VK_TO_VSC));
+  protoKeyEvent->set_is_extended(isExtendedKeyCode(keyCode));
+  for (int i = 0; i < 256; ++i) {
+    protoKeyEvent->add_key_states(0);
+  }
+}
+
 Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), pipe_(INVALID_HANDLE_VALUE), nextSeqNum_(0),
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
@@ -814,6 +849,67 @@ void Client::updateStatus(Json::Value &msg, Ime::EditSession *session) {
   // keyboard status
   updateKeyboardStatus(msg);
 
+}
+
+bool Client::sendSyntheticKeyEvent(const char *methodName, UINT keyCode,
+                                   int charCode, Ime::EditSession *session) {
+  auto req = createRpcRequest(methodName);
+  addSyntheticKeyEventToRpcRequest(req, keyCode, charCode);
+
+  Json::Value ret;
+  if (!callRpcMethod(req, ret) || !handleRpcResponse(ret, session)) {
+    return false;
+  }
+  return ret["return"].asBool();
+}
+
+bool Client::sendSyntheticKeyDown(UINT keyCode, int charCode,
+                                  Ime::EditSession *session) {
+  if (!sendSyntheticKeyEvent("filterKeyDown", keyCode, charCode, session)) {
+    return false;
+  }
+  return sendSyntheticKeyEvent("onKeyDown", keyCode, charCode, session);
+}
+
+bool Client::setCandidateSelectionFromUiElement(UINT index,
+                                                Ime::EditSession *session) {
+  if (session == nullptr || textService_ == nullptr ||
+      textService_->candidateWindow_ == nullptr) {
+    return false;
+  }
+
+  const int targetIndex = static_cast<int>(index);
+  if (targetIndex < 0 ||
+      targetIndex >= static_cast<int>(textService_->candidates_.size())) {
+    return false;
+  }
+
+  const int currentIndex = textService_->candidateWindow_->currentSel();
+  if (targetIndex == currentIndex) {
+    return true;
+  }
+
+  const UINT keyCode = targetIndex > currentIndex ? VK_DOWN : VK_UP;
+  const int stepCount = std::abs(targetIndex - currentIndex);
+  for (int step = 0; step < stepCount; ++step) {
+    if (!sendSyntheticKeyDown(keyCode, 0, session)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Client::finalizeCandidateSelectionFromUiElement(Ime::EditSession *session) {
+  return sendSyntheticKeyDown(VK_SPACE, VK_SPACE, session);
+}
+
+bool Client::abortCandidateSelectionFromUiElement(Ime::EditSession *session) {
+  return sendSyntheticKeyDown(VK_ESCAPE, 0, session);
+}
+
+bool Client::onIntegratableCandidateListKeyDown(UINT keyCode, int charCode,
+                                                Ime::EditSession *session) {
+  return sendSyntheticKeyDown(keyCode, charCode, session);
 }
 
 void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {

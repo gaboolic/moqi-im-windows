@@ -563,7 +563,11 @@ void TextService::createCandidateWindow(Ime::EditSession* session) {
 		if (elementMgr) {
 			BOOL pbShow = shouldShowCandidateWindowUI_ ? TRUE : FALSE;
 			if (validCandidateListElementId_ =
-				(elementMgr->BeginUIElement(candidateWindow_, &pbShow, &candidateListElementId_) == S_OK)) {
+				(elementMgr->BeginUIElement(
+					static_cast<ITfCandidateListUIElement*>(
+						static_cast<Ime::ComInterface<ITfCandidateListUIElement>*>(candidateWindow_)),
+					&pbShow,
+					&candidateListElementId_) == S_OK)) {
 				shouldShowCandidateWindowUI_ = !effectiveUiLess() && pbShow != FALSE;
 				std::wostringstream log;
 				log << L"[TextService::createCandidateWindow] BeginUIElement success pbShow=" << pbShow
@@ -683,6 +687,137 @@ void TextService::setCandidateCursor(int cursor) {
 	if (candidateWindow_) {
 		candidateWindow_->setCurrentSel(cursor);
 	}
+}
+
+bool TextService::withCurrentEditSession(
+	const std::function<bool(Ime::EditSession*)>& action) {
+	if (!action) {
+		return false;
+	}
+	auto context = currentContext();
+	if (!context) {
+		return false;
+	}
+
+	bool handled = false;
+	auto* editSession = new Ime::EditSession(
+		context, [&action, &handled](Ime::EditSession* session, TfEditCookie) {
+			handled = action(session);
+		});
+	HRESULT sessionHr = E_FAIL;
+	const HRESULT hr = context->RequestEditSession(
+		clientId(), editSession, TF_ES_SYNC | TF_ES_READWRITE, &sessionHr);
+	editSession->Release();
+	return SUCCEEDED(hr) && SUCCEEDED(sessionHr) && handled;
+}
+
+bool TextService::setCandidateSelectionFromUiElement(UINT index) {
+	if (!client_ || !candidateWindow_) {
+		return false;
+	}
+	{
+		std::wostringstream log;
+		log << L"[TextService::setCandidateSelectionFromUiElement] index=" << index;
+		appendCandidateWindowLog(log.str());
+	}
+	const bool handled = withCurrentEditSession([this, index](Ime::EditSession* session) {
+		return client_->setCandidateSelectionFromUiElement(index, session);
+	});
+	if (handled) {
+		candidateWindow_->setCurrentSel(static_cast<int>(index));
+	}
+	return handled;
+}
+
+bool TextService::finalizeCandidateSelectionFromUiElement() {
+	if (!client_) {
+		return false;
+	}
+	appendCandidateWindowLog(L"[TextService::finalizeCandidateSelectionFromUiElement]");
+	return withCurrentEditSession([this](Ime::EditSession* session) {
+		return client_->finalizeCandidateSelectionFromUiElement(session);
+	});
+}
+
+bool TextService::abortCandidateSelectionFromUiElement() {
+	if (!client_) {
+		return false;
+	}
+	appendCandidateWindowLog(L"[TextService::abortCandidateSelectionFromUiElement]");
+	return withCurrentEditSession([this](Ime::EditSession* session) {
+		return client_->abortCandidateSelectionFromUiElement(session);
+	});
+}
+
+bool TextService::onIntegratableCandidateListKeyDown(WPARAM wParam, LPARAM lParam, BOOL* eaten) {
+	if (!eaten) {
+		return false;
+	}
+	*eaten = FALSE;
+	if (!client_) {
+		return false;
+	}
+	const bool handled = withCurrentEditSession(
+		[this, wParam](Ime::EditSession* session) {
+			int charCode = 0;
+			if (wParam >= '0' && wParam <= '9') {
+				charCode = static_cast<int>(wParam);
+			} else if (wParam >= 'A' && wParam <= 'Z') {
+				charCode = static_cast<int>(wParam - 'A' + 'a');
+			} else if (wParam >= VK_NUMPAD0 && wParam <= VK_NUMPAD9) {
+				charCode = static_cast<int>('0' + (wParam - VK_NUMPAD0));
+			} else if (wParam == VK_SPACE) {
+				charCode = VK_SPACE;
+			}
+			return client_->onIntegratableCandidateListKeyDown(
+				static_cast<UINT>(wParam), charCode, session);
+		});
+	*eaten = handled ? TRUE : FALSE;
+
+	std::wostringstream log;
+	log << L"[TextService::onIntegratableCandidateListKeyDown] vk=0x" << std::hex
+		<< static_cast<unsigned long long>(wParam) << L" lParam=0x"
+		<< static_cast<unsigned long long>(lParam) << std::dec
+		<< L" eaten=" << *eaten;
+	appendCandidateWindowLog(log.str());
+
+	return handled;
+}
+
+bool TextService::finalizeExactCompositionStringFromUiElement() {
+	if (!client_) {
+		return false;
+	}
+	return withCurrentEditSession([this](Ime::EditSession* session) {
+		std::wstring exactText =
+			effectiveInlinePreedit() ? compositionString(session) : candidatePreedit();
+		if (exactText.empty()) {
+			exactText = candidatePreedit();
+		}
+
+		std::wostringstream log;
+		log << L"[TextService::finalizeExactCompositionStringFromUiElement] exact_text_len="
+			<< exactText.length() << L" inline_preedit=" << effectiveInlinePreedit();
+		appendCandidateWindowLog(log.str());
+
+		if (!exactText.empty()) {
+			if (!isComposing()) {
+				startComposition(session->context());
+				if (!isComposing()) {
+					appendCandidateWindowLog(
+						L"[TextService::finalizeExactCompositionStringFromUiElement] startComposition failed");
+					return false;
+				}
+			}
+			setCompositionString(session, exactText.c_str(),
+				static_cast<int>(exactText.length()));
+			setCandidatePreedit(L"");
+			suppressNextCompositionTerminatedNotification();
+			endComposition(session->context());
+		}
+
+		return client_->abortCandidateSelectionFromUiElement(session);
+	});
 }
 
 // show candidate list window
