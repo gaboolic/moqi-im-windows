@@ -8,10 +8,16 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。
 
+## 快速开始
+下载安装包：[moqi-im-windows-setup.exe](https://github.com/gaboolic/moqi-im-windows/releases)
+
 ## 特色功能
-- 托盘切换输入法状态
-- 主题皮肤修改
-- 原生ai功能 编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
+- 托盘切换输入法状态：中英文 全半角 简繁
+- 外观编辑：主题皮肤切换、字体调整、主题色切换、自定义快捷键
+- 切换方案集、切换输入方案、更新配置
+- 置顶短语、超级简拼
+- 输入设置：自动插入成对引号、分号键次选
+- 原生ai功能：支持整句优化、翻译、问答等，只有想不到没有做不到。编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
 
 ```
 {
@@ -47,9 +53,13 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 ## 功能演示
 ai功能演示：https://github.com/gaboolic/moqi-im-windows/issues/4
-![菜单](others/imgs/caidan.png)
-![菜单2](others/imgs/caidan2.png)
+
+![菜单主题](others/imgs/caidan-zhuti.png)
+![菜单方案集](others/imgs/caidan-schemas.png)
+![菜单方案](others/imgs/caidan-schema.png)
 ![输入1](others/imgs/input-zise.png)
+![输入2](others/imgs/input-mo.png)
+![输入3](others/imgs/input-qi.png)
 
 ## 运行架构
 
