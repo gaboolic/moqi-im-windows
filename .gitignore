@@ -42,6 +42,8 @@
 
 .tools
 
+logs
+
 build
 build_*
 build64

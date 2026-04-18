@@ -233,6 +233,8 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
   Json::Value result;
   if (ui.has_cand_font_name())
     result["candFontName"] = ui.cand_font_name();
+  if (ui.has_cand_comment_font_name())
+    result["candCommentFontName"] = ui.cand_comment_font_name();
   if (ui.has_cand_font_size())
     result["candFontSize"] = ui.cand_font_size();
   if (ui.has_cand_comment_font_size())
@@ -251,6 +253,10 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
     result["candTextColor"] = ui.cand_text_color();
   if (ui.has_cand_highlight_text_color())
     result["candHighlightTextColor"] = ui.cand_highlight_text_color();
+  if (ui.has_cand_comment_color())
+    result["candCommentColor"] = ui.cand_comment_color();
+  if (ui.has_cand_comment_highlight_color())
+    result["candCommentHighlightColor"] = ui.cand_comment_highlight_color();
   if (ui.has_auto_pair_quotes())
     result["autoPairQuotes"] = ui.auto_pair_quotes();
   if (ui.has_semicolon_select_second())
@@ -468,6 +474,9 @@ void Client::updateUI(const Json::Value &data) {
     if (value.isString() && strcmp(name, "candFontName") == 0) {
       wstring fontName = utf8ToUtf16(value.asCString());
       textService_->setCandFontName(fontName);
+    } else if (value.isString() && strcmp(name, "candCommentFontName") == 0) {
+      wstring fontName = utf8ToUtf16(value.asCString());
+      textService_->setCandCommentFontName(fontName);
     } else if (value.isInt() && strcmp(name, "candFontSize") == 0) {
       textService_->setCandFontSize(value.asInt());
     } else if (value.isInt() && strcmp(name, "candCommentFontSize") == 0) {
@@ -499,6 +508,16 @@ void Client::updateUI(const Json::Value &data) {
       COLORREF color = textService_->candHighlightTextColor();
       if (parseHexColor(value.asCString(), color)) {
         textService_->setCandHighlightTextColor(color);
+      }
+    } else if (value.isString() && strcmp(name, "candCommentColor") == 0) {
+      COLORREF color = textService_->candCommentColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandCommentColor(color);
+      }
+    } else if (value.isString() && strcmp(name, "candCommentHighlightColor") == 0) {
+      COLORREF color = textService_->candCommentHighlightColor();
+      if (parseHexColor(value.asCString(), color)) {
+        textService_->setCandCommentHighlightColor(color);
       }
     }
   }

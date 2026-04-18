@@ -59,6 +59,8 @@ public:
     void setHighlightColor(COLORREF color);
     void setTextColor(COLORREF color);
     void setHighlightTextColor(COLORREF color);
+    void setCommentColor(COLORREF color);
+    void setCommentHighlightColor(COLORREF color);
     void syncOwner(Ime::EditSession* session);
     void recalculateSize() override;
 
@@ -96,6 +98,8 @@ private:
     COLORREF highlightColor_;
     COLORREF textColor_;
     COLORREF highlightTextColor_;
+    COLORREF commentColor_;
+    COLORREF commentHighlightColor_;
     std::wstring preedit_;
     HFONT commentFont_;
     std::vector<wchar_t> selKeys_;

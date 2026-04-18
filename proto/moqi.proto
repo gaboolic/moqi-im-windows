@@ -84,6 +84,9 @@ message CustomizeUi {
   optional uint32 cand_comment_font_size = 10;
   optional bool auto_pair_quotes = 11;
   optional bool semicolon_select_second = 12;
+  optional string cand_comment_font_name = 13;
+  optional string cand_comment_color = 14;
+  optional string cand_comment_highlight_color = 15;
 }
 
 message MessageWindow {

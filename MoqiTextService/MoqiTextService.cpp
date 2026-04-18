@@ -44,6 +44,7 @@ std::wstring currentProcessPath();
 std::wstring processBaseName(const std::wstring& imagePath);
 std::wstring timestampNow();
 std::wstring formatDebugLogLine(const std::wstring& message);
+constexpr wchar_t kDefaultCommentFontFace[] = L"Consolas";
 
 // {3FCBE4CC-CC03-4BD4-B39F-3B6B0BEA5D90}
 const GUID kToggleUiLessOverrideGuid = {
@@ -281,12 +282,15 @@ TextService::TextService(ImeModule* module):
 	candPerRow_(1),
 	selKeys_(L"1234567890"),
 	candUseCursor_(true),
+	candCommentFontName_(kDefaultCommentFontFace),
 	candFontSize_(20),
 	candCommentFontSize_(18),
 	candBackgroundColor_(RGB(255, 255, 255)),
 	candHighlightColor_(RGB(198, 221, 249)),
 	candTextColor_(RGB(0, 0, 0)),
 	candHighlightTextColor_(RGB(0, 0, 0)),
+	candCommentColor_(RGB(0, 0, 0)),
+	candCommentHighlightColor_(RGB(0, 0, 0)),
 	inlinePreedit_(true),
 	autoPairQuotes_(false),
 	suppressNextCompositionTerminatedNotification_(false) {
@@ -301,6 +305,9 @@ TextService::TextService(ImeModule* module):
 	lf.lfWeight = FW_NORMAL;
 	font_ = CreateFontIndirect(&lf);
 	lf.lfHeight = candCommentFontHeight();
+	const std::wstring& commentFontName =
+		candCommentFontName_.empty() ? std::wstring(kDefaultCommentFontFace) : candCommentFontName_;
+	wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), commentFontName.c_str(), _TRUNCATE);
 	commentFont_ = CreateFontIndirect(&lf);
 }
 
@@ -623,6 +630,8 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	candidateWindow_->setHighlightColor(candHighlightColor_);
 	candidateWindow_->setTextColor(candTextColor_);
 	candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
+	candidateWindow_->setCommentColor(candCommentColor_);
+	candidateWindow_->setCommentHighlightColor(candCommentHighlightColor_);
 	candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
 
 	// the items in the candidate list should not exist the
@@ -844,6 +853,9 @@ void TextService::applyCandidateAppearanceNow() {
 	font_ = CreateFontIndirect(&lf);
 
 	lf.lfHeight = candCommentFontHeight();
+	const std::wstring& commentFontName =
+		candCommentFontName_.empty() ? std::wstring(kDefaultCommentFontFace) : candCommentFontName_;
+	wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), commentFontName.c_str(), _TRUNCATE);
 	commentFont_ = CreateFontIndirect(&lf);
 	updateFont_ = false;
 

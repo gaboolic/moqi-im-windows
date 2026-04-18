@@ -21,10 +21,8 @@ constexpr COLORREF kWindowBackground = RGB(255, 255, 255);
 constexpr COLORREF kWindowBorder = RGB(150, 150, 150);
 constexpr COLORREF kDividerColor = RGB(220, 220, 220);
 constexpr COLORREF kItemText = RGB(0, 0, 0);
-constexpr COLORREF kItemAuxText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
 constexpr COLORREF kSelectedText = RGB(0, 0, 0);
-constexpr COLORREF kSelectedAuxText = RGB(0, 0, 0);
 
 std::wstring currentProcessPath() {
     std::wstring buffer(MAX_PATH, L'\0');
@@ -142,6 +140,8 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       highlightColor_(kSelectedBackground),
       textColor_(kItemText),
       highlightTextColor_(kSelectedText),
+      commentColor_(kItemText),
+      commentHighlightColor_(kSelectedText),
       currentSel_(0),
       useCursor_(false),
       commentFont_(nullptr) {
@@ -364,6 +364,24 @@ void CandidateWindow::setTextColor(COLORREF color) {
 void CandidateWindow::setHighlightTextColor(COLORREF color) {
     if (highlightTextColor_ != color) {
         highlightTextColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setCommentColor(COLORREF color) {
+    if (commentColor_ != color) {
+        commentColor_ = color;
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setCommentHighlightColor(COLORREF color) {
+    if (commentHighlightColor_ != color) {
+        commentHighlightColor_ = color;
         if (isVisible()) {
             ::InvalidateRect(hwnd_, NULL, TRUE);
         }
@@ -607,7 +625,7 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     const COLORREF bgColor = selected ? highlightColor_ : backgroundColor_;
     const COLORREF textColor = selected ? highlightTextColor_ : textColor_;
     const COLORREF selColor = selected ? highlightTextColor_ : textColor_;
-    const COLORREF commentColor = selected ? kSelectedAuxText : kItemAuxText;
+    const COLORREF commentColor = selected ? commentHighlightColor_ : commentColor_;
 
     if (selected) {
         if (candPerRow_ == 1) {

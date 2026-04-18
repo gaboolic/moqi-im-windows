@@ -1569,6 +1569,9 @@ class CustomizeUi final : public ::google::protobuf::Message
     kCandHighlightColorFieldNumber = 7,
     kCandTextColorFieldNumber = 8,
     kCandHighlightTextColorFieldNumber = 9,
+    kCandCommentFontNameFieldNumber = 13,
+    kCandCommentColorFieldNumber = 14,
+    kCandCommentHighlightColorFieldNumber = 15,
     kCandFontSizeFieldNumber = 2,
     kCandPerRowFieldNumber = 3,
     kCandUseCursorFieldNumber = 4,
@@ -1657,6 +1660,54 @@ class CustomizeUi final : public ::google::protobuf::Message
   ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_highlight_text_color();
 
   public:
+  // optional string cand_comment_font_name = 13;
+  bool has_cand_comment_font_name() const;
+  void clear_cand_comment_font_name() ;
+  const ::std::string& cand_comment_font_name() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_font_name(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_font_name();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_font_name();
+  void set_allocated_cand_comment_font_name(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_font_name() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_font_name(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_font_name();
+
+  public:
+  // optional string cand_comment_color = 14;
+  bool has_cand_comment_color() const;
+  void clear_cand_comment_color() ;
+  const ::std::string& cand_comment_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_color();
+  void set_allocated_cand_comment_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_color();
+
+  public:
+  // optional string cand_comment_highlight_color = 15;
+  bool has_cand_comment_highlight_color() const;
+  void clear_cand_comment_highlight_color() ;
+  const ::std::string& cand_comment_highlight_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_highlight_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_highlight_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_highlight_color();
+  void set_allocated_cand_comment_highlight_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_highlight_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_highlight_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_highlight_color();
+
+  public:
   // optional uint32 cand_font_size = 2;
   bool has_cand_font_size() const;
   void clear_cand_font_size() ;
@@ -1738,8 +1789,8 @@ class CustomizeUi final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 12,
-                                   0, 137,
+  static const ::google::protobuf::internal::TcParseTable<4, 15,
+                                   0, 205,
                                    2>
       _table_;
 
@@ -1765,6 +1816,9 @@ class CustomizeUi final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr cand_highlight_color_;
     ::google::protobuf::internal::ArenaStringPtr cand_text_color_;
     ::google::protobuf::internal::ArenaStringPtr cand_highlight_text_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_font_name_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_highlight_color_;
     ::uint32_t cand_font_size_;
     ::uint32_t cand_per_row_;
     bool cand_use_cursor_;
@@ -4557,14 +4611,14 @@ inline void CustomizeUi::set_allocated_cand_font_name(::std::string* PROTOBUF_NU
 
 // optional uint32 cand_font_size = 2;
 inline bool CustomizeUi::has_cand_font_size() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
   return value;
 }
 inline void CustomizeUi::clear_cand_font_size() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_font_size_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000020U);
+                  0x00000100U);
 }
 inline ::uint32_t CustomizeUi::cand_font_size() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_font_size)
@@ -4572,7 +4626,7 @@ inline ::uint32_t CustomizeUi::cand_font_size() const {
 }
 inline void CustomizeUi::set_cand_font_size(::uint32_t value) {
   _internal_set_cand_font_size(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_font_size)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_font_size() const {
@@ -4586,14 +4640,14 @@ inline void CustomizeUi::_internal_set_cand_font_size(::uint32_t value) {
 
 // optional uint32 cand_per_row = 3;
 inline bool CustomizeUi::has_cand_per_row() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
   return value;
 }
 inline void CustomizeUi::clear_cand_per_row() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_per_row_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000040U);
+                  0x00000200U);
 }
 inline ::uint32_t CustomizeUi::cand_per_row() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_per_row)
@@ -4601,7 +4655,7 @@ inline ::uint32_t CustomizeUi::cand_per_row() const {
 }
 inline void CustomizeUi::set_cand_per_row(::uint32_t value) {
   _internal_set_cand_per_row(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_per_row)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_per_row() const {
@@ -4615,14 +4669,14 @@ inline void CustomizeUi::_internal_set_cand_per_row(::uint32_t value) {
 
 // optional bool cand_use_cursor = 4;
 inline bool CustomizeUi::has_cand_use_cursor() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
   return value;
 }
 inline void CustomizeUi::clear_cand_use_cursor() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_use_cursor_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000080U);
+                  0x00000400U);
 }
 inline bool CustomizeUi::cand_use_cursor() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_use_cursor)
@@ -4630,7 +4684,7 @@ inline bool CustomizeUi::cand_use_cursor() const {
 }
 inline void CustomizeUi::set_cand_use_cursor(bool value) {
   _internal_set_cand_use_cursor(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_use_cursor)
 }
 inline bool CustomizeUi::_internal_cand_use_cursor() const {
@@ -4644,14 +4698,14 @@ inline void CustomizeUi::_internal_set_cand_use_cursor(bool value) {
 
 // optional bool inline_preedit = 5;
 inline bool CustomizeUi::has_inline_preedit() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
   return value;
 }
 inline void CustomizeUi::clear_inline_preedit() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.inline_preedit_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000100U);
+                  0x00000800U);
 }
 inline bool CustomizeUi::inline_preedit() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.inline_preedit)
@@ -4659,7 +4713,7 @@ inline bool CustomizeUi::inline_preedit() const {
 }
 inline void CustomizeUi::set_inline_preedit(bool value) {
   _internal_set_inline_preedit(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.inline_preedit)
 }
 inline bool CustomizeUi::_internal_inline_preedit() const {
@@ -4949,14 +5003,14 @@ inline void CustomizeUi::set_allocated_cand_highlight_text_color(::std::string* 
 
 // optional uint32 cand_comment_font_size = 10;
 inline bool CustomizeUi::has_cand_comment_font_size() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_font_size() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_font_size_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00004000U);
 }
 inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_font_size)
@@ -4964,7 +5018,7 @@ inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
 }
 inline void CustomizeUi::set_cand_comment_font_size(::uint32_t value) {
   _internal_set_cand_comment_font_size(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_font_size)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_comment_font_size() const {
@@ -4978,14 +5032,14 @@ inline void CustomizeUi::_internal_set_cand_comment_font_size(::uint32_t value) 
 
 // optional bool auto_pair_quotes = 11;
 inline bool CustomizeUi::has_auto_pair_quotes() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
   return value;
 }
 inline void CustomizeUi::clear_auto_pair_quotes() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.auto_pair_quotes_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000200U);
+                  0x00001000U);
 }
 inline bool CustomizeUi::auto_pair_quotes() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.auto_pair_quotes)
@@ -4993,7 +5047,7 @@ inline bool CustomizeUi::auto_pair_quotes() const {
 }
 inline void CustomizeUi::set_auto_pair_quotes(bool value) {
   _internal_set_auto_pair_quotes(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.auto_pair_quotes)
 }
 inline bool CustomizeUi::_internal_auto_pair_quotes() const {
@@ -5007,14 +5061,14 @@ inline void CustomizeUi::_internal_set_auto_pair_quotes(bool value) {
 
 // optional bool semicolon_select_second = 12;
 inline bool CustomizeUi::has_semicolon_select_second() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
   return value;
 }
 inline void CustomizeUi::clear_semicolon_select_second() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.semicolon_select_second_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000400U);
+                  0x00002000U);
 }
 inline bool CustomizeUi::semicolon_select_second() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.semicolon_select_second)
@@ -5022,7 +5076,7 @@ inline bool CustomizeUi::semicolon_select_second() const {
 }
 inline void CustomizeUi::set_semicolon_select_second(bool value) {
   _internal_set_semicolon_select_second(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.semicolon_select_second)
 }
 inline bool CustomizeUi::_internal_semicolon_select_second() const {
@@ -5032,6 +5086,213 @@ inline bool CustomizeUi::_internal_semicolon_select_second() const {
 inline void CustomizeUi::_internal_set_semicolon_select_second(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.semicolon_select_second_ = value;
+}
+
+// optional string cand_comment_font_name = 13;
+inline bool CustomizeUi::has_cand_comment_font_name() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
+  return value;
+}
+inline void CustomizeUi::clear_cand_comment_font_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_font_name_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline const ::std::string& CustomizeUi::cand_comment_font_name() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_font_name)
+  return _internal_cand_comment_font_name();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_font_name(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  _impl_.cand_comment_font_name_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_font_name)
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_font_name()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ::std::string* _s = _internal_mutable_cand_comment_font_name();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_font_name)
+  return _s;
+}
+inline const ::std::string& CustomizeUi::_internal_cand_comment_font_name() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.cand_comment_font_name_.Get();
+}
+inline void CustomizeUi::_internal_set_cand_comment_font_name(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_font_name_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comment_font_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.cand_comment_font_name_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_font_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_font_name)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000020U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  auto* released = _impl_.cand_comment_font_name_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.cand_comment_font_name_.Set("", GetArena());
+  }
+  return released;
+}
+inline void CustomizeUi::set_allocated_cand_comment_font_name(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  }
+  _impl_.cand_comment_font_name_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_font_name_.IsDefault()) {
+    _impl_.cand_comment_font_name_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.CustomizeUi.cand_comment_font_name)
+}
+
+// optional string cand_comment_color = 14;
+inline bool CustomizeUi::has_cand_comment_color() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  return value;
+}
+inline void CustomizeUi::clear_cand_comment_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_color_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline const ::std::string& CustomizeUi::cand_comment_color() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_color)
+  return _internal_cand_comment_color();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_color(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  _impl_.cand_comment_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_color)
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_color()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ::std::string* _s = _internal_mutable_cand_comment_color();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_color)
+  return _s;
+}
+inline const ::std::string& CustomizeUi::_internal_cand_comment_color() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.cand_comment_color_.Get();
+}
+inline void CustomizeUi::_internal_set_cand_comment_color(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_color_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comment_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.cand_comment_color_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_color)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000040U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  auto* released = _impl_.cand_comment_color_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.cand_comment_color_.Set("", GetArena());
+  }
+  return released;
+}
+inline void CustomizeUi::set_allocated_cand_comment_color(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  }
+  _impl_.cand_comment_color_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_color_.IsDefault()) {
+    _impl_.cand_comment_color_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.CustomizeUi.cand_comment_color)
+}
+
+// optional string cand_comment_highlight_color = 15;
+inline bool CustomizeUi::has_cand_comment_highlight_color() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
+  return value;
+}
+inline void CustomizeUi::clear_cand_comment_highlight_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_highlight_color_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline const ::std::string& CustomizeUi::cand_comment_highlight_color() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
+  return _internal_cand_comment_highlight_color();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_highlight_color(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  _impl_.cand_comment_highlight_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_highlight_color()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  ::std::string* _s = _internal_mutable_cand_comment_highlight_color();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
+  return _s;
+}
+inline const ::std::string& CustomizeUi::_internal_cand_comment_highlight_color() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.cand_comment_highlight_color_.Get();
+}
+inline void CustomizeUi::_internal_set_cand_comment_highlight_color(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_comment_highlight_color_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comment_highlight_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.cand_comment_highlight_color_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_highlight_color() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000080U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
+  auto* released = _impl_.cand_comment_highlight_color_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.cand_comment_highlight_color_.Set("", GetArena());
+  }
+  return released;
+}
+inline void CustomizeUi::set_allocated_cand_comment_highlight_color(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
+  }
+  _impl_.cand_comment_highlight_color_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_highlight_color_.IsDefault()) {
+    _impl_.cand_comment_highlight_color_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
 }
 
 // -------------------------------------------------------------------

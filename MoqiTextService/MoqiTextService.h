@@ -114,6 +114,16 @@ public:
 		applyCandidateAppearanceNow();
 	}
 
+	std::wstring candCommentFontName() const {
+		return candCommentFontName_;
+	}
+
+	void setCandCommentFontName(std::wstring candCommentFontName) {
+		candCommentFontName_ = candCommentFontName;
+		updateFont_ = true;
+		applyCandidateAppearanceNow();
+	}
+
 	int candFontSize() {
 		return candFontSize_;
 	}
@@ -164,6 +174,22 @@ public:
 
 	void setCandHighlightTextColor(COLORREF color) {
 		candHighlightTextColor_ = color;
+	}
+
+	COLORREF candCommentColor() const {
+		return candCommentColor_;
+	}
+
+	void setCandCommentColor(COLORREF color) {
+		candCommentColor_ = color;
+	}
+
+	COLORREF candCommentHighlightColor() const {
+		return candCommentHighlightColor_;
+	}
+
+	void setCandCommentHighlightColor(COLORREF color) {
+		candCommentHighlightColor_ = color;
 	}
 
 	bool inlinePreedit() const {
@@ -287,12 +313,15 @@ private:
 	std::wstring selKeys_;
 	bool candUseCursor_;
 	std::wstring candFontName_;
+	std::wstring candCommentFontName_;
 	int candFontSize_;
 	int candCommentFontSize_;
 	COLORREF candBackgroundColor_;
 	COLORREF candHighlightColor_;
 	COLORREF candTextColor_;
 	COLORREF candHighlightTextColor_;
+	COLORREF candCommentColor_;
+	COLORREF candCommentHighlightColor_;
 	bool inlinePreedit_;
 	bool autoPairQuotes_;
 	bool suppressNextCompositionTerminatedNotification_;
