@@ -58,6 +58,7 @@ ai功能演示：https://github.com/gaboolic/moqi-im-windows/issues/4
 ![菜单方案集](others/imgs/caidan-schemas.png)
 ![菜单方案](others/imgs/caidan-schema.png)
 ![输入1](others/imgs/input-zise.png)
+
 ![输入2](others/imgs/input-mo.png)
 ![输入3](others/imgs/input-qi.png)
 
