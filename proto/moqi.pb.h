@@ -61,6 +61,10 @@ enum Method : int;
 extern const uint32_t Method_internal_data_[];
 enum TrayNotificationIcon : int;
 extern const uint32_t TrayNotificationIcon_internal_data_[];
+class AutoPairRule;
+struct AutoPairRuleDefaultTypeInternal;
+extern AutoPairRuleDefaultTypeInternal _AutoPairRule_default_instance_;
+extern const ::google::protobuf::internal::ClassDataFull AutoPairRule_class_data_;
 class ButtonInfo;
 struct ButtonInfoDefaultTypeInternal;
 extern ButtonInfoDefaultTypeInternal _ButtonInfo_default_instance_;
@@ -306,7 +310,7 @@ class TrayNotification final : public ::google::protobuf::Message
     return *reinterpret_cast<const TrayNotification*>(
         &_TrayNotification_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 7;
+  static constexpr int kIndexInFileMessages = 8;
   friend void swap(TrayNotification& a, TrayNotification& b) { a.Swap(&b); }
   inline void Swap(TrayNotification* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -749,7 +753,7 @@ class MessageWindow final : public ::google::protobuf::Message
     return *reinterpret_cast<const MessageWindow*>(
         &_MessageWindow_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 6;
+  static constexpr int kIndexInFileMessages = 7;
   friend void swap(MessageWindow& a, MessageWindow& b) { a.Swap(&b); }
   inline void Swap(MessageWindow* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1422,419 +1426,6 @@ class KeyEvent final : public ::google::protobuf::Message
 extern const ::google::protobuf::internal::ClassDataFull KeyEvent_class_data_;
 // -------------------------------------------------------------------
 
-class CustomizeUi final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:moqi.protocol.CustomizeUi) */ {
- public:
-  inline CustomizeUi() : CustomizeUi(nullptr) {}
-  ~CustomizeUi() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(CustomizeUi* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(CustomizeUi));
-  }
-#endif
-
-  template <typename = void>
-  explicit PROTOBUF_CONSTEXPR CustomizeUi(::google::protobuf::internal::ConstantInitialized);
-
-  inline CustomizeUi(const CustomizeUi& from) : CustomizeUi(nullptr, from) {}
-  inline CustomizeUi(CustomizeUi&& from) noexcept
-      : CustomizeUi(nullptr, ::std::move(from)) {}
-  inline CustomizeUi& operator=(const CustomizeUi& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline CustomizeUi& operator=(CustomizeUi&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  static const CustomizeUi& default_instance() {
-    return *reinterpret_cast<const CustomizeUi*>(
-        &_CustomizeUi_default_instance_);
-  }
-  static constexpr int kIndexInFileMessages = 5;
-  friend void swap(CustomizeUi& a, CustomizeUi& b) { a.Swap(&b); }
-  inline void Swap(CustomizeUi* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(CustomizeUi* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  CustomizeUi* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return ::google::protobuf::Message::DefaultConstruct<CustomizeUi>(arena);
-  }
-  using ::google::protobuf::Message::CopyFrom;
-  void CopyFrom(const CustomizeUi& from);
-  using ::google::protobuf::Message::MergeFrom;
-  void MergeFrom(const CustomizeUi& from) { CustomizeUi::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  ::size_t ByteSizeLong() const final;
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(CustomizeUi* PROTOBUF_NONNULL other);
- private:
-  template <typename T>
-  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
-  static ::absl::string_view FullMessageName() { return "moqi.protocol.CustomizeUi"; }
-
-  explicit CustomizeUi(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  CustomizeUi(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const CustomizeUi& from);
-  CustomizeUi(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, CustomizeUi&& from) noexcept
-      : CustomizeUi(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_();
-
-  ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kCandFontNameFieldNumber = 1,
-    kCandBackgroundColorFieldNumber = 6,
-    kCandHighlightColorFieldNumber = 7,
-    kCandTextColorFieldNumber = 8,
-    kCandHighlightTextColorFieldNumber = 9,
-    kCandCommentFontNameFieldNumber = 13,
-    kCandCommentColorFieldNumber = 14,
-    kCandCommentHighlightColorFieldNumber = 15,
-    kCandFontSizeFieldNumber = 2,
-    kCandPerRowFieldNumber = 3,
-    kCandUseCursorFieldNumber = 4,
-    kInlinePreeditFieldNumber = 5,
-    kAutoPairQuotesFieldNumber = 11,
-    kSemicolonSelectSecondFieldNumber = 12,
-    kCandCommentFontSizeFieldNumber = 10,
-  };
-  // optional string cand_font_name = 1;
-  bool has_cand_font_name() const;
-  void clear_cand_font_name() ;
-  const ::std::string& cand_font_name() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_font_name(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_font_name();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_font_name();
-  void set_allocated_cand_font_name(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_font_name() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_font_name(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_font_name();
-
-  public:
-  // optional string cand_background_color = 6;
-  bool has_cand_background_color() const;
-  void clear_cand_background_color() ;
-  const ::std::string& cand_background_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_background_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_background_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_background_color();
-  void set_allocated_cand_background_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_background_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_background_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_background_color();
-
-  public:
-  // optional string cand_highlight_color = 7;
-  bool has_cand_highlight_color() const;
-  void clear_cand_highlight_color() ;
-  const ::std::string& cand_highlight_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_highlight_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_highlight_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_highlight_color();
-  void set_allocated_cand_highlight_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_highlight_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_highlight_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_highlight_color();
-
-  public:
-  // optional string cand_text_color = 8;
-  bool has_cand_text_color() const;
-  void clear_cand_text_color() ;
-  const ::std::string& cand_text_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_text_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_text_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_text_color();
-  void set_allocated_cand_text_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_text_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_text_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_text_color();
-
-  public:
-  // optional string cand_highlight_text_color = 9;
-  bool has_cand_highlight_text_color() const;
-  void clear_cand_highlight_text_color() ;
-  const ::std::string& cand_highlight_text_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_highlight_text_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_highlight_text_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_highlight_text_color();
-  void set_allocated_cand_highlight_text_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_highlight_text_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_highlight_text_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_highlight_text_color();
-
-  public:
-  // optional string cand_comment_font_name = 13;
-  bool has_cand_comment_font_name() const;
-  void clear_cand_comment_font_name() ;
-  const ::std::string& cand_comment_font_name() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_comment_font_name(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_font_name();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_font_name();
-  void set_allocated_cand_comment_font_name(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_comment_font_name() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_font_name(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_font_name();
-
-  public:
-  // optional string cand_comment_color = 14;
-  bool has_cand_comment_color() const;
-  void clear_cand_comment_color() ;
-  const ::std::string& cand_comment_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_comment_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_color();
-  void set_allocated_cand_comment_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_comment_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_color();
-
-  public:
-  // optional string cand_comment_highlight_color = 15;
-  bool has_cand_comment_highlight_color() const;
-  void clear_cand_comment_highlight_color() ;
-  const ::std::string& cand_comment_highlight_color() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_cand_comment_highlight_color(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_highlight_color();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_highlight_color();
-  void set_allocated_cand_comment_highlight_color(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_cand_comment_highlight_color() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_highlight_color(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_highlight_color();
-
-  public:
-  // optional uint32 cand_font_size = 2;
-  bool has_cand_font_size() const;
-  void clear_cand_font_size() ;
-  ::uint32_t cand_font_size() const;
-  void set_cand_font_size(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_cand_font_size() const;
-  void _internal_set_cand_font_size(::uint32_t value);
-
-  public:
-  // optional uint32 cand_per_row = 3;
-  bool has_cand_per_row() const;
-  void clear_cand_per_row() ;
-  ::uint32_t cand_per_row() const;
-  void set_cand_per_row(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_cand_per_row() const;
-  void _internal_set_cand_per_row(::uint32_t value);
-
-  public:
-  // optional bool cand_use_cursor = 4;
-  bool has_cand_use_cursor() const;
-  void clear_cand_use_cursor() ;
-  bool cand_use_cursor() const;
-  void set_cand_use_cursor(bool value);
-
-  private:
-  bool _internal_cand_use_cursor() const;
-  void _internal_set_cand_use_cursor(bool value);
-
-  public:
-  // optional bool inline_preedit = 5;
-  bool has_inline_preedit() const;
-  void clear_inline_preedit() ;
-  bool inline_preedit() const;
-  void set_inline_preedit(bool value);
-
-  private:
-  bool _internal_inline_preedit() const;
-  void _internal_set_inline_preedit(bool value);
-
-  public:
-  // optional bool auto_pair_quotes = 11;
-  bool has_auto_pair_quotes() const;
-  void clear_auto_pair_quotes() ;
-  bool auto_pair_quotes() const;
-  void set_auto_pair_quotes(bool value);
-
-  private:
-  bool _internal_auto_pair_quotes() const;
-  void _internal_set_auto_pair_quotes(bool value);
-
-  public:
-  // optional bool semicolon_select_second = 12;
-  bool has_semicolon_select_second() const;
-  void clear_semicolon_select_second() ;
-  bool semicolon_select_second() const;
-  void set_semicolon_select_second(bool value);
-
-  private:
-  bool _internal_semicolon_select_second() const;
-  void _internal_set_semicolon_select_second(bool value);
-
-  public:
-  // optional uint32 cand_comment_font_size = 10;
-  bool has_cand_comment_font_size() const;
-  void clear_cand_comment_font_size() ;
-  ::uint32_t cand_comment_font_size() const;
-  void set_cand_comment_font_size(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_cand_comment_font_size() const;
-  void _internal_set_cand_comment_font_size(::uint32_t value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:moqi.protocol.CustomizeUi)
- private:
-  class _Internal;
-  friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 15,
-                                   0, 205,
-                                   2>
-      _table_;
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const CustomizeUi& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::internal::ArenaStringPtr cand_font_name_;
-    ::google::protobuf::internal::ArenaStringPtr cand_background_color_;
-    ::google::protobuf::internal::ArenaStringPtr cand_highlight_color_;
-    ::google::protobuf::internal::ArenaStringPtr cand_text_color_;
-    ::google::protobuf::internal::ArenaStringPtr cand_highlight_text_color_;
-    ::google::protobuf::internal::ArenaStringPtr cand_comment_font_name_;
-    ::google::protobuf::internal::ArenaStringPtr cand_comment_color_;
-    ::google::protobuf::internal::ArenaStringPtr cand_comment_highlight_color_;
-    ::uint32_t cand_font_size_;
-    ::uint32_t cand_per_row_;
-    bool cand_use_cursor_;
-    bool inline_preedit_;
-    bool auto_pair_quotes_;
-    bool semicolon_select_second_;
-    ::uint32_t cand_comment_font_size_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_proto_2fmoqi_2eproto;
-};
-
-extern const ::google::protobuf::internal::ClassDataFull CustomizeUi_class_data_;
-// -------------------------------------------------------------------
-
 class CandidateEntry final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:moqi.protocol.CandidateEntry) */ {
  public:
@@ -2354,6 +1945,1157 @@ class ButtonInfo final : public ::google::protobuf::Message
 extern const ::google::protobuf::internal::ClassDataFull ButtonInfo_class_data_;
 // -------------------------------------------------------------------
 
+class AutoPairRule final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:moqi.protocol.AutoPairRule) */ {
+ public:
+  inline AutoPairRule() : AutoPairRule(nullptr) {}
+  ~AutoPairRule() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(AutoPairRule* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(AutoPairRule));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR AutoPairRule(::google::protobuf::internal::ConstantInitialized);
+
+  inline AutoPairRule(const AutoPairRule& from) : AutoPairRule(nullptr, from) {}
+  inline AutoPairRule(AutoPairRule&& from) noexcept
+      : AutoPairRule(nullptr, ::std::move(from)) {}
+  inline AutoPairRule& operator=(const AutoPairRule& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AutoPairRule& operator=(AutoPairRule&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const AutoPairRule& default_instance() {
+    return *reinterpret_cast<const AutoPairRule*>(
+        &_AutoPairRule_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 5;
+  friend void swap(AutoPairRule& a, AutoPairRule& b) { a.Swap(&b); }
+  inline void Swap(AutoPairRule* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(AutoPairRule* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  AutoPairRule* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<AutoPairRule>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const AutoPairRule& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const AutoPairRule& from) { AutoPairRule::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(AutoPairRule* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "moqi.protocol.AutoPairRule"; }
+
+  explicit AutoPairRule(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  AutoPairRule(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const AutoPairRule& from);
+  AutoPairRule(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, AutoPairRule&& from) noexcept
+      : AutoPairRule(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kOpenFieldNumber = 1,
+    kCloseFieldNumber = 2,
+  };
+  // string open = 1;
+  void clear_open() ;
+  const ::std::string& open() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_open(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_open();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_open();
+  void set_allocated_open(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_open() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_open(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_open();
+
+  public:
+  // string close = 2;
+  void clear_close() ;
+  const ::std::string& close() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_close(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_close();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_close();
+  void set_allocated_close(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_close() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_close(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_close();
+
+  public:
+  // @@protoc_insertion_point(class_scope:moqi.protocol.AutoPairRule)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<1, 2,
+                                   0, 44,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const AutoPairRule& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr open_;
+    ::google::protobuf::internal::ArenaStringPtr close_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proto_2fmoqi_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull AutoPairRule_class_data_;
+// -------------------------------------------------------------------
+
+class CustomizeUi final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:moqi.protocol.CustomizeUi) */ {
+ public:
+  inline CustomizeUi() : CustomizeUi(nullptr) {}
+  ~CustomizeUi() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(CustomizeUi* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(CustomizeUi));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR CustomizeUi(::google::protobuf::internal::ConstantInitialized);
+
+  inline CustomizeUi(const CustomizeUi& from) : CustomizeUi(nullptr, from) {}
+  inline CustomizeUi(CustomizeUi&& from) noexcept
+      : CustomizeUi(nullptr, ::std::move(from)) {}
+  inline CustomizeUi& operator=(const CustomizeUi& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CustomizeUi& operator=(CustomizeUi&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CustomizeUi& default_instance() {
+    return *reinterpret_cast<const CustomizeUi*>(
+        &_CustomizeUi_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 6;
+  friend void swap(CustomizeUi& a, CustomizeUi& b) { a.Swap(&b); }
+  inline void Swap(CustomizeUi* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CustomizeUi* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CustomizeUi* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<CustomizeUi>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const CustomizeUi& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const CustomizeUi& from) { CustomizeUi::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(CustomizeUi* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "moqi.protocol.CustomizeUi"; }
+
+  explicit CustomizeUi(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  CustomizeUi(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const CustomizeUi& from);
+  CustomizeUi(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, CustomizeUi&& from) noexcept
+      : CustomizeUi(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kAutoPairRulesFieldNumber = 16,
+    kCandFontNameFieldNumber = 1,
+    kCandBackgroundColorFieldNumber = 6,
+    kCandHighlightColorFieldNumber = 7,
+    kCandTextColorFieldNumber = 8,
+    kCandHighlightTextColorFieldNumber = 9,
+    kCandCommentFontNameFieldNumber = 13,
+    kCandCommentColorFieldNumber = 14,
+    kCandCommentHighlightColorFieldNumber = 15,
+    kCandFontSizeFieldNumber = 2,
+    kCandPerRowFieldNumber = 3,
+    kCandUseCursorFieldNumber = 4,
+    kInlinePreeditFieldNumber = 5,
+    kAutoPairQuotesFieldNumber = 11,
+    kSemicolonSelectSecondFieldNumber = 12,
+    kCandCommentFontSizeFieldNumber = 10,
+  };
+  // repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
+  int auto_pair_rules_size() const;
+  private:
+  int _internal_auto_pair_rules_size() const;
+
+  public:
+  void clear_auto_pair_rules() ;
+  ::moqi::protocol::AutoPairRule* PROTOBUF_NONNULL mutable_auto_pair_rules(int index);
+  ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>* PROTOBUF_NONNULL mutable_auto_pair_rules();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>& _internal_auto_pair_rules() const;
+  ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>* PROTOBUF_NONNULL _internal_mutable_auto_pair_rules();
+  public:
+  const ::moqi::protocol::AutoPairRule& auto_pair_rules(int index) const;
+  ::moqi::protocol::AutoPairRule* PROTOBUF_NONNULL add_auto_pair_rules();
+  const ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>& auto_pair_rules() const;
+  // optional string cand_font_name = 1;
+  bool has_cand_font_name() const;
+  void clear_cand_font_name() ;
+  const ::std::string& cand_font_name() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_font_name(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_font_name();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_font_name();
+  void set_allocated_cand_font_name(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_font_name() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_font_name(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_font_name();
+
+  public:
+  // optional string cand_background_color = 6;
+  bool has_cand_background_color() const;
+  void clear_cand_background_color() ;
+  const ::std::string& cand_background_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_background_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_background_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_background_color();
+  void set_allocated_cand_background_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_background_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_background_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_background_color();
+
+  public:
+  // optional string cand_highlight_color = 7;
+  bool has_cand_highlight_color() const;
+  void clear_cand_highlight_color() ;
+  const ::std::string& cand_highlight_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_highlight_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_highlight_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_highlight_color();
+  void set_allocated_cand_highlight_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_highlight_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_highlight_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_highlight_color();
+
+  public:
+  // optional string cand_text_color = 8;
+  bool has_cand_text_color() const;
+  void clear_cand_text_color() ;
+  const ::std::string& cand_text_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_text_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_text_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_text_color();
+  void set_allocated_cand_text_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_text_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_text_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_text_color();
+
+  public:
+  // optional string cand_highlight_text_color = 9;
+  bool has_cand_highlight_text_color() const;
+  void clear_cand_highlight_text_color() ;
+  const ::std::string& cand_highlight_text_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_highlight_text_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_highlight_text_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_highlight_text_color();
+  void set_allocated_cand_highlight_text_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_highlight_text_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_highlight_text_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_highlight_text_color();
+
+  public:
+  // optional string cand_comment_font_name = 13;
+  bool has_cand_comment_font_name() const;
+  void clear_cand_comment_font_name() ;
+  const ::std::string& cand_comment_font_name() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_font_name(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_font_name();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_font_name();
+  void set_allocated_cand_comment_font_name(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_font_name() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_font_name(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_font_name();
+
+  public:
+  // optional string cand_comment_color = 14;
+  bool has_cand_comment_color() const;
+  void clear_cand_comment_color() ;
+  const ::std::string& cand_comment_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_color();
+  void set_allocated_cand_comment_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_color();
+
+  public:
+  // optional string cand_comment_highlight_color = 15;
+  bool has_cand_comment_highlight_color() const;
+  void clear_cand_comment_highlight_color() ;
+  const ::std::string& cand_comment_highlight_color() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_cand_comment_highlight_color(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_cand_comment_highlight_color();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_cand_comment_highlight_color();
+  void set_allocated_cand_comment_highlight_color(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_cand_comment_highlight_color() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_cand_comment_highlight_color(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_cand_comment_highlight_color();
+
+  public:
+  // optional uint32 cand_font_size = 2;
+  bool has_cand_font_size() const;
+  void clear_cand_font_size() ;
+  ::uint32_t cand_font_size() const;
+  void set_cand_font_size(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_cand_font_size() const;
+  void _internal_set_cand_font_size(::uint32_t value);
+
+  public:
+  // optional uint32 cand_per_row = 3;
+  bool has_cand_per_row() const;
+  void clear_cand_per_row() ;
+  ::uint32_t cand_per_row() const;
+  void set_cand_per_row(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_cand_per_row() const;
+  void _internal_set_cand_per_row(::uint32_t value);
+
+  public:
+  // optional bool cand_use_cursor = 4;
+  bool has_cand_use_cursor() const;
+  void clear_cand_use_cursor() ;
+  bool cand_use_cursor() const;
+  void set_cand_use_cursor(bool value);
+
+  private:
+  bool _internal_cand_use_cursor() const;
+  void _internal_set_cand_use_cursor(bool value);
+
+  public:
+  // optional bool inline_preedit = 5;
+  bool has_inline_preedit() const;
+  void clear_inline_preedit() ;
+  bool inline_preedit() const;
+  void set_inline_preedit(bool value);
+
+  private:
+  bool _internal_inline_preedit() const;
+  void _internal_set_inline_preedit(bool value);
+
+  public:
+  // optional bool auto_pair_quotes = 11;
+  bool has_auto_pair_quotes() const;
+  void clear_auto_pair_quotes() ;
+  bool auto_pair_quotes() const;
+  void set_auto_pair_quotes(bool value);
+
+  private:
+  bool _internal_auto_pair_quotes() const;
+  void _internal_set_auto_pair_quotes(bool value);
+
+  public:
+  // optional bool semicolon_select_second = 12;
+  bool has_semicolon_select_second() const;
+  void clear_semicolon_select_second() ;
+  bool semicolon_select_second() const;
+  void set_semicolon_select_second(bool value);
+
+  private:
+  bool _internal_semicolon_select_second() const;
+  void _internal_set_semicolon_select_second(bool value);
+
+  public:
+  // optional uint32 cand_comment_font_size = 10;
+  bool has_cand_comment_font_size() const;
+  void clear_cand_comment_font_size() ;
+  ::uint32_t cand_comment_font_size() const;
+  void set_cand_comment_font_size(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_cand_comment_font_size() const;
+  void _internal_set_cand_comment_font_size(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:moqi.protocol.CustomizeUi)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<4, 16,
+                                   1, 213,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const CustomizeUi& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::moqi::protocol::AutoPairRule > auto_pair_rules_;
+    ::google::protobuf::internal::ArenaStringPtr cand_font_name_;
+    ::google::protobuf::internal::ArenaStringPtr cand_background_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_highlight_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_text_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_highlight_text_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_font_name_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_color_;
+    ::google::protobuf::internal::ArenaStringPtr cand_comment_highlight_color_;
+    ::uint32_t cand_font_size_;
+    ::uint32_t cand_per_row_;
+    bool cand_use_cursor_;
+    bool inline_preedit_;
+    bool auto_pair_quotes_;
+    bool semicolon_select_second_;
+    ::uint32_t cand_comment_font_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proto_2fmoqi_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull CustomizeUi_class_data_;
+// -------------------------------------------------------------------
+
+class ClientRequest final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:moqi.protocol.ClientRequest) */ {
+ public:
+  inline ClientRequest() : ClientRequest(nullptr) {}
+  ~ClientRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(ClientRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(ClientRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR ClientRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline ClientRequest(const ClientRequest& from) : ClientRequest(nullptr, from) {}
+  inline ClientRequest(ClientRequest&& from) noexcept
+      : ClientRequest(nullptr, ::std::move(from)) {}
+  inline ClientRequest& operator=(const ClientRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline ClientRequest& operator=(ClientRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const ClientRequest& default_instance() {
+    return *reinterpret_cast<const ClientRequest*>(
+        &_ClientRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 9;
+  friend void swap(ClientRequest& a, ClientRequest& b) { a.Swap(&b); }
+  inline void Swap(ClientRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(ClientRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  ClientRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<ClientRequest>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const ClientRequest& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const ClientRequest& from) { ClientRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(ClientRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "moqi.protocol.ClientRequest"; }
+
+  explicit ClientRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  ClientRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ClientRequest& from);
+  ClientRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ClientRequest&& from) noexcept
+      : ClientRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kCandidateListFieldNumber = 13,
+    kGuidFieldNumber = 3,
+    kCompositionStringFieldNumber = 12,
+    kButtonIdFieldNumber = 18,
+    kPreservedKeyGuidFieldNumber = 20,
+    kCompartmentGuidFieldNumber = 21,
+    kClientIdFieldNumber = 23,
+    kKeyEventFieldNumber = 11,
+    kSeqNumFieldNumber = 1,
+    kMethodFieldNumber = 2,
+    kIsWindows8AboveFieldNumber = 4,
+    kIsMetroAppFieldNumber = 5,
+    kIsUiLessFieldNumber = 6,
+    kIsConsoleFieldNumber = 7,
+    kCommandTypeFieldNumber = 10,
+    kOpenedFieldNumber = 8,
+    kForcedFieldNumber = 9,
+    kShowCandidatesFieldNumber = 14,
+    kIsKeyboardOpenFieldNumber = 22,
+    kCursorPosFieldNumber = 15,
+    kSelStartFieldNumber = 16,
+    kSelEndFieldNumber = 17,
+    kCommandIdFieldNumber = 19,
+  };
+  // repeated string candidate_list = 13;
+  int candidate_list_size() const;
+  private:
+  int _internal_candidate_list_size() const;
+
+  public:
+  void clear_candidate_list() ;
+  const ::std::string& candidate_list(int index) const;
+  ::std::string* PROTOBUF_NONNULL mutable_candidate_list(int index);
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_candidate_list(int index, Arg_&& value, Args_... args);
+  ::std::string* PROTOBUF_NONNULL add_candidate_list();
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void add_candidate_list(Arg_&& value, Args_... args);
+  const ::google::protobuf::RepeatedPtrField<::std::string>& candidate_list() const;
+  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL mutable_candidate_list();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_candidate_list() const;
+  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_candidate_list();
+
+  public:
+  // optional string guid = 3;
+  bool has_guid() const;
+  void clear_guid() ;
+  const ::std::string& guid() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_guid(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_guid();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_guid();
+  void set_allocated_guid(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_guid() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_guid(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_guid();
+
+  public:
+  // string composition_string = 12;
+  void clear_composition_string() ;
+  const ::std::string& composition_string() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_composition_string(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_composition_string();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_composition_string();
+  void set_allocated_composition_string(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_composition_string() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_composition_string(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_composition_string();
+
+  public:
+  // optional string button_id = 18;
+  bool has_button_id() const;
+  void clear_button_id() ;
+  const ::std::string& button_id() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_button_id(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_button_id();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_button_id();
+  void set_allocated_button_id(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_button_id() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_button_id(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_button_id();
+
+  public:
+  // optional string preserved_key_guid = 20;
+  bool has_preserved_key_guid() const;
+  void clear_preserved_key_guid() ;
+  const ::std::string& preserved_key_guid() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_preserved_key_guid(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_preserved_key_guid();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_preserved_key_guid();
+  void set_allocated_preserved_key_guid(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_preserved_key_guid() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_preserved_key_guid(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_preserved_key_guid();
+
+  public:
+  // optional string compartment_guid = 21;
+  bool has_compartment_guid() const;
+  void clear_compartment_guid() ;
+  const ::std::string& compartment_guid() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_compartment_guid(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_compartment_guid();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_compartment_guid();
+  void set_allocated_compartment_guid(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_compartment_guid() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_compartment_guid(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_compartment_guid();
+
+  public:
+  // optional string client_id = 23;
+  bool has_client_id() const;
+  void clear_client_id() ;
+  const ::std::string& client_id() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_client_id(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_client_id();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_client_id();
+  void set_allocated_client_id(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_client_id() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_client_id(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_client_id();
+
+  public:
+  // .moqi.protocol.KeyEvent key_event = 11;
+  bool has_key_event() const;
+  void clear_key_event() ;
+  const ::moqi::protocol::KeyEvent& key_event() const;
+  [[nodiscard]] ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE release_key_event();
+  ::moqi::protocol::KeyEvent* PROTOBUF_NONNULL mutable_key_event();
+  void set_allocated_key_event(::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_key_event(::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE value);
+  ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE unsafe_arena_release_key_event();
+
+  private:
+  const ::moqi::protocol::KeyEvent& _internal_key_event() const;
+  ::moqi::protocol::KeyEvent* PROTOBUF_NONNULL _internal_mutable_key_event();
+
+  public:
+  // uint32 seq_num = 1;
+  void clear_seq_num() ;
+  ::uint32_t seq_num() const;
+  void set_seq_num(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_seq_num() const;
+  void _internal_set_seq_num(::uint32_t value);
+
+  public:
+  // .moqi.protocol.Method method = 2;
+  void clear_method() ;
+  ::moqi::protocol::Method method() const;
+  void set_method(::moqi::protocol::Method value);
+
+  private:
+  ::moqi::protocol::Method _internal_method() const;
+  void _internal_set_method(::moqi::protocol::Method value);
+
+  public:
+  // bool is_windows8_above = 4;
+  void clear_is_windows8_above() ;
+  bool is_windows8_above() const;
+  void set_is_windows8_above(bool value);
+
+  private:
+  bool _internal_is_windows8_above() const;
+  void _internal_set_is_windows8_above(bool value);
+
+  public:
+  // bool is_metro_app = 5;
+  void clear_is_metro_app() ;
+  bool is_metro_app() const;
+  void set_is_metro_app(bool value);
+
+  private:
+  bool _internal_is_metro_app() const;
+  void _internal_set_is_metro_app(bool value);
+
+  public:
+  // bool is_ui_less = 6;
+  void clear_is_ui_less() ;
+  bool is_ui_less() const;
+  void set_is_ui_less(bool value);
+
+  private:
+  bool _internal_is_ui_less() const;
+  void _internal_set_is_ui_less(bool value);
+
+  public:
+  // bool is_console = 7;
+  void clear_is_console() ;
+  bool is_console() const;
+  void set_is_console(bool value);
+
+  private:
+  bool _internal_is_console() const;
+  void _internal_set_is_console(bool value);
+
+  public:
+  // uint32 command_type = 10;
+  void clear_command_type() ;
+  ::uint32_t command_type() const;
+  void set_command_type(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_command_type() const;
+  void _internal_set_command_type(::uint32_t value);
+
+  public:
+  // bool opened = 8;
+  void clear_opened() ;
+  bool opened() const;
+  void set_opened(bool value);
+
+  private:
+  bool _internal_opened() const;
+  void _internal_set_opened(bool value);
+
+  public:
+  // bool forced = 9;
+  void clear_forced() ;
+  bool forced() const;
+  void set_forced(bool value);
+
+  private:
+  bool _internal_forced() const;
+  void _internal_set_forced(bool value);
+
+  public:
+  // bool show_candidates = 14;
+  void clear_show_candidates() ;
+  bool show_candidates() const;
+  void set_show_candidates(bool value);
+
+  private:
+  bool _internal_show_candidates() const;
+  void _internal_set_show_candidates(bool value);
+
+  public:
+  // bool is_keyboard_open = 22;
+  void clear_is_keyboard_open() ;
+  bool is_keyboard_open() const;
+  void set_is_keyboard_open(bool value);
+
+  private:
+  bool _internal_is_keyboard_open() const;
+  void _internal_set_is_keyboard_open(bool value);
+
+  public:
+  // int32 cursor_pos = 15;
+  void clear_cursor_pos() ;
+  ::int32_t cursor_pos() const;
+  void set_cursor_pos(::int32_t value);
+
+  private:
+  ::int32_t _internal_cursor_pos() const;
+  void _internal_set_cursor_pos(::int32_t value);
+
+  public:
+  // int32 sel_start = 16;
+  void clear_sel_start() ;
+  ::int32_t sel_start() const;
+  void set_sel_start(::int32_t value);
+
+  private:
+  ::int32_t _internal_sel_start() const;
+  void _internal_set_sel_start(::int32_t value);
+
+  public:
+  // int32 sel_end = 17;
+  void clear_sel_end() ;
+  ::int32_t sel_end() const;
+  void set_sel_end(::int32_t value);
+
+  private:
+  ::int32_t _internal_sel_end() const;
+  void _internal_set_sel_end(::int32_t value);
+
+  public:
+  // optional uint32 command_id = 19;
+  bool has_command_id() const;
+  void clear_command_id() ;
+  ::uint32_t command_id() const;
+  void set_command_id(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_command_id() const;
+  void _internal_set_command_id(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:moqi.protocol.ClientRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<5, 23,
+                                   1, 140,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const ClientRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField<::std::string> candidate_list_;
+    ::google::protobuf::internal::ArenaStringPtr guid_;
+    ::google::protobuf::internal::ArenaStringPtr composition_string_;
+    ::google::protobuf::internal::ArenaStringPtr button_id_;
+    ::google::protobuf::internal::ArenaStringPtr preserved_key_guid_;
+    ::google::protobuf::internal::ArenaStringPtr compartment_guid_;
+    ::google::protobuf::internal::ArenaStringPtr client_id_;
+    ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE key_event_;
+    ::uint32_t seq_num_;
+    int method_;
+    bool is_windows8_above_;
+    bool is_metro_app_;
+    bool is_ui_less_;
+    bool is_console_;
+    ::uint32_t command_type_;
+    bool opened_;
+    bool forced_;
+    bool show_candidates_;
+    bool is_keyboard_open_;
+    ::int32_t cursor_pos_;
+    ::int32_t sel_start_;
+    ::int32_t sel_end_;
+    ::uint32_t command_id_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proto_2fmoqi_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull ClientRequest_class_data_;
+// -------------------------------------------------------------------
+
 class ServerResponse final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:moqi.protocol.ServerResponse) */ {
  public:
@@ -2409,7 +3151,7 @@ class ServerResponse final : public ::google::protobuf::Message
     return *reinterpret_cast<const ServerResponse*>(
         &_ServerResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 9;
+  static constexpr int kIndexInFileMessages = 10;
   friend void swap(ServerResponse& a, ServerResponse& b) { a.Swap(&b); }
   inline void Swap(ServerResponse* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -2966,513 +3708,6 @@ class ServerResponse final : public ::google::protobuf::Message
 };
 
 extern const ::google::protobuf::internal::ClassDataFull ServerResponse_class_data_;
-// -------------------------------------------------------------------
-
-class ClientRequest final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:moqi.protocol.ClientRequest) */ {
- public:
-  inline ClientRequest() : ClientRequest(nullptr) {}
-  ~ClientRequest() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(ClientRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(ClientRequest));
-  }
-#endif
-
-  template <typename = void>
-  explicit PROTOBUF_CONSTEXPR ClientRequest(::google::protobuf::internal::ConstantInitialized);
-
-  inline ClientRequest(const ClientRequest& from) : ClientRequest(nullptr, from) {}
-  inline ClientRequest(ClientRequest&& from) noexcept
-      : ClientRequest(nullptr, ::std::move(from)) {}
-  inline ClientRequest& operator=(const ClientRequest& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline ClientRequest& operator=(ClientRequest&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  static const ClientRequest& default_instance() {
-    return *reinterpret_cast<const ClientRequest*>(
-        &_ClientRequest_default_instance_);
-  }
-  static constexpr int kIndexInFileMessages = 8;
-  friend void swap(ClientRequest& a, ClientRequest& b) { a.Swap(&b); }
-  inline void Swap(ClientRequest* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(ClientRequest* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  ClientRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return ::google::protobuf::Message::DefaultConstruct<ClientRequest>(arena);
-  }
-  using ::google::protobuf::Message::CopyFrom;
-  void CopyFrom(const ClientRequest& from);
-  using ::google::protobuf::Message::MergeFrom;
-  void MergeFrom(const ClientRequest& from) { ClientRequest::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  ::size_t ByteSizeLong() const final;
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(ClientRequest* PROTOBUF_NONNULL other);
- private:
-  template <typename T>
-  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
-  static ::absl::string_view FullMessageName() { return "moqi.protocol.ClientRequest"; }
-
-  explicit ClientRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  ClientRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ClientRequest& from);
-  ClientRequest(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ClientRequest&& from) noexcept
-      : ClientRequest(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_();
-
-  ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kCandidateListFieldNumber = 13,
-    kGuidFieldNumber = 3,
-    kCompositionStringFieldNumber = 12,
-    kButtonIdFieldNumber = 18,
-    kPreservedKeyGuidFieldNumber = 20,
-    kCompartmentGuidFieldNumber = 21,
-    kClientIdFieldNumber = 23,
-    kKeyEventFieldNumber = 11,
-    kSeqNumFieldNumber = 1,
-    kMethodFieldNumber = 2,
-    kIsWindows8AboveFieldNumber = 4,
-    kIsMetroAppFieldNumber = 5,
-    kIsUiLessFieldNumber = 6,
-    kIsConsoleFieldNumber = 7,
-    kCommandTypeFieldNumber = 10,
-    kOpenedFieldNumber = 8,
-    kForcedFieldNumber = 9,
-    kShowCandidatesFieldNumber = 14,
-    kIsKeyboardOpenFieldNumber = 22,
-    kCursorPosFieldNumber = 15,
-    kSelStartFieldNumber = 16,
-    kSelEndFieldNumber = 17,
-    kCommandIdFieldNumber = 19,
-  };
-  // repeated string candidate_list = 13;
-  int candidate_list_size() const;
-  private:
-  int _internal_candidate_list_size() const;
-
-  public:
-  void clear_candidate_list() ;
-  const ::std::string& candidate_list(int index) const;
-  ::std::string* PROTOBUF_NONNULL mutable_candidate_list(int index);
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_candidate_list(int index, Arg_&& value, Args_... args);
-  ::std::string* PROTOBUF_NONNULL add_candidate_list();
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void add_candidate_list(Arg_&& value, Args_... args);
-  const ::google::protobuf::RepeatedPtrField<::std::string>& candidate_list() const;
-  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL mutable_candidate_list();
-
-  private:
-  const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_candidate_list() const;
-  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_candidate_list();
-
-  public:
-  // optional string guid = 3;
-  bool has_guid() const;
-  void clear_guid() ;
-  const ::std::string& guid() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_guid(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_guid();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_guid();
-  void set_allocated_guid(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_guid() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_guid(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_guid();
-
-  public:
-  // string composition_string = 12;
-  void clear_composition_string() ;
-  const ::std::string& composition_string() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_composition_string(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_composition_string();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_composition_string();
-  void set_allocated_composition_string(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_composition_string() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_composition_string(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_composition_string();
-
-  public:
-  // optional string button_id = 18;
-  bool has_button_id() const;
-  void clear_button_id() ;
-  const ::std::string& button_id() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_button_id(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_button_id();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_button_id();
-  void set_allocated_button_id(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_button_id() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_button_id(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_button_id();
-
-  public:
-  // optional string preserved_key_guid = 20;
-  bool has_preserved_key_guid() const;
-  void clear_preserved_key_guid() ;
-  const ::std::string& preserved_key_guid() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_preserved_key_guid(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_preserved_key_guid();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_preserved_key_guid();
-  void set_allocated_preserved_key_guid(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_preserved_key_guid() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_preserved_key_guid(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_preserved_key_guid();
-
-  public:
-  // optional string compartment_guid = 21;
-  bool has_compartment_guid() const;
-  void clear_compartment_guid() ;
-  const ::std::string& compartment_guid() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_compartment_guid(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_compartment_guid();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_compartment_guid();
-  void set_allocated_compartment_guid(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_compartment_guid() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_compartment_guid(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_compartment_guid();
-
-  public:
-  // optional string client_id = 23;
-  bool has_client_id() const;
-  void clear_client_id() ;
-  const ::std::string& client_id() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_client_id(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_client_id();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_client_id();
-  void set_allocated_client_id(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_client_id() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_client_id(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_client_id();
-
-  public:
-  // .moqi.protocol.KeyEvent key_event = 11;
-  bool has_key_event() const;
-  void clear_key_event() ;
-  const ::moqi::protocol::KeyEvent& key_event() const;
-  [[nodiscard]] ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE release_key_event();
-  ::moqi::protocol::KeyEvent* PROTOBUF_NONNULL mutable_key_event();
-  void set_allocated_key_event(::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE value);
-  void unsafe_arena_set_allocated_key_event(::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE value);
-  ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE unsafe_arena_release_key_event();
-
-  private:
-  const ::moqi::protocol::KeyEvent& _internal_key_event() const;
-  ::moqi::protocol::KeyEvent* PROTOBUF_NONNULL _internal_mutable_key_event();
-
-  public:
-  // uint32 seq_num = 1;
-  void clear_seq_num() ;
-  ::uint32_t seq_num() const;
-  void set_seq_num(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_seq_num() const;
-  void _internal_set_seq_num(::uint32_t value);
-
-  public:
-  // .moqi.protocol.Method method = 2;
-  void clear_method() ;
-  ::moqi::protocol::Method method() const;
-  void set_method(::moqi::protocol::Method value);
-
-  private:
-  ::moqi::protocol::Method _internal_method() const;
-  void _internal_set_method(::moqi::protocol::Method value);
-
-  public:
-  // bool is_windows8_above = 4;
-  void clear_is_windows8_above() ;
-  bool is_windows8_above() const;
-  void set_is_windows8_above(bool value);
-
-  private:
-  bool _internal_is_windows8_above() const;
-  void _internal_set_is_windows8_above(bool value);
-
-  public:
-  // bool is_metro_app = 5;
-  void clear_is_metro_app() ;
-  bool is_metro_app() const;
-  void set_is_metro_app(bool value);
-
-  private:
-  bool _internal_is_metro_app() const;
-  void _internal_set_is_metro_app(bool value);
-
-  public:
-  // bool is_ui_less = 6;
-  void clear_is_ui_less() ;
-  bool is_ui_less() const;
-  void set_is_ui_less(bool value);
-
-  private:
-  bool _internal_is_ui_less() const;
-  void _internal_set_is_ui_less(bool value);
-
-  public:
-  // bool is_console = 7;
-  void clear_is_console() ;
-  bool is_console() const;
-  void set_is_console(bool value);
-
-  private:
-  bool _internal_is_console() const;
-  void _internal_set_is_console(bool value);
-
-  public:
-  // uint32 command_type = 10;
-  void clear_command_type() ;
-  ::uint32_t command_type() const;
-  void set_command_type(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_command_type() const;
-  void _internal_set_command_type(::uint32_t value);
-
-  public:
-  // bool opened = 8;
-  void clear_opened() ;
-  bool opened() const;
-  void set_opened(bool value);
-
-  private:
-  bool _internal_opened() const;
-  void _internal_set_opened(bool value);
-
-  public:
-  // bool forced = 9;
-  void clear_forced() ;
-  bool forced() const;
-  void set_forced(bool value);
-
-  private:
-  bool _internal_forced() const;
-  void _internal_set_forced(bool value);
-
-  public:
-  // bool show_candidates = 14;
-  void clear_show_candidates() ;
-  bool show_candidates() const;
-  void set_show_candidates(bool value);
-
-  private:
-  bool _internal_show_candidates() const;
-  void _internal_set_show_candidates(bool value);
-
-  public:
-  // bool is_keyboard_open = 22;
-  void clear_is_keyboard_open() ;
-  bool is_keyboard_open() const;
-  void set_is_keyboard_open(bool value);
-
-  private:
-  bool _internal_is_keyboard_open() const;
-  void _internal_set_is_keyboard_open(bool value);
-
-  public:
-  // int32 cursor_pos = 15;
-  void clear_cursor_pos() ;
-  ::int32_t cursor_pos() const;
-  void set_cursor_pos(::int32_t value);
-
-  private:
-  ::int32_t _internal_cursor_pos() const;
-  void _internal_set_cursor_pos(::int32_t value);
-
-  public:
-  // int32 sel_start = 16;
-  void clear_sel_start() ;
-  ::int32_t sel_start() const;
-  void set_sel_start(::int32_t value);
-
-  private:
-  ::int32_t _internal_sel_start() const;
-  void _internal_set_sel_start(::int32_t value);
-
-  public:
-  // int32 sel_end = 17;
-  void clear_sel_end() ;
-  ::int32_t sel_end() const;
-  void set_sel_end(::int32_t value);
-
-  private:
-  ::int32_t _internal_sel_end() const;
-  void _internal_set_sel_end(::int32_t value);
-
-  public:
-  // optional uint32 command_id = 19;
-  bool has_command_id() const;
-  void clear_command_id() ;
-  ::uint32_t command_id() const;
-  void set_command_id(::uint32_t value);
-
-  private:
-  ::uint32_t _internal_command_id() const;
-  void _internal_set_command_id(::uint32_t value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:moqi.protocol.ClientRequest)
- private:
-  class _Internal;
-  friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<5, 23,
-                                   1, 140,
-                                   2>
-      _table_;
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const ClientRequest& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::RepeatedPtrField<::std::string> candidate_list_;
-    ::google::protobuf::internal::ArenaStringPtr guid_;
-    ::google::protobuf::internal::ArenaStringPtr composition_string_;
-    ::google::protobuf::internal::ArenaStringPtr button_id_;
-    ::google::protobuf::internal::ArenaStringPtr preserved_key_guid_;
-    ::google::protobuf::internal::ArenaStringPtr compartment_guid_;
-    ::google::protobuf::internal::ArenaStringPtr client_id_;
-    ::moqi::protocol::KeyEvent* PROTOBUF_NULLABLE key_event_;
-    ::uint32_t seq_num_;
-    int method_;
-    bool is_windows8_above_;
-    bool is_metro_app_;
-    bool is_ui_less_;
-    bool is_console_;
-    ::uint32_t command_type_;
-    bool opened_;
-    bool forced_;
-    bool show_candidates_;
-    bool is_keyboard_open_;
-    ::int32_t cursor_pos_;
-    ::int32_t sel_start_;
-    ::int32_t sel_end_;
-    ::uint32_t command_id_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_proto_2fmoqi_2eproto;
-};
-
-extern const ::google::protobuf::internal::ClassDataFull ClientRequest_class_data_;
 
 // ===================================================================
 
@@ -4538,18 +4773,152 @@ inline void CandidateEntry::set_allocated_comment(::std::string* PROTOBUF_NULLAB
 
 // -------------------------------------------------------------------
 
+// AutoPairRule
+
+// string open = 1;
+inline void AutoPairRule::clear_open() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.open_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::std::string& AutoPairRule::open() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.AutoPairRule.open)
+  return _internal_open();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void AutoPairRule::set_open(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  _impl_.open_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.AutoPairRule.open)
+}
+inline ::std::string* PROTOBUF_NONNULL AutoPairRule::mutable_open()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::std::string* _s = _internal_mutable_open();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.AutoPairRule.open)
+  return _s;
+}
+inline const ::std::string& AutoPairRule::_internal_open() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.open_.Get();
+}
+inline void AutoPairRule::_internal_set_open(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.open_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL AutoPairRule::_internal_mutable_open() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.open_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE AutoPairRule::release_open() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.AutoPairRule.open)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000001U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  auto* released = _impl_.open_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.open_.Set("", GetArena());
+  }
+  return released;
+}
+inline void AutoPairRule::set_allocated_open(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  _impl_.open_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.open_.IsDefault()) {
+    _impl_.open_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.AutoPairRule.open)
+}
+
+// string close = 2;
+inline void AutoPairRule::clear_close() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.close_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::std::string& AutoPairRule::close() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.AutoPairRule.close)
+  return _internal_close();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void AutoPairRule::set_close(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.close_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:moqi.protocol.AutoPairRule.close)
+}
+inline ::std::string* PROTOBUF_NONNULL AutoPairRule::mutable_close()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_close();
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.AutoPairRule.close)
+  return _s;
+}
+inline const ::std::string& AutoPairRule::_internal_close() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.close_.Get();
+}
+inline void AutoPairRule::_internal_set_close(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.close_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL AutoPairRule::_internal_mutable_close() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.close_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE AutoPairRule::release_close() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:moqi.protocol.AutoPairRule.close)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.close_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.close_.Set("", GetArena());
+  }
+  return released;
+}
+inline void AutoPairRule::set_allocated_close(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.close_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.close_.IsDefault()) {
+    _impl_.close_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:moqi.protocol.AutoPairRule.close)
+}
+
+// -------------------------------------------------------------------
+
 // CustomizeUi
 
 // optional string cand_font_name = 1;
 inline bool CustomizeUi::has_cand_font_name() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
   return value;
 }
 inline void CustomizeUi::clear_cand_font_name() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_font_name_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000001U);
+                  0x00000002U);
 }
 inline const ::std::string& CustomizeUi::cand_font_name() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4559,13 +4928,13 @@ inline const ::std::string& CustomizeUi::cand_font_name() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_font_name(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
   _impl_.cand_font_name_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_font_name)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_font_name()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
   ::std::string* _s = _internal_mutable_cand_font_name();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_font_name)
   return _s;
@@ -4585,10 +4954,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_font_
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_font_name() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_font_name)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000001U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
   auto* released = _impl_.cand_font_name_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_font_name_.Set("", GetArena());
@@ -4598,9 +4967,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_font_name() {
 inline void CustomizeUi::set_allocated_cand_font_name(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
   }
   _impl_.cand_font_name_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_font_name_.IsDefault()) {
@@ -4611,14 +4980,14 @@ inline void CustomizeUi::set_allocated_cand_font_name(::std::string* PROTOBUF_NU
 
 // optional uint32 cand_font_size = 2;
 inline bool CustomizeUi::has_cand_font_size() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
   return value;
 }
 inline void CustomizeUi::clear_cand_font_size() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_font_size_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000100U);
+                  0x00000200U);
 }
 inline ::uint32_t CustomizeUi::cand_font_size() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_font_size)
@@ -4626,7 +4995,7 @@ inline ::uint32_t CustomizeUi::cand_font_size() const {
 }
 inline void CustomizeUi::set_cand_font_size(::uint32_t value) {
   _internal_set_cand_font_size(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_font_size)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_font_size() const {
@@ -4640,14 +5009,14 @@ inline void CustomizeUi::_internal_set_cand_font_size(::uint32_t value) {
 
 // optional uint32 cand_per_row = 3;
 inline bool CustomizeUi::has_cand_per_row() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
   return value;
 }
 inline void CustomizeUi::clear_cand_per_row() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_per_row_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000200U);
+                  0x00000400U);
 }
 inline ::uint32_t CustomizeUi::cand_per_row() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_per_row)
@@ -4655,7 +5024,7 @@ inline ::uint32_t CustomizeUi::cand_per_row() const {
 }
 inline void CustomizeUi::set_cand_per_row(::uint32_t value) {
   _internal_set_cand_per_row(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_per_row)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_per_row() const {
@@ -4669,14 +5038,14 @@ inline void CustomizeUi::_internal_set_cand_per_row(::uint32_t value) {
 
 // optional bool cand_use_cursor = 4;
 inline bool CustomizeUi::has_cand_use_cursor() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
   return value;
 }
 inline void CustomizeUi::clear_cand_use_cursor() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_use_cursor_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000400U);
+                  0x00000800U);
 }
 inline bool CustomizeUi::cand_use_cursor() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_use_cursor)
@@ -4684,7 +5053,7 @@ inline bool CustomizeUi::cand_use_cursor() const {
 }
 inline void CustomizeUi::set_cand_use_cursor(bool value) {
   _internal_set_cand_use_cursor(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_use_cursor)
 }
 inline bool CustomizeUi::_internal_cand_use_cursor() const {
@@ -4698,14 +5067,14 @@ inline void CustomizeUi::_internal_set_cand_use_cursor(bool value) {
 
 // optional bool inline_preedit = 5;
 inline bool CustomizeUi::has_inline_preedit() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
   return value;
 }
 inline void CustomizeUi::clear_inline_preedit() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.inline_preedit_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00001000U);
 }
 inline bool CustomizeUi::inline_preedit() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.inline_preedit)
@@ -4713,7 +5082,7 @@ inline bool CustomizeUi::inline_preedit() const {
 }
 inline void CustomizeUi::set_inline_preedit(bool value) {
   _internal_set_inline_preedit(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.inline_preedit)
 }
 inline bool CustomizeUi::_internal_inline_preedit() const {
@@ -4727,14 +5096,14 @@ inline void CustomizeUi::_internal_set_inline_preedit(bool value) {
 
 // optional string cand_background_color = 6;
 inline bool CustomizeUi::has_cand_background_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
   return value;
 }
 inline void CustomizeUi::clear_cand_background_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_background_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000002U);
+                  0x00000004U);
 }
 inline const ::std::string& CustomizeUi::cand_background_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4744,13 +5113,13 @@ inline const ::std::string& CustomizeUi::cand_background_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_background_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   _impl_.cand_background_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_background_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_background_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   ::std::string* _s = _internal_mutable_cand_background_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_background_color)
   return _s;
@@ -4770,10 +5139,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_backg
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_background_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_background_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   auto* released = _impl_.cand_background_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_background_color_.Set("", GetArena());
@@ -4783,9 +5152,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_background_col
 inline void CustomizeUi::set_allocated_cand_background_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   }
   _impl_.cand_background_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_background_color_.IsDefault()) {
@@ -4796,14 +5165,14 @@ inline void CustomizeUi::set_allocated_cand_background_color(::std::string* PROT
 
 // optional string cand_highlight_color = 7;
 inline bool CustomizeUi::has_cand_highlight_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
   return value;
 }
 inline void CustomizeUi::clear_cand_highlight_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_highlight_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000004U);
+                  0x00000008U);
 }
 inline const ::std::string& CustomizeUi::cand_highlight_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4813,13 +5182,13 @@ inline const ::std::string& CustomizeUi::cand_highlight_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_highlight_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   _impl_.cand_highlight_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_highlight_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_highlight_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   ::std::string* _s = _internal_mutable_cand_highlight_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_highlight_color)
   return _s;
@@ -4839,10 +5208,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_highl
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_highlight_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_highlight_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000008U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
   auto* released = _impl_.cand_highlight_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_highlight_color_.Set("", GetArena());
@@ -4852,9 +5221,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_highlight_colo
 inline void CustomizeUi::set_allocated_cand_highlight_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
   }
   _impl_.cand_highlight_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_highlight_color_.IsDefault()) {
@@ -4865,14 +5234,14 @@ inline void CustomizeUi::set_allocated_cand_highlight_color(::std::string* PROTO
 
 // optional string cand_text_color = 8;
 inline bool CustomizeUi::has_cand_text_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
   return value;
 }
 inline void CustomizeUi::clear_cand_text_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_text_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000008U);
+                  0x00000010U);
 }
 inline const ::std::string& CustomizeUi::cand_text_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4882,13 +5251,13 @@ inline const ::std::string& CustomizeUi::cand_text_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_text_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   _impl_.cand_text_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_text_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_text_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   ::std::string* _s = _internal_mutable_cand_text_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_text_color)
   return _s;
@@ -4908,10 +5277,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_text_
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_text_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_text_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000008U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000010U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
   auto* released = _impl_.cand_text_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_text_color_.Set("", GetArena());
@@ -4921,9 +5290,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_text_color() {
 inline void CustomizeUi::set_allocated_cand_text_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
   }
   _impl_.cand_text_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_text_color_.IsDefault()) {
@@ -4934,14 +5303,14 @@ inline void CustomizeUi::set_allocated_cand_text_color(::std::string* PROTOBUF_N
 
 // optional string cand_highlight_text_color = 9;
 inline bool CustomizeUi::has_cand_highlight_text_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
   return value;
 }
 inline void CustomizeUi::clear_cand_highlight_text_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_highlight_text_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000010U);
+                  0x00000020U);
 }
 inline const ::std::string& CustomizeUi::cand_highlight_text_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4951,13 +5320,13 @@ inline const ::std::string& CustomizeUi::cand_highlight_text_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_highlight_text_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   _impl_.cand_highlight_text_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_highlight_text_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_highlight_text_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   ::std::string* _s = _internal_mutable_cand_highlight_text_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_highlight_text_color)
   return _s;
@@ -4977,10 +5346,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_highl
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_highlight_text_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_highlight_text_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000010U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000020U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   auto* released = _impl_.cand_highlight_text_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_highlight_text_color_.Set("", GetArena());
@@ -4990,9 +5359,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_highlight_text
 inline void CustomizeUi::set_allocated_cand_highlight_text_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   }
   _impl_.cand_highlight_text_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_highlight_text_color_.IsDefault()) {
@@ -5003,14 +5372,14 @@ inline void CustomizeUi::set_allocated_cand_highlight_text_color(::std::string* 
 
 // optional uint32 cand_comment_font_size = 10;
 inline bool CustomizeUi::has_cand_comment_font_size() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00008000U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_font_size() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_font_size_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00004000U);
+                  0x00008000U);
 }
 inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_comment_font_size)
@@ -5018,7 +5387,7 @@ inline ::uint32_t CustomizeUi::cand_comment_font_size() const {
 }
 inline void CustomizeUi::set_cand_comment_font_size(::uint32_t value) {
   _internal_set_cand_comment_font_size(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_font_size)
 }
 inline ::uint32_t CustomizeUi::_internal_cand_comment_font_size() const {
@@ -5032,14 +5401,14 @@ inline void CustomizeUi::_internal_set_cand_comment_font_size(::uint32_t value) 
 
 // optional bool auto_pair_quotes = 11;
 inline bool CustomizeUi::has_auto_pair_quotes() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
   return value;
 }
 inline void CustomizeUi::clear_auto_pair_quotes() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.auto_pair_quotes_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00001000U);
+                  0x00002000U);
 }
 inline bool CustomizeUi::auto_pair_quotes() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.auto_pair_quotes)
@@ -5047,7 +5416,7 @@ inline bool CustomizeUi::auto_pair_quotes() const {
 }
 inline void CustomizeUi::set_auto_pair_quotes(bool value) {
   _internal_set_auto_pair_quotes(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.auto_pair_quotes)
 }
 inline bool CustomizeUi::_internal_auto_pair_quotes() const {
@@ -5061,14 +5430,14 @@ inline void CustomizeUi::_internal_set_auto_pair_quotes(bool value) {
 
 // optional bool semicolon_select_second = 12;
 inline bool CustomizeUi::has_semicolon_select_second() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
   return value;
 }
 inline void CustomizeUi::clear_semicolon_select_second() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.semicolon_select_second_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00002000U);
+                  0x00004000U);
 }
 inline bool CustomizeUi::semicolon_select_second() const {
   // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.semicolon_select_second)
@@ -5076,7 +5445,7 @@ inline bool CustomizeUi::semicolon_select_second() const {
 }
 inline void CustomizeUi::set_semicolon_select_second(bool value) {
   _internal_set_semicolon_select_second(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.semicolon_select_second)
 }
 inline bool CustomizeUi::_internal_semicolon_select_second() const {
@@ -5090,14 +5459,14 @@ inline void CustomizeUi::_internal_set_semicolon_select_second(bool value) {
 
 // optional string cand_comment_font_name = 13;
 inline bool CustomizeUi::has_cand_comment_font_name() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_font_name() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_font_name_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000020U);
+                  0x00000040U);
 }
 inline const ::std::string& CustomizeUi::cand_comment_font_name() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -5107,13 +5476,13 @@ inline const ::std::string& CustomizeUi::cand_comment_font_name() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_font_name(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   _impl_.cand_comment_font_name_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_font_name)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_font_name()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   ::std::string* _s = _internal_mutable_cand_comment_font_name();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_font_name)
   return _s;
@@ -5133,10 +5502,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comme
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_font_name() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_font_name)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000020U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000040U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
   auto* released = _impl_.cand_comment_font_name_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_comment_font_name_.Set("", GetArena());
@@ -5146,9 +5515,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_font_n
 inline void CustomizeUi::set_allocated_cand_comment_font_name(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
   }
   _impl_.cand_comment_font_name_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_font_name_.IsDefault()) {
@@ -5159,14 +5528,14 @@ inline void CustomizeUi::set_allocated_cand_comment_font_name(::std::string* PRO
 
 // optional string cand_comment_color = 14;
 inline bool CustomizeUi::has_cand_comment_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000040U);
+                  0x00000080U);
 }
 inline const ::std::string& CustomizeUi::cand_comment_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -5176,13 +5545,13 @@ inline const ::std::string& CustomizeUi::cand_comment_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
   _impl_.cand_comment_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
   ::std::string* _s = _internal_mutable_cand_comment_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_color)
   return _s;
@@ -5202,10 +5571,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comme
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000040U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000080U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
   auto* released = _impl_.cand_comment_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_comment_color_.Set("", GetArena());
@@ -5215,9 +5584,9 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_color(
 inline void CustomizeUi::set_allocated_cand_comment_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000080U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
   }
   _impl_.cand_comment_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_color_.IsDefault()) {
@@ -5228,14 +5597,14 @@ inline void CustomizeUi::set_allocated_cand_comment_color(::std::string* PROTOBU
 
 // optional string cand_comment_highlight_color = 15;
 inline bool CustomizeUi::has_cand_comment_highlight_color() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
   return value;
 }
 inline void CustomizeUi::clear_cand_comment_highlight_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cand_comment_highlight_color_.ClearToEmpty();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000080U);
+                  0x00000100U);
 }
 inline const ::std::string& CustomizeUi::cand_comment_highlight_color() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -5245,13 +5614,13 @@ inline const ::std::string& CustomizeUi::cand_comment_highlight_color() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CustomizeUi::set_cand_comment_highlight_color(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
   _impl_.cand_comment_highlight_color_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
 }
 inline ::std::string* PROTOBUF_NONNULL CustomizeUi::mutable_cand_comment_highlight_color()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
   ::std::string* _s = _internal_mutable_cand_comment_highlight_color();
   // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
   return _s;
@@ -5271,10 +5640,10 @@ inline ::std::string* PROTOBUF_NONNULL CustomizeUi::_internal_mutable_cand_comme
 inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_highlight_color() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000080U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000100U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000100U);
   auto* released = _impl_.cand_comment_highlight_color_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.cand_comment_highlight_color_.Set("", GetArena());
@@ -5284,15 +5653,71 @@ inline ::std::string* PROTOBUF_NULLABLE CustomizeUi::release_cand_comment_highli
 inline void CustomizeUi::set_allocated_cand_comment_highlight_color(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000100U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000100U);
   }
   _impl_.cand_comment_highlight_color_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.cand_comment_highlight_color_.IsDefault()) {
     _impl_.cand_comment_highlight_color_.Set("", GetArena());
   }
   // @@protoc_insertion_point(field_set_allocated:moqi.protocol.CustomizeUi.cand_comment_highlight_color)
+}
+
+// repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
+inline int CustomizeUi::_internal_auto_pair_rules_size() const {
+  return _internal_auto_pair_rules().size();
+}
+inline int CustomizeUi::auto_pair_rules_size() const {
+  return _internal_auto_pair_rules_size();
+}
+inline void CustomizeUi::clear_auto_pair_rules() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.auto_pair_rules_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::moqi::protocol::AutoPairRule* PROTOBUF_NONNULL CustomizeUi::mutable_auto_pair_rules(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:moqi.protocol.CustomizeUi.auto_pair_rules)
+  return _internal_mutable_auto_pair_rules()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>* PROTOBUF_NONNULL CustomizeUi::mutable_auto_pair_rules()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:moqi.protocol.CustomizeUi.auto_pair_rules)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_auto_pair_rules();
+}
+inline const ::moqi::protocol::AutoPairRule& CustomizeUi::auto_pair_rules(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.auto_pair_rules)
+  return _internal_auto_pair_rules().Get(index);
+}
+inline ::moqi::protocol::AutoPairRule* PROTOBUF_NONNULL CustomizeUi::add_auto_pair_rules()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::moqi::protocol::AutoPairRule* _add =
+      _internal_mutable_auto_pair_rules()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:moqi.protocol.CustomizeUi.auto_pair_rules)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>& CustomizeUi::auto_pair_rules() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:moqi.protocol.CustomizeUi.auto_pair_rules)
+  return _internal_auto_pair_rules();
+}
+inline const ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>&
+CustomizeUi::_internal_auto_pair_rules() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.auto_pair_rules_;
+}
+inline ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>* PROTOBUF_NONNULL
+CustomizeUi::_internal_mutable_auto_pair_rules() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.auto_pair_rules_;
 }
 
 // -------------------------------------------------------------------

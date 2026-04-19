@@ -46,7 +46,6 @@ using namespace std;
 namespace Moqi {
 
 static constexpr UINT ASYNC_RPC_POLL_INTERVAL_MS = 50;
-static constexpr UINT INPUT_AUTO_PAIR_QUOTES_COMMAND_ID = 220;
 
 namespace {
 
@@ -56,41 +55,6 @@ std::wstring quotePairLogPath() {
     return L"";
   }
   return std::wstring(localAppData) + L"\\MoqiIM\\Log\\quote-pair-debug.log";
-}
-
-std::wstring appearanceConfigPath() {
-  const wchar_t *appData = _wgetenv(L"APPDATA");
-  if (!appData || !*appData) {
-    return L"";
-  }
-  return std::wstring(appData) + L"\\Moqi\\appearance_config.json";
-}
-
-bool loadAutoPairQuotesSetting(bool &enabled) {
-  const std::wstring configPath = appearanceConfigPath();
-  if (configPath.empty()) {
-    return false;
-  }
-
-  std::ifstream stream(std::filesystem::path(configPath), std::ios::binary);
-  if (!stream.is_open()) {
-    return false;
-  }
-
-  Json::CharReaderBuilder builder;
-  Json::Value root;
-  std::string errs;
-  if (!Json::parseFromStream(builder, stream, &root, &errs)) {
-    return false;
-  }
-
-  const Json::Value &value = root["auto_pair_quotes"];
-  if (!value.isBool()) {
-    return false;
-  }
-
-  enabled = value.asBool();
-  return true;
 }
 
 void appendQuotePairLog(const std::wstring &message) {
@@ -132,29 +96,29 @@ std::wstring formatCodePoints(const std::wstring &text) {
   return stream.str();
 }
 
-struct AutoPairSymbol {
-  wchar_t open;
-  wchar_t close;
-};
+std::vector<AutoPairRuleState> defaultAutoPairRules() {
+  return {
+      {L"“", L"”"}, {L"‘", L"’"}, {L"【", L"】"}, {L"《", L"》"},
+      {L"<", L">"}, {L"(", L")"}, {L"（", L"）"}, {L"「", L"」"},
+  };
+}
 
 bool shouldAutoPairSymbol(const std::wstring &commitString,
+                          const std::vector<AutoPairRuleState> &rules,
                           std::wstring &pairedString) {
   if (commitString.size() != 1) {
     return false;
   }
 
-  static const AutoPairSymbol kAutoPairSymbols[] = {
-      {L'“', L'”'}, {L'‘', L'’'}, {L'【', L'】'}, {L'《', L'》'},
-      {L'<', L'>'}, {L'(', L')'}, {L'（', L'）'}, {L'「', L'」'},
-  };
-
-  const wchar_t symbol = commitString[0];
-  for (const auto &pair : kAutoPairSymbols) {
-    if (symbol != pair.open && symbol != pair.close) {
+  for (const auto &rule : rules) {
+    if (rule.open.size() != 1 || rule.close.size() != 1) {
       continue;
     }
-    pairedString.assign(1, pair.open);
-    pairedString.push_back(pair.close);
+    const wchar_t symbol = commitString[0];
+    if (symbol != rule.open[0] && symbol != rule.close[0]) {
+      continue;
+    }
+    pairedString = rule.open + rule.close;
     return true;
   }
   return false;
@@ -167,11 +131,25 @@ void sendDelayedLeftArrow(HWND targetWindow) {
   }
 
   std::thread([targetWindow]() {
-    ::Sleep(25);
-    HWND foreground = ::GetForegroundWindow();
-    if (foreground != targetWindow) {
-      appendQuotePairLog(L"[caretMove] skipped foreground_changed");
-      return;
+    constexpr int kInitialDelayMs = 25;
+    constexpr int kModifierPollDelayMs = 5;
+    constexpr int kModifierPollCount = 40;
+
+    ::Sleep(kInitialDelayMs);
+    for (int i = 0; i < kModifierPollCount; ++i) {
+      HWND foreground = ::GetForegroundWindow();
+      if (foreground != targetWindow) {
+        appendQuotePairLog(L"[caretMove] skipped foreground_changed");
+        return;
+      }
+      const bool shiftDown =
+          (::GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0 ||
+          (::GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0 ||
+          (::GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0;
+      if (!shiftDown) {
+        break;
+      }
+      ::Sleep(kModifierPollDelayMs);
     }
 
     INPUT inputs[2] = {};
@@ -274,6 +252,16 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
     result["candCommentHighlightColor"] = ui.cand_comment_highlight_color();
   if (ui.has_auto_pair_quotes())
     result["autoPairQuotes"] = ui.auto_pair_quotes();
+  if (ui.auto_pair_rules_size() > 0) {
+    Json::Value rules(Json::arrayValue);
+    for (const auto &rule : ui.auto_pair_rules()) {
+      Json::Value item;
+      item["open"] = rule.open();
+      item["close"] = rule.close();
+      rules.append(item);
+    }
+    result["autoPairRules"] = rules;
+  }
   if (ui.has_semicolon_select_second())
     result["semicolonSelectSecond"] = ui.semicolon_select_second();
   return result;
@@ -445,7 +433,7 @@ Client::Client(TextService *service, REFIID langProfileGuid)
       isActivated_(false), guid_{uuidToString(langProfileGuid)},
       shouldWaitConnection_{true}, launcherStartAttempted_{false},
       asyncPollTimerWindow_(nullptr),
-      asyncPollTimerId_(0) {}
+      asyncPollTimerId_(0), autoPairRules_(defaultAutoPairRules()) {}
 
 Client::~Client(void) {
   if (asyncPollTimerId_ != 0) {
@@ -504,6 +492,23 @@ void Client::updateUI(const Json::Value &data) {
       textService_->setInlinePreedit(value.asBool());
     } else if (value.isBool() && strcmp(name, "autoPairQuotes") == 0) {
       textService_->setAutoPairQuotes(value.asBool());
+    } else if (value.isArray() && strcmp(name, "autoPairRules") == 0) {
+      std::vector<AutoPairRuleState> rules;
+      rules.reserve(value.size());
+      for (const auto &item : value) {
+        const Json::Value &open = item["open"];
+        const Json::Value &close = item["close"];
+        if (!open.isString() || !close.isString()) {
+          continue;
+        }
+        std::wstring openText = utf8ToUtf16(open.asCString());
+        std::wstring closeText = utf8ToUtf16(close.asCString());
+        if (openText.empty() || closeText.empty()) {
+          continue;
+        }
+        rules.push_back({std::move(openText), std::move(closeText)});
+      }
+      autoPairRules_ = std::move(rules);
     } else if (value.isString() && strcmp(name, "candBackgroundColor") == 0) {
       COLORREF color = textService_->candBackgroundColor();
       if (parseHexColor(value.asCString(), color)) {
@@ -583,7 +588,7 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session,
     std::wstring commitString = rawCommitString;
     std::wstring pairedCommitString;
     const bool isAutoPairSymbol =
-        shouldAutoPairSymbol(rawCommitString, pairedCommitString);
+        shouldAutoPairSymbol(rawCommitString, autoPairRules_, pairedCommitString);
     if (isAutoPairSymbol) {
       appendQuotePairLog(L"[updateCommitString] raw=" +
                          formatCodePoints(rawCommitString) + L" auto_pair_quotes=" +
@@ -919,12 +924,6 @@ void Client::onActivate() {
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret)) {
   }
-  bool autoPairQuotesEnabled = false;
-  if (loadAutoPairQuotesSetting(autoPairQuotesEnabled)) {
-    textService_->setAutoPairQuotes(autoPairQuotesEnabled);
-    appendQuotePairLog(L"[settings] activate auto_pair_quotes=" +
-                       std::wstring(autoPairQuotesEnabled ? L"true" : L"false"));
-  }
   isActivated_ = true;
 }
 
@@ -1013,18 +1012,6 @@ bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
   Json::Value ret;
   callRpcMethod(req, ret);
   if (handleRpcResponse(ret)) {
-    if (id == INPUT_AUTO_PAIR_QUOTES_COMMAND_ID) {
-      bool autoPairQuotesEnabled = false;
-      if (loadAutoPairQuotesSetting(autoPairQuotesEnabled)) {
-        textService_->setAutoPairQuotes(autoPairQuotesEnabled);
-      } else {
-        textService_->setAutoPairQuotes(!textService_->autoPairQuotes());
-      }
-      appendQuotePairLog(L"[settings] command auto_pair_quotes=" +
-                         std::wstring(textService_->autoPairQuotes()
-                                          ? L"true"
-                                          : L"false"));
-    }
     return ret["return"].asBool();
   }
   return false;
@@ -1505,6 +1492,7 @@ void Client::resetTextServiceState() {
     }
     buttons_.clear();
   }
+  autoPairRules_ = defaultAutoPairRules();
 }
 
 void Client::closeRpcConnection() {
