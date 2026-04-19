@@ -71,6 +71,11 @@ message CandidateEntry {
   string comment = 2;
 }
 
+message AutoPairRule {
+  string open = 1;
+  string close = 2;
+}
+
 message CustomizeUi {
   optional string cand_font_name = 1;
   optional uint32 cand_font_size = 2;
@@ -87,6 +92,7 @@ message CustomizeUi {
   optional string cand_comment_font_name = 13;
   optional string cand_comment_color = 14;
   optional string cand_comment_highlight_color = 15;
+  repeated AutoPairRule auto_pair_rules = 16;
 }
 
 message MessageWindow {

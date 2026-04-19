@@ -28,12 +28,18 @@
 #include <deque>
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <json/json.h>
 #include "proto/moqi.pb.h"
 
 namespace Moqi {
 
 class TextService;
+
+struct AutoPairRuleState {
+	std::wstring open;
+	std::wstring close;
+};
 
 class Client
 {
@@ -128,6 +134,7 @@ private:
 	HWND asyncPollTimerWindow_;
 	UINT_PTR asyncPollTimerId_;
 	std::deque<Json::Value> pendingAsyncResponses_;
+	std::vector<AutoPairRuleState> autoPairRules_;
 };
 
 }
