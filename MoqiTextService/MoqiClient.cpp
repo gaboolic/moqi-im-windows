@@ -618,7 +618,7 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session,
         textService_->suppressNextCompositionTerminatedNotification();
       }
       textService_->endComposition(session->context());
-      if (autoPairedQuotes) {
+      if (autoPairedSymbols) {
         sendDelayedLeftArrow(targetWindow);
       }
     }
