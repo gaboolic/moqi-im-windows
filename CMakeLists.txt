@@ -78,7 +78,6 @@ set(protobuf_BUILD_PROTOBUF_BINARIES ON CACHE BOOL "" FORCE)
 set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "" FORCE)
 set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(protobuf_INSTALL OFF CACHE BOOL "" FORCE)
-set(protobuf_LOCAL_DEPENDENCIES_ONLY ON CACHE BOOL "" FORCE)
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
 set(ABSL_MSVC_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
 
@@ -95,6 +94,9 @@ if(NOT MOQI_PROTOC_EXECUTABLE AND MOQI_PROTOBUF_ROOT AND EXISTS "${MOQI_PROTOBUF
 endif()
 
 if(MOQI_PROTOBUF_SOURCE_DIR)
+    # Local protobuf source trees used by developers may already vendor abseil.
+    # Keep protobuf in local-only mode for that case.
+    set(protobuf_LOCAL_DEPENDENCIES_ONLY ON CACHE BOOL "" FORCE)
     if(EXISTS "${MOQI_PROTOBUF_SOURCE_DIR}/third_party/abseil-cpp/CMakeLists.txt" AND NOT TARGET absl::strings)
         add_subdirectory("${MOQI_PROTOBUF_SOURCE_DIR}/third_party/abseil-cpp" "${CMAKE_BINARY_DIR}/abseil")
     endif()
@@ -102,6 +104,8 @@ if(MOQI_PROTOBUF_SOURCE_DIR)
     set(MOQI_PROTOBUF_INCLUDE_DIR "${MOQI_PROTOBUF_SOURCE_DIR}/src")
     set(MOQI_PROTOBUF_ABSL_INCLUDE_DIR "${MOQI_PROTOBUF_SOURCE_DIR}/third_party/abseil-cpp")
 else()
+    # CI often provides only protoc. Let protobuf fetch its own CMake deps.
+    set(protobuf_LOCAL_DEPENDENCIES_ONLY OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
         protobuf
         URL https://github.com/protocolbuffers/protobuf/releases/download/v33.5/protobuf-33.5.zip
