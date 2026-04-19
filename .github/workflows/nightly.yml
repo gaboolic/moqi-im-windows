@@ -110,10 +110,12 @@ jobs:
           git tag --force $tag $env:GITHUB_SHA
           git push origin "refs/tags/$tag" --force
 
-          $existingTag = gh release list --limit 100 --json tagName --jq ".[] | select(.tagName == `"$tag`") | .tagName"
+          $releaseListJson = gh release list --limit 100 --json tagName
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to query existing releases."
           }
+          $releaseList = $releaseListJson | ConvertFrom-Json
+          $existingTag = $releaseList | Where-Object { $_.tagName -eq $tag } | Select-Object -ExpandProperty tagName -First 1
 
           if (-not [string]::IsNullOrWhiteSpace($existingTag)) {
             gh release upload $tag $assetPath --clobber
