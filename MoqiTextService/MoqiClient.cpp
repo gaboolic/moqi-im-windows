@@ -131,11 +131,25 @@ void sendDelayedLeftArrow(HWND targetWindow) {
   }
 
   std::thread([targetWindow]() {
-    ::Sleep(25);
-    HWND foreground = ::GetForegroundWindow();
-    if (foreground != targetWindow) {
-      appendQuotePairLog(L"[caretMove] skipped foreground_changed");
-      return;
+    constexpr int kInitialDelayMs = 25;
+    constexpr int kModifierPollDelayMs = 5;
+    constexpr int kModifierPollCount = 40;
+
+    ::Sleep(kInitialDelayMs);
+    for (int i = 0; i < kModifierPollCount; ++i) {
+      HWND foreground = ::GetForegroundWindow();
+      if (foreground != targetWindow) {
+        appendQuotePairLog(L"[caretMove] skipped foreground_changed");
+        return;
+      }
+      const bool shiftDown =
+          (::GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0 ||
+          (::GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0 ||
+          (::GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0;
+      if (!shiftDown) {
+        break;
+      }
+      ::Sleep(kModifierPollDelayMs);
     }
 
     INPUT inputs[2] = {};
