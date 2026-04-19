@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  PROTOBUF_VERSION: "33.5"
+
+jobs:
+  build-release:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout moqi-im-windows
+        uses: actions/checkout@v4
+        with:
+          path: moqi-im-windows
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Checkout moqi-ime
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/moqi-ime
+          path: moqi-ime
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.6"
+          cache-dependency-path: moqi-ime/go.sum
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Download protoc
+        run: |
+          $protocRoot = Join-Path $env:RUNNER_TEMP "protoc-$env:PROTOBUF_VERSION-win64"
+          $zipPath = Join-Path $env:RUNNER_TEMP "protoc-$env:PROTOBUF_VERSION-win64.zip"
+
+          if (Test-Path -LiteralPath $protocRoot) {
+            Remove-Item -LiteralPath $protocRoot -Recurse -Force
+          }
+
+          Invoke-WebRequest `
+            -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v$env:PROTOBUF_VERSION/protoc-$env:PROTOBUF_VERSION-win64.zip" `
+            -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $protocRoot -Force
+
+          "PROTOBUF_ROOT=$protocRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Seed launcher icon for clean runners
+        run: |
+          $iconSource = Join-Path $env:GITHUB_WORKSPACE "moqi-ime\icons\moqi.ico"
+          if (-not (Test-Path -LiteralPath $iconSource)) {
+            throw "Missing icon: $iconSource"
+          }
+
+          $iconDestDir = Join-Path $env:GITHUB_WORKSPACE "moqi-im-windows\installer\stage\win32\MoqiIM\moqi-ime\icons"
+          New-Item -ItemType Directory -Path $iconDestDir -Force | Out-Null
+          Copy-Item -LiteralPath $iconSource -Destination (Join-Path $iconDestDir "moqi.ico") -Force
+
+      - name: Build release installer
+        working-directory: ${{ github.workspace }}/moqi-im-windows
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\_all_in_package.ps1 `
+            -RepoRoot "$env:GITHUB_WORKSPACE\moqi-im-windows" `
+            -MoqiImeRoot "$env:GITHUB_WORKSPACE\moqi-ime" `
+            -ProtobufRoot "$env:PROTOBUF_ROOT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moqi-im-windows-release-${{ github.event.release.tag_name || github.sha }}
+          path: ${{ github.workspace }}/moqi-im-windows/installer/dist/moqi-im-windows-setup.exe
+          if-no-files-found: error
+
+      - name: Upload asset to GitHub release
+        if: github.event_name == 'release'
+        working-directory: ${{ github.workspace }}/moqi-im-windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $assetPath = Join-Path $PWD "installer\dist\moqi-im-windows-setup.exe"
+          gh release upload $tag $assetPath --clobber
