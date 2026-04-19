@@ -8,13 +8,15 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。
 
+默认输入法：[`白霜拼音`](https://github.com/gaboolic/rime-frost)
+
 ## 快速开始
 下载安装包：[moqi-im-windows-setup.exe](https://github.com/gaboolic/moqi-im-windows/releases)
 
 ## 特色功能
 - 托盘切换输入法状态：中英文 全半角 简繁
 - 外观编辑：主题皮肤切换、字体调整、主题色切换、自定义快捷键
-- 切换方案集、切换输入方案、更新配置
+- 默认使用白霜拼音，支持切换方案集、切换输入方案、更新配置
 - 置顶短语、超级简拼
 - 输入设置：自动插入成对符号、分号键次选
 - 原生ai功能：支持整句优化、翻译、问答等，只有想不到没有做不到。编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
@@ -140,6 +142,8 @@ Windows 侧的职责主要是：
 
 - [Microsoft TSF 文档](https://docs.microsoft.com/en-us/windows/win32/tsf/text-services-framework)
 - [ITfTextInputProcessor 接口](https://docs.microsoft.com/en-us/windows/win32/api/msctf/nn-msctf-itftextinputprocessor)
+- [PIME](https://github.com/EasyIME/PIME)
+- [小狼毫](https://github.com/rime/weasel)
 
 ## 友情链接
 
