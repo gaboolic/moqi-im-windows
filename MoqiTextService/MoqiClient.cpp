@@ -132,14 +132,29 @@ std::wstring formatCodePoints(const std::wstring &text) {
   return stream.str();
 }
 
-bool shouldAutoPairQuote(const std::wstring &commitString,
-                         std::wstring &pairedString) {
-  if (commitString == L"“" || commitString == L"”") {
-    pairedString = L"“”";
-    return true;
+struct AutoPairSymbol {
+  wchar_t open;
+  wchar_t close;
+};
+
+bool shouldAutoPairSymbol(const std::wstring &commitString,
+                          std::wstring &pairedString) {
+  if (commitString.size() != 1) {
+    return false;
   }
-  if (commitString == L"‘" || commitString == L"’") {
-    pairedString = L"‘’";
+
+  static const AutoPairSymbol kAutoPairSymbols[] = {
+      {L'“', L'”'}, {L'‘', L'’'}, {L'【', L'】'}, {L'《', L'》'},
+      {L'<', L'>'}, {L'(', L')'}, {L'（', L'）'}, {L'「', L'」'},
+  };
+
+  const wchar_t symbol = commitString[0];
+  for (const auto &pair : kAutoPairSymbols) {
+    if (symbol != pair.open && symbol != pair.close) {
+      continue;
+    }
+    pairedString.assign(1, pair.open);
+    pairedString.push_back(pair.close);
     return true;
   }
   return false;
@@ -566,19 +581,17 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session,
     const std::wstring rawCommitString = utf8ToUtf16(commitStringVal.asCString());
     const bool autoPairQuotesEnabled = textService_->autoPairQuotes();
     std::wstring commitString = rawCommitString;
-    const bool isQuoteLikeCommit = rawCommitString == L"“" || rawCommitString == L"”" ||
-                                   rawCommitString == L"‘" || rawCommitString == L"’";
-    if (isQuoteLikeCommit) {
+    std::wstring pairedCommitString;
+    const bool isAutoPairSymbol =
+        shouldAutoPairSymbol(rawCommitString, pairedCommitString);
+    if (isAutoPairSymbol) {
       appendQuotePairLog(L"[updateCommitString] raw=" +
                          formatCodePoints(rawCommitString) + L" auto_pair_quotes=" +
                          (autoPairQuotesEnabled ? L"true" : L"false"));
     }
 
-    std::wstring pairedCommitString;
-    const bool autoPairedQuotes =
-        autoPairQuotesEnabled &&
-        shouldAutoPairQuote(rawCommitString, pairedCommitString);
-    if (autoPairedQuotes) {
+    const bool autoPairedSymbols = autoPairQuotesEnabled && isAutoPairSymbol;
+    if (autoPairedSymbols) {
       commitString = pairedCommitString;
       appendQuotePairLog(L"[updateCommitString] paired=" +
                          formatCodePoints(commitString));
@@ -590,7 +603,7 @@ void Client::updateCommitString(Json::Value &msg, Ime::EditSession *session,
       }
       textService_->setCompositionString(session, commitString.c_str(),
                                          commitString.length());
-      if (autoPairedQuotes) {
+      if (autoPairedSymbols) {
         textService_->setCompositionCursor(session, 1);
       }
       // FIXME: update the position of candidate and message window when the
