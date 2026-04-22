@@ -856,22 +856,17 @@ void Client::updateStatus(Json::Value &msg, Ime::EditSession *session) {
 void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
   // handle candidate list
   const auto &showCandidatesVal = msg["showCandidates"];
-  if (showCandidatesVal.isBool()) {
-    if (showCandidatesVal.asBool()) {
-      // start composition if we are not composing.
-      // this is required to get correctly position the candidate window
-      if (!textService_->isComposing()) {
-        textService_->startComposition(session->context());
-      }
-      textService_->showCandidates(session);
-    } else {
-      textService_->hideCandidates();
-    }
-  }
+  const bool hasExplicitShowCandidates = showCandidatesVal.isBool();
+  const bool explicitShowCandidates =
+      hasExplicitShowCandidates && showCandidatesVal.asBool();
 
   const auto &candidateListVal = msg["candidateList"];
   const auto &candidateEntriesVal = msg["candidateEntries"];
+  bool hasCandidatePayload = false;
+  bool hasVisibleCandidates = false;
+
   if (candidateEntriesVal.isArray()) {
+    hasCandidatePayload = true;
     vector<CandidateUiItem> &candidates = textService_->candidates_;
     candidates.clear();
     for (const auto &candidate : candidateEntriesVal) {
@@ -886,11 +881,9 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
       }
       candidates.emplace_back(std::move(item));
     }
-    textService_->updateCandidates(session);
-    if (!showCandidatesVal.asBool()) {
-      textService_->hideCandidates();
-    }
+    hasVisibleCandidates = !candidates.empty();
   } else if (candidateListVal.isArray()) {
+    hasCandidatePayload = true;
     // handle candidates
     // FIXME: directly access private member is dirty!!!
     vector<CandidateUiItem> &candidates = textService_->candidates_;
@@ -900,10 +893,30 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
       item.text = utf8ToUtf16(candidate.asCString());
       candidates.emplace_back(std::move(item));
     }
+    hasVisibleCandidates = !candidates.empty();
+  }
+
+  const bool shouldRestoreCandidatesWithoutExplicitShow =
+      !hasExplicitShowCandidates && hasVisibleCandidates &&
+      (textService_->pendingCandidateRecovery() || textService_->showingCandidates() ||
+       textService_->isComposing() || !textService_->candidatePreedit().empty());
+
+  if (explicitShowCandidates || shouldRestoreCandidatesWithoutExplicitShow) {
+    // start composition if we are not composing.
+    // this is required to correctly position the candidate window
+    if (!textService_->isComposing()) {
+      textService_->startComposition(session->context());
+    }
+    textService_->showCandidates(session);
+  }
+
+  if (hasCandidatePayload) {
     textService_->updateCandidates(session);
-    if (!showCandidatesVal.asBool()) {
+    if ((hasExplicitShowCandidates && !explicitShowCandidates) || !hasVisibleCandidates) {
       textService_->hideCandidates();
     }
+  } else if (hasExplicitShowCandidates && !explicitShowCandidates) {
+    textService_->hideCandidates();
   }
 
   const auto &candidateCursorVal = msg["candidateCursor"];

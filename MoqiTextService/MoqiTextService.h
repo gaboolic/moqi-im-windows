@@ -257,11 +257,15 @@ public:
 		return showingCandidates_;
 	}
 
+	bool pendingCandidateRecovery() const {
+		return pendingCandidateRecovery_;
+	}
+
 	// candidate window
 	void showCandidates(Ime::EditSession* session);
 	void updateCandidates(Ime::EditSession* session);
     void updateCandidatesWindow(Ime::EditSession* session);
-	void hideCandidates();
+	void hideCandidates(bool preserveRecoveryState = false);
 
 	void refreshCandidates();
 	void setCandidateCursor(int cursor);
@@ -303,6 +307,7 @@ private:
 	bool autoDisableTsfCandidateUi_;
 	Ime::ComPtr<Moqi::CandidateWindow> candidateWindow_; // this is a ref-counted COM object and should not be managed with std::unique_ptr
 	bool showingCandidates_;
+	bool pendingCandidateRecovery_;
 	std::vector<CandidateUiItem> candidates_; // current candidate list
 	std::unique_ptr<Ime::MessageWindow> messageWindow_;
 	UINT messageTimerId_;

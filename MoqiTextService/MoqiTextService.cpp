@@ -278,6 +278,7 @@ TextService::TextService(ImeModule* module):
 	autoDisableTsfCandidateUi_(shouldDisableTsfCandidateUiForProcess(currentProcessPath())),
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
+	pendingCandidateRecovery_(false),
 	updateFont_(false),
 	candPerRow_(1),
 	selKeys_(L"1234567890"),
@@ -367,12 +368,22 @@ void TextService::onFocus() {
 
 // virtual
 void TextService::onSetFocus() {
-	logDebug(L"[onSetFocus] exe=" + processBaseName(currentProcessPath()) + L" " + foregroundWindowSummary());
+	std::wostringstream log;
+	log << L"[onSetFocus] exe=" << processBaseName(currentProcessPath())
+		<< L" showing_candidates=" << boolText(showingCandidates_)
+		<< L" pending_candidate_recovery=" << boolText(pendingCandidateRecovery_)
+		<< L" " << foregroundWindowSummary();
+	logDebug(log.str());
 }
 
 // virtual
 void TextService::onKillFocus() {
-	logDebug(L"[onKillFocus] exe=" + processBaseName(currentProcessPath()) + L" " + foregroundWindowSummary());
+	std::wostringstream log;
+	log << L"[onKillFocus] exe=" << processBaseName(currentProcessPath())
+		<< L" showing_candidates=" << boolText(showingCandidates_)
+		<< L" pending_candidate_recovery=" << boolText(pendingCandidateRecovery_)
+		<< L" " << foregroundWindowSummary();
+	logDebug(log.str());
 }
 
 // virtual
@@ -381,13 +392,20 @@ void TextService::onSetThreadFocus() {
 	log << L"[onSetThreadFocus] exe=" << processBaseName(currentProcessPath())
 	    << L" keyboard_open=" << boolText(isKeyboardOpened())
 	    << L" effective_ui_less=" << boolText(effectiveUiLess())
+	    << L" showing_candidates=" << boolText(showingCandidates_)
+	    << L" pending_candidate_recovery=" << boolText(pendingCandidateRecovery_)
 	    << L" " << foregroundWindowSummary();
 	logDebug(log.str());
 }
 
 // virtual
 void TextService::onKillThreadFocus() {
-	logDebug(L"[onKillThreadFocus] exe=" + processBaseName(currentProcessPath()) + L" " + foregroundWindowSummary());
+	std::wostringstream log;
+	log << L"[onKillThreadFocus] exe=" << processBaseName(currentProcessPath())
+		<< L" showing_candidates=" << boolText(showingCandidates_)
+		<< L" pending_candidate_recovery=" << boolText(pendingCandidateRecovery_)
+		<< L" " << foregroundWindowSummary();
+	logDebug(log.str());
 }
 
 // virtual
@@ -514,12 +532,24 @@ void TextService::onCompositionTerminated(bool forced) {
 		return;
 	}
 	if(forced) {
+		const bool shouldPreserveCandidateRecovery =
+			showingCandidates_ || !candidatePreedit_.empty() || !candidates_.empty();
+		std::wostringstream log;
+		log << L"[onCompositionTerminated] forced=true"
+			<< L" showing_candidates=" << boolText(showingCandidates_)
+			<< L" candidate_count=" << candidates_.size()
+			<< L" preedit_len=" << candidatePreedit_.length()
+			<< L" preserve_candidate_recovery=" << boolText(shouldPreserveCandidateRecovery);
+		logDebug(log.str());
 		// we're still editing our composition and have something in the preedit buffer.
 		// however, some other applications grabs the focus and force us to terminate
 		// our composition.
 		if (showingCandidates()) // disable candidate window if it's opened
-			hideCandidates();
+			hideCandidates(shouldPreserveCandidateRecovery);
 		hideMessage(); // hide message window, if there's any
+	}
+	else {
+		logDebug(L"[onCompositionTerminated] forced=false");
 	}
 	if(client_)
 		client_->onCompositionTerminated(forced);
@@ -607,6 +637,7 @@ void TextService::destroyCandidateWindow() {
 		appendCandidateWindowLog(L"[TextService::destroyCandidateWindow] destroyed");
 	}
 	showingCandidates_ = false;
+	pendingCandidateRecovery_ = false;
 	candidatePreedit_.clear();
 }
 
@@ -648,6 +679,13 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 	if (inputRect(session, &textRect)) {
 		// FIXME: where should we put the candidate window?
 		candidateWindow_->move(textRect.left, textRect.bottom);
+		std::wostringstream log;
+		log << L"[TextService::updateCandidates] moved left=" << textRect.left
+			<< L" bottom=" << textRect.bottom;
+		appendCandidateWindowLog(log.str());
+	}
+	else {
+		appendCandidateWindowLog(L"[TextService::updateCandidates] inputRect unavailable");
 	}
 
 	if (validCandidateListElementId_) {
@@ -669,7 +707,14 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
         if (inputRect(session, &textRect)) {
             // FIXME: where should we put the candidate window?
             candidateWindow_->move(textRect.left, textRect.bottom);
+			std::wostringstream log;
+			log << L"[TextService::updateCandidatesWindow] moved left=" << textRect.left
+				<< L" bottom=" << textRect.bottom;
+			appendCandidateWindowLog(log.str());
         }
+		else {
+			appendCandidateWindowLog(L"[TextService::updateCandidatesWindow] inputRect unavailable");
+		}
     }
 }
 
@@ -698,6 +743,7 @@ void TextService::setCandidateCursor(int cursor) {
 void TextService::showCandidates(Ime::EditSession* session) {
 	if (!tsfCandidateUiEnabled()) {
 		showingCandidates_ = true;
+		pendingCandidateRecovery_ = false;
 		appendCandidateWindowLog(L"[TextService::showCandidates] skipped by process policy");
 		return;
 	}
@@ -715,12 +761,15 @@ void TextService::showCandidates(Ime::EditSession* session) {
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
 	}
 	showingCandidates_ = true;
+	pendingCandidateRecovery_ = false;
+	appendCandidateWindowLog(L"[TextService::showCandidates] shown");
 }
 
 // hide candidate list window
-void TextService::hideCandidates() {
+void TextService::hideCandidates(bool preserveRecoveryState) {
 	if (!tsfCandidateUiEnabled()) {
 		showingCandidates_ = false;
+		pendingCandidateRecovery_ = preserveRecoveryState;
 		appendCandidateWindowLog(L"[TextService::hideCandidates] skipped by process policy");
 		return;
 	}
@@ -730,7 +779,11 @@ void TextService::hideCandidates() {
 		candidateWindow_->clear();
 	}
 	showingCandidates_ = false;
-	appendCandidateWindowLog(L"[TextService::hideCandidates] hidden");
+	pendingCandidateRecovery_ = preserveRecoveryState;
+	std::wostringstream log;
+	log << L"[TextService::hideCandidates] hidden preserve_recovery="
+		<< boolText(preserveRecoveryState);
+	appendCandidateWindowLog(log.str());
 }
 
 // message window

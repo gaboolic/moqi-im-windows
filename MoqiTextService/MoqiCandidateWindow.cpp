@@ -95,21 +95,35 @@ void appendCandidateWindowLog(const std::wstring& message) {
 
 HWND resolveCandidateOwnerWindow(Ime::EditSession* session) {
     HWND hwnd = nullptr;
+    const wchar_t* source = L"none";
     if (session != nullptr) {
         if (ITfContext* context = session->context()) {
             ITfContextView* view = nullptr;
             if (SUCCEEDED(context->GetActiveView(&view)) && view != nullptr) {
                 view->GetWnd(&hwnd);
+                if (hwnd != nullptr) {
+                    source = L"context-view";
+                }
                 view->Release();
             }
         }
     }
     if (hwnd == nullptr) {
         hwnd = ::GetFocus();
+        if (hwnd != nullptr) {
+            source = L"GetFocus";
+        }
     }
     if (hwnd == nullptr) {
         hwnd = ::GetForegroundWindow();
+        if (hwnd != nullptr) {
+            source = L"GetForegroundWindow";
+        }
     }
+    std::wostringstream log;
+    log << L"[resolveCandidateOwnerWindow] session=" << session
+        << L" source=" << source << L" hwnd=" << hwnd;
+    appendCandidateWindowLog(log.str());
     return hwnd;
 }
 
@@ -410,7 +424,8 @@ void CandidateWindow::syncOwner(Ime::EditSession* session) {
     std::wostringstream log;
     log << L"[CandidateWindow::syncOwner] hwnd=" << hwnd_
         << L" old_owner=" << currentOwner
-        << L" new_owner=" << owner;
+        << L" new_owner=" << owner
+        << L" shown=" << shown_;
     appendCandidateWindowLog(log.str());
 }
 
