@@ -93,6 +93,7 @@ message CustomizeUi {
   optional string cand_comment_color = 14;
   optional string cand_comment_highlight_color = 15;
   repeated AutoPairRule auto_pair_rules = 16;
+  optional uint32 cand_spacing = 17;
 }
 
 message MessageWindow {

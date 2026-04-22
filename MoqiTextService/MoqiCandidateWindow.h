@@ -51,6 +51,7 @@ public:
     void add(CandidateUiItem item, wchar_t selKey);
     void clear();
     void setCandPerRow(int n);
+    void setCandSpacing(int spacing);
     void setCurrentSel(int sel);
     void setUseCursor(bool use);
     void setPreeditText(std::wstring text);
@@ -82,6 +83,7 @@ private:
     int commentWidth_;
     int itemHeight_;
     int candPerRow_;
+    int candSpacing_;
     int colSpacing_;
     int rowSpacing_;
     int padX_;

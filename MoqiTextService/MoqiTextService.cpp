@@ -281,6 +281,7 @@ TextService::TextService(ImeModule* module):
 	pendingCandidateRecovery_(false),
 	updateFont_(false),
 	candPerRow_(1),
+	candSpacing_(20),
 	selKeys_(L"1234567890"),
 	candUseCursor_(true),
 	candCommentFontName_(kDefaultCommentFontFace),
@@ -657,6 +658,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 
 	candidateWindow_->setUseCursor(candUseCursor_);
 	candidateWindow_->setCandPerRow(candPerRow_);
+	candidateWindow_->setCandSpacing(candSpacing_);
 	candidateWindow_->setBackgroundColor(candBackgroundColor_);
 	candidateWindow_->setHighlightColor(candHighlightColor_);
 	candidateWindow_->setTextColor(candTextColor_);
@@ -928,6 +930,7 @@ void TextService::refreshCandidateAppearance() {
 	}
 	candidateWindow_->setUseCursor(candUseCursor_);
 	candidateWindow_->setCandPerRow(candPerRow_);
+	candidateWindow_->setCandSpacing(candSpacing_);
 	candidateWindow_->setBackgroundColor(candBackgroundColor_);
 	candidateWindow_->setHighlightColor(candHighlightColor_);
 	candidateWindow_->setTextColor(candTextColor_);

@@ -234,6 +234,8 @@ static Json::Value customizeUiToJson(const moqi::protocol::CustomizeUi &ui) {
     result["candCommentFontSize"] = ui.cand_comment_font_size();
   if (ui.has_cand_per_row())
     result["candPerRow"] = ui.cand_per_row();
+  if (ui.has_cand_spacing())
+    result["candSpacing"] = ui.cand_spacing();
   if (ui.has_cand_use_cursor())
     result["candUseCursor"] = ui.cand_use_cursor();
   if (ui.has_inline_preedit())
@@ -486,6 +488,8 @@ void Client::updateUI(const Json::Value &data) {
       textService_->setCandCommentFontSize(value.asInt());
     } else if (value.isInt() && strcmp(name, "candPerRow") == 0) {
       textService_->setCandPerRow(value.asInt());
+    } else if (value.isInt() && strcmp(name, "candSpacing") == 0) {
+      textService_->setCandSpacing(value.asInt());
     } else if (value.isBool() && strcmp(name, "candUseCursor") == 0) {
       textService_->setCandUseCursor(value.asBool());
     } else if (value.isBool() && strcmp(name, "inlinePreedit") == 0) {

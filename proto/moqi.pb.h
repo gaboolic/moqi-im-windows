@@ -2315,6 +2315,7 @@ class CustomizeUi final : public ::google::protobuf::Message
     kAutoPairQuotesFieldNumber = 11,
     kSemicolonSelectSecondFieldNumber = 12,
     kCandCommentFontSizeFieldNumber = 10,
+    kCandSpacingFieldNumber = 17,
   };
   // repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
   int auto_pair_rules_size() const;
@@ -2538,11 +2539,22 @@ class CustomizeUi final : public ::google::protobuf::Message
   void _internal_set_cand_comment_font_size(::uint32_t value);
 
   public:
+  // optional uint32 cand_spacing = 17;
+  bool has_cand_spacing() const;
+  void clear_cand_spacing() ;
+  ::uint32_t cand_spacing() const;
+  void set_cand_spacing(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_cand_spacing() const;
+  void _internal_set_cand_spacing(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:moqi.protocol.CustomizeUi)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 16,
+  static const ::google::protobuf::internal::TcParseTable<5, 17,
                                    1, 213,
                                    2>
       _table_;
@@ -2580,6 +2592,7 @@ class CustomizeUi final : public ::google::protobuf::Message
     bool auto_pair_quotes_;
     bool semicolon_select_second_;
     ::uint32_t cand_comment_font_size_;
+    ::uint32_t cand_spacing_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -5718,6 +5731,35 @@ inline ::google::protobuf::RepeatedPtrField<::moqi::protocol::AutoPairRule>* PRO
 CustomizeUi::_internal_mutable_auto_pair_rules() {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return &_impl_.auto_pair_rules_;
+}
+
+// optional uint32 cand_spacing = 17;
+inline bool CustomizeUi::has_cand_spacing() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00010000U);
+  return value;
+}
+inline void CustomizeUi::clear_cand_spacing() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_spacing_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00010000U);
+}
+inline ::uint32_t CustomizeUi::cand_spacing() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.CustomizeUi.cand_spacing)
+  return _internal_cand_spacing();
+}
+inline void CustomizeUi::set_cand_spacing(::uint32_t value) {
+  _internal_set_cand_spacing(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.CustomizeUi.cand_spacing)
+}
+inline ::uint32_t CustomizeUi::_internal_cand_spacing() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.cand_spacing_;
+}
+inline void CustomizeUi::_internal_set_cand_spacing(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.cand_spacing_ = value;
 }
 
 // -------------------------------------------------------------------

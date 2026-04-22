@@ -88,6 +88,14 @@ public:
 		candPerRow_ = candPerRow;
 	}
 
+	int candSpacing() const {
+		return candSpacing_;
+	}
+
+	void setCandSpacing(int candSpacing) {
+		candSpacing_ = candSpacing;
+	}
+
 	std::wstring selKeys() const {
 		return selKeys_;
 	}
@@ -315,6 +323,7 @@ private:
 	HFONT commentFont_;
 	bool updateFont_;
 	int candPerRow_;
+	int candSpacing_;
 	std::wstring selKeys_;
 	bool candUseCursor_;
 	std::wstring candFontName_;

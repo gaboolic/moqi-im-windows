@@ -313,7 +313,8 @@ inline constexpr CustomizeUi::Impl_::Impl_(
         inline_preedit_{false},
         auto_pair_quotes_{false},
         semicolon_select_second_{false},
-        cand_comment_font_size_{0u} {}
+        cand_comment_font_size_{0u},
+        cand_spacing_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR CustomizeUi::CustomizeUi(::_pbi::ConstantInitialized)
@@ -539,7 +540,7 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_._has_bits_),
-        19, // hasbit index offset
+        20, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_font_name_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_font_size_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_per_row_),
@@ -556,6 +557,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_comment_color_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_comment_highlight_color_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.auto_pair_rules_),
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::CustomizeUi, _impl_.cand_spacing_),
         1,
         9,
         10,
@@ -572,6 +574,7 @@ const ::uint32_t
         7,
         8,
         0,
+        16,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::MessageWindow, _impl_._has_bits_),
         5, // hasbit index offset
@@ -705,10 +708,10 @@ static const ::_pbi::MigrationSchema
         {60, sizeof(::moqi::protocol::CandidateEntry)},
         {67, sizeof(::moqi::protocol::AutoPairRule)},
         {74, sizeof(::moqi::protocol::CustomizeUi)},
-        {109, sizeof(::moqi::protocol::MessageWindow)},
-        {116, sizeof(::moqi::protocol::TrayNotification)},
-        {125, sizeof(::moqi::protocol::ClientRequest)},
-        {174, sizeof(::moqi::protocol::ServerResponse)},
+        {111, sizeof(::moqi::protocol::MessageWindow)},
+        {118, sizeof(::moqi::protocol::TrayNotification)},
+        {127, sizeof(::moqi::protocol::ClientRequest)},
+        {176, sizeof(::moqi::protocol::ServerResponse)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::moqi::protocol::_KeyEvent_default_instance_._instance,
@@ -741,7 +744,7 @@ const char descriptor_table_protodef_proto_2fmoqi_2eproto[] ABSL_ATTRIBUTE_SECTI
     "ode\030\001 \001(\r\022\021\n\tmodifiers\030\002 \001(\r\022\014\n\004guid\030\003 \001"
     "(\t\"/\n\016CandidateEntry\022\014\n\004text\030\001 \001(\t\022\017\n\007co"
     "mment\030\002 \001(\t\"+\n\014AutoPairRule\022\014\n\004open\030\001 \001("
-    "\t\022\r\n\005close\030\002 \001(\t\"\235\007\n\013CustomizeUi\022\033\n\016cand"
+    "\t\022\r\n\005close\030\002 \001(\t\"\311\007\n\013CustomizeUi\022\033\n\016cand"
     "_font_name\030\001 \001(\tH\000\210\001\001\022\033\n\016cand_font_size\030"
     "\002 \001(\rH\001\210\001\001\022\031\n\014cand_per_row\030\003 \001(\rH\002\210\001\001\022\034\n"
     "\017cand_use_cursor\030\004 \001(\010H\003\210\001\001\022\033\n\016inline_pr"
@@ -755,86 +758,87 @@ const char descriptor_table_protodef_proto_2fmoqi_2eproto[] ABSL_ATTRIBUTE_SECTI
     "font_name\030\r \001(\tH\014\210\001\001\022\037\n\022cand_comment_col"
     "or\030\016 \001(\tH\r\210\001\001\022)\n\034cand_comment_highlight_"
     "color\030\017 \001(\tH\016\210\001\001\0224\n\017auto_pair_rules\030\020 \003("
-    "\0132\033.moqi.protocol.AutoPairRuleB\021\n\017_cand_"
-    "font_nameB\021\n\017_cand_font_sizeB\017\n\r_cand_pe"
-    "r_rowB\022\n\020_cand_use_cursorB\021\n\017_inline_pre"
-    "editB\030\n\026_cand_background_colorB\027\n\025_cand_"
-    "highlight_colorB\022\n\020_cand_text_colorB\034\n\032_"
-    "cand_highlight_text_colorB\031\n\027_cand_comme"
-    "nt_font_sizeB\023\n\021_auto_pair_quotesB\032\n\030_se"
-    "micolon_select_secondB\031\n\027_cand_comment_f"
-    "ont_nameB\025\n\023_cand_comment_colorB\037\n\035_cand"
-    "_comment_highlight_color\"2\n\rMessageWindo"
-    "w\022\017\n\007message\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005\"e\n\020"
-    "TrayNotification\022\r\n\005title\030\001 \001(\t\022\017\n\007messa"
-    "ge\030\002 \001(\t\0221\n\004icon\030\003 \001(\0162#.moqi.protocol.T"
-    "rayNotificationIcon\"\235\005\n\rClientRequest\022\017\n"
-    "\007seq_num\030\001 \001(\r\022%\n\006method\030\002 \001(\0162\025.moqi.pr"
-    "otocol.Method\022\021\n\004guid\030\003 \001(\tH\000\210\001\001\022\031\n\021is_w"
-    "indows8_above\030\004 \001(\010\022\024\n\014is_metro_app\030\005 \001("
-    "\010\022\022\n\nis_ui_less\030\006 \001(\010\022\022\n\nis_console\030\007 \001("
-    "\010\022\016\n\006opened\030\010 \001(\010\022\016\n\006forced\030\t \001(\010\022\024\n\014com"
-    "mand_type\030\n \001(\r\022*\n\tkey_event\030\013 \001(\0132\027.moq"
-    "i.protocol.KeyEvent\022\032\n\022composition_strin"
-    "g\030\014 \001(\t\022\026\n\016candidate_list\030\r \003(\t\022\027\n\017show_"
-    "candidates\030\016 \001(\010\022\022\n\ncursor_pos\030\017 \001(\005\022\021\n\t"
-    "sel_start\030\020 \001(\005\022\017\n\007sel_end\030\021 \001(\005\022\026\n\tbutt"
-    "on_id\030\022 \001(\tH\001\210\001\001\022\027\n\ncommand_id\030\023 \001(\rH\002\210\001"
-    "\001\022\037\n\022preserved_key_guid\030\024 \001(\tH\003\210\001\001\022\035\n\020co"
-    "mpartment_guid\030\025 \001(\tH\004\210\001\001\022\030\n\020is_keyboard"
-    "_open\030\026 \001(\010\022\026\n\tclient_id\030\027 \001(\tH\005\210\001\001B\007\n\005_"
-    "guidB\014\n\n_button_idB\r\n\013_command_idB\025\n\023_pr"
-    "eserved_key_guidB\023\n\021_compartment_guidB\014\n"
-    "\n_client_id\"\260\007\n\016ServerResponse\022\026\n\tclient"
-    "_id\030\001 \001(\tH\000\210\001\001\022\017\n\007seq_num\030\002 \001(\r\022\017\n\007succe"
-    "ss\030\003 \001(\010\022\024\n\014return_value\030\004 \001(\005\022+\n\nmenu_i"
-    "tems\030\005 \003(\0132\027.moqi.protocol.MenuItem\022\032\n\022c"
-    "omposition_string\030\006 \001(\t\022\025\n\rcommit_string"
-    "\030\007 \001(\t\022\026\n\016candidate_list\030\010 \003(\t\022\027\n\017show_c"
-    "andidates\030\t \001(\010\022\022\n\ncursor_pos\030\n \001(\005\022\032\n\022c"
-    "omposition_cursor\030\013 \001(\005\022\030\n\020candidate_cur"
-    "sor\030\014 \001(\005\022\021\n\tsel_start\030\r \001(\005\022\017\n\007sel_end\030"
-    "\016 \001(\005\022\024\n\014set_sel_keys\030\017 \001(\t\0225\n\014customize"
-    "_ui\030\020 \001(\0132\032.moqi.protocol.CustomizeUiH\001\210"
-    "\001\001\022-\n\nadd_button\030\021 \003(\0132\031.moqi.protocol.B"
-    "uttonInfo\022\025\n\rremove_button\030\022 \003(\t\0220\n\rchan"
-    "ge_button\030\023 \003(\0132\031.moqi.protocol.ButtonIn"
-    "fo\0227\n\014show_message\030\024 \001(\0132\034.moqi.protocol"
-    ".MessageWindowH\002\210\001\001\022\024\n\014hide_message\030\025 \001("
-    "\010\022\025\n\ropen_keyboard\030\026 \001(\010\0226\n\021add_preserve"
-    "d_key\030\027 \003(\0132\033.moqi.protocol.PreservedKey"
-    "\022\034\n\024remove_preserved_key\030\030 \003(\t\022\r\n\005error\030"
-    "\031 \001(\t\022\?\n\021tray_notification\030\032 \001(\0132\037.moqi."
-    "protocol.TrayNotificationH\003\210\001\001\0228\n\021candid"
-    "ate_entries\030\033 \003(\0132\035.moqi.protocol.Candid"
-    "ateEntryB\014\n\n_client_idB\017\n\r_customize_uiB"
-    "\017\n\r_show_messageB\024\n\022_tray_notification*\267"
-    "\003\n\006Method\022\026\n\022METHOD_UNSPECIFIED\020\000\022\017\n\013MET"
-    "HOD_INIT\020\001\022\020\n\014METHOD_CLOSE\020\002\022\026\n\022METHOD_O"
-    "N_ACTIVATE\020\003\022\030\n\024METHOD_ON_DEACTIVATE\020\004\022\032"
-    "\n\026METHOD_FILTER_KEY_DOWN\020\005\022\026\n\022METHOD_ON_"
-    "KEY_DOWN\020\006\022\030\n\024METHOD_FILTER_KEY_UP\020\007\022\024\n\020"
-    "METHOD_ON_KEY_UP\020\010\022\033\n\027METHOD_ON_PRESERVE"
-    "D_KEY\020\t\022\025\n\021METHOD_ON_COMMAND\020\n\022\022\n\016METHOD"
-    "_ON_MENU\020\013\022!\n\035METHOD_ON_COMPARTMENT_CHAN"
-    "GED\020\014\022%\n!METHOD_ON_KEYBOARD_STATUS_CHANG"
-    "ED\020\r\022$\n METHOD_ON_COMPOSITION_TERMINATED"
-    "\020\016\022$\n METHOD_ON_LANG_PROFILE_ACTIVATED\020\017"
-    "*o\n\nButtonType\022\033\n\027BUTTON_TYPE_UNSPECIFIE"
-    "D\020\000\022\026\n\022BUTTON_TYPE_BUTTON\020\001\022\026\n\022BUTTON_TY"
-    "PE_TOGGLE\020\002\022\024\n\020BUTTON_TYPE_MENU\020\003*\245\001\n\024Tr"
-    "ayNotificationIcon\022&\n\"TRAY_NOTIFICATION_"
-    "ICON_UNSPECIFIED\020\000\022\037\n\033TRAY_NOTIFICATION_"
-    "ICON_INFO\020\001\022\"\n\036TRAY_NOTIFICATION_ICON_WA"
-    "RNING\020\002\022 \n\034TRAY_NOTIFICATION_ICON_ERROR\020"
-    "\003B+Z)github.com/gaboolic/moqi-ime/proto;"
-    "moqipbb\006proto3"
+    "\0132\033.moqi.protocol.AutoPairRule\022\031\n\014cand_s"
+    "pacing\030\021 \001(\rH\017\210\001\001B\021\n\017_cand_font_nameB\021\n\017"
+    "_cand_font_sizeB\017\n\r_cand_per_rowB\022\n\020_can"
+    "d_use_cursorB\021\n\017_inline_preeditB\030\n\026_cand"
+    "_background_colorB\027\n\025_cand_highlight_col"
+    "orB\022\n\020_cand_text_colorB\034\n\032_cand_highligh"
+    "t_text_colorB\031\n\027_cand_comment_font_sizeB"
+    "\023\n\021_auto_pair_quotesB\032\n\030_semicolon_selec"
+    "t_secondB\031\n\027_cand_comment_font_nameB\025\n\023_"
+    "cand_comment_colorB\037\n\035_cand_comment_high"
+    "light_colorB\017\n\r_cand_spacing\"2\n\rMessageW"
+    "indow\022\017\n\007message\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005"
+    "\"e\n\020TrayNotification\022\r\n\005title\030\001 \001(\t\022\017\n\007m"
+    "essage\030\002 \001(\t\0221\n\004icon\030\003 \001(\0162#.moqi.protoc"
+    "ol.TrayNotificationIcon\"\235\005\n\rClientReques"
+    "t\022\017\n\007seq_num\030\001 \001(\r\022%\n\006method\030\002 \001(\0162\025.moq"
+    "i.protocol.Method\022\021\n\004guid\030\003 \001(\tH\000\210\001\001\022\031\n\021"
+    "is_windows8_above\030\004 \001(\010\022\024\n\014is_metro_app\030"
+    "\005 \001(\010\022\022\n\nis_ui_less\030\006 \001(\010\022\022\n\nis_console\030"
+    "\007 \001(\010\022\016\n\006opened\030\010 \001(\010\022\016\n\006forced\030\t \001(\010\022\024\n"
+    "\014command_type\030\n \001(\r\022*\n\tkey_event\030\013 \001(\0132\027"
+    ".moqi.protocol.KeyEvent\022\032\n\022composition_s"
+    "tring\030\014 \001(\t\022\026\n\016candidate_list\030\r \003(\t\022\027\n\017s"
+    "how_candidates\030\016 \001(\010\022\022\n\ncursor_pos\030\017 \001(\005"
+    "\022\021\n\tsel_start\030\020 \001(\005\022\017\n\007sel_end\030\021 \001(\005\022\026\n\t"
+    "button_id\030\022 \001(\tH\001\210\001\001\022\027\n\ncommand_id\030\023 \001(\r"
+    "H\002\210\001\001\022\037\n\022preserved_key_guid\030\024 \001(\tH\003\210\001\001\022\035"
+    "\n\020compartment_guid\030\025 \001(\tH\004\210\001\001\022\030\n\020is_keyb"
+    "oard_open\030\026 \001(\010\022\026\n\tclient_id\030\027 \001(\tH\005\210\001\001B"
+    "\007\n\005_guidB\014\n\n_button_idB\r\n\013_command_idB\025\n"
+    "\023_preserved_key_guidB\023\n\021_compartment_gui"
+    "dB\014\n\n_client_id\"\260\007\n\016ServerResponse\022\026\n\tcl"
+    "ient_id\030\001 \001(\tH\000\210\001\001\022\017\n\007seq_num\030\002 \001(\r\022\017\n\007s"
+    "uccess\030\003 \001(\010\022\024\n\014return_value\030\004 \001(\005\022+\n\nme"
+    "nu_items\030\005 \003(\0132\027.moqi.protocol.MenuItem\022"
+    "\032\n\022composition_string\030\006 \001(\t\022\025\n\rcommit_st"
+    "ring\030\007 \001(\t\022\026\n\016candidate_list\030\010 \003(\t\022\027\n\017sh"
+    "ow_candidates\030\t \001(\010\022\022\n\ncursor_pos\030\n \001(\005\022"
+    "\032\n\022composition_cursor\030\013 \001(\005\022\030\n\020candidate"
+    "_cursor\030\014 \001(\005\022\021\n\tsel_start\030\r \001(\005\022\017\n\007sel_"
+    "end\030\016 \001(\005\022\024\n\014set_sel_keys\030\017 \001(\t\0225\n\014custo"
+    "mize_ui\030\020 \001(\0132\032.moqi.protocol.CustomizeU"
+    "iH\001\210\001\001\022-\n\nadd_button\030\021 \003(\0132\031.moqi.protoc"
+    "ol.ButtonInfo\022\025\n\rremove_button\030\022 \003(\t\0220\n\r"
+    "change_button\030\023 \003(\0132\031.moqi.protocol.Butt"
+    "onInfo\0227\n\014show_message\030\024 \001(\0132\034.moqi.prot"
+    "ocol.MessageWindowH\002\210\001\001\022\024\n\014hide_message\030"
+    "\025 \001(\010\022\025\n\ropen_keyboard\030\026 \001(\010\0226\n\021add_pres"
+    "erved_key\030\027 \003(\0132\033.moqi.protocol.Preserve"
+    "dKey\022\034\n\024remove_preserved_key\030\030 \003(\t\022\r\n\005er"
+    "ror\030\031 \001(\t\022\?\n\021tray_notification\030\032 \001(\0132\037.m"
+    "oqi.protocol.TrayNotificationH\003\210\001\001\0228\n\021ca"
+    "ndidate_entries\030\033 \003(\0132\035.moqi.protocol.Ca"
+    "ndidateEntryB\014\n\n_client_idB\017\n\r_customize"
+    "_uiB\017\n\r_show_messageB\024\n\022_tray_notificati"
+    "on*\267\003\n\006Method\022\026\n\022METHOD_UNSPECIFIED\020\000\022\017\n"
+    "\013METHOD_INIT\020\001\022\020\n\014METHOD_CLOSE\020\002\022\026\n\022METH"
+    "OD_ON_ACTIVATE\020\003\022\030\n\024METHOD_ON_DEACTIVATE"
+    "\020\004\022\032\n\026METHOD_FILTER_KEY_DOWN\020\005\022\026\n\022METHOD"
+    "_ON_KEY_DOWN\020\006\022\030\n\024METHOD_FILTER_KEY_UP\020\007"
+    "\022\024\n\020METHOD_ON_KEY_UP\020\010\022\033\n\027METHOD_ON_PRES"
+    "ERVED_KEY\020\t\022\025\n\021METHOD_ON_COMMAND\020\n\022\022\n\016ME"
+    "THOD_ON_MENU\020\013\022!\n\035METHOD_ON_COMPARTMENT_"
+    "CHANGED\020\014\022%\n!METHOD_ON_KEYBOARD_STATUS_C"
+    "HANGED\020\r\022$\n METHOD_ON_COMPOSITION_TERMIN"
+    "ATED\020\016\022$\n METHOD_ON_LANG_PROFILE_ACTIVAT"
+    "ED\020\017*o\n\nButtonType\022\033\n\027BUTTON_TYPE_UNSPEC"
+    "IFIED\020\000\022\026\n\022BUTTON_TYPE_BUTTON\020\001\022\026\n\022BUTTO"
+    "N_TYPE_TOGGLE\020\002\022\024\n\020BUTTON_TYPE_MENU\020\003*\245\001"
+    "\n\024TrayNotificationIcon\022&\n\"TRAY_NOTIFICAT"
+    "ION_ICON_UNSPECIFIED\020\000\022\037\n\033TRAY_NOTIFICAT"
+    "ION_ICON_INFO\020\001\022\"\n\036TRAY_NOTIFICATION_ICO"
+    "N_WARNING\020\002\022 \n\034TRAY_NOTIFICATION_ICON_ER"
+    "ROR\020\003B+Z)github.com/gaboolic/moqi-ime/pr"
+    "oto;moqipbb\006proto3"
 };
 static ::absl::once_flag descriptor_table_proto_2fmoqi_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_proto_2fmoqi_2eproto = {
     false,
     false,
-    4134,
+    4178,
     descriptor_table_protodef_proto_2fmoqi_2eproto,
     "proto/moqi.proto",
     &descriptor_table_proto_2fmoqi_2eproto_once,
@@ -3381,9 +3385,9 @@ CustomizeUi::CustomizeUi(
                offsetof(Impl_, cand_font_size_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, cand_font_size_),
-           offsetof(Impl_, cand_comment_font_size_) -
+           offsetof(Impl_, cand_spacing_) -
                offsetof(Impl_, cand_font_size_) +
-               sizeof(Impl_::cand_comment_font_size_));
+               sizeof(Impl_::cand_spacing_));
 
   // @@protoc_insertion_point(copy_constructor:moqi.protocol.CustomizeUi)
 }
@@ -3406,9 +3410,9 @@ inline void CustomizeUi::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, cand_font_size_),
            0,
-           offsetof(Impl_, cand_comment_font_size_) -
+           offsetof(Impl_, cand_spacing_) -
                offsetof(Impl_, cand_font_size_) +
-               sizeof(Impl_::cand_comment_font_size_));
+               sizeof(Impl_::cand_spacing_));
 }
 CustomizeUi::~CustomizeUi() {
   // @@protoc_insertion_point(destructor:moqi.protocol.CustomizeUi)
@@ -3487,16 +3491,16 @@ CustomizeUi::GetClassData() const {
   return CustomizeUi_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 16, 1, 213, 2>
+const ::_pbi::TcParseTable<5, 17, 1, 213, 2>
 CustomizeUi::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_._has_bits_),
     0, // no _extensions_
-    16, 120,  // max_field_number, fast_idx_mask
+    17, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294901760,  // skipmap
+    4294836224,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    16,  // num_field_entries
+    17,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     CustomizeUi_class_data_.base(),
@@ -3506,10 +3510,7 @@ CustomizeUi::_table_ = {
     ::_pbi::TcParser::GetTable<::moqi::protocol::CustomizeUi>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
-    {::_pbi::TcParser::FastMtR2,
-     {386, 0, 0,
-      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.auto_pair_rules_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // optional string cand_font_name = 1;
     {::_pbi::TcParser::FastUS1,
      {10, 1, 0,
@@ -3570,6 +3571,28 @@ CustomizeUi::_table_ = {
     {::_pbi::TcParser::FastUS1,
      {122, 8, 0,
       PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_highlight_color_)}},
+    // repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
+    {::_pbi::TcParser::FastMtR2,
+     {386, 0, 0,
+      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.auto_pair_rules_)}},
+    // optional uint32 cand_spacing = 17;
+    {::_pbi::TcParser::FastV32S2,
+     {392, 16, 0,
+      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_spacing_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
@@ -3605,6 +3628,8 @@ CustomizeUi::_table_ = {
     {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_highlight_color_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // repeated .moqi.protocol.AutoPairRule auto_pair_rules = 16;
     {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.auto_pair_rules_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+    // optional uint32 cand_spacing = 17;
+    {PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_spacing_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::moqi::protocol::AutoPairRule>()},
@@ -3664,6 +3689,7 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
         reinterpret_cast<char*>(&_impl_.cand_comment_font_size_) -
         reinterpret_cast<char*>(&_impl_.cand_font_size_)) + sizeof(_impl_.cand_comment_font_size_));
   }
+  _impl_.cand_spacing_ = 0u;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -3813,6 +3839,13 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
     }
   }
 
+  // optional uint32 cand_spacing = 17;
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+        17, this_._internal_cand_spacing(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -3905,6 +3938,13 @@ PROTOBUF_NOINLINE void CustomizeUi::Clear() {
           this_._internal_cand_comment_font_size());
     }
   }
+   {
+    // optional uint32 cand_spacing = 17;
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::UInt32Size(
+                                      this_._internal_cand_spacing());
+    }
+  }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
                                              &this_._impl_._cached_size_);
 }
@@ -3978,6 +4018,9 @@ void CustomizeUi::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.cand_comment_font_size_ = from._impl_.cand_comment_font_size_;
     }
   }
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    _this->_impl_.cand_spacing_ = from._impl_.cand_spacing_;
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
@@ -4007,8 +4050,8 @@ void CustomizeUi::InternalSwap(CustomizeUi* PROTOBUF_RESTRICT PROTOBUF_NONNULL o
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.cand_comment_color_, &other->_impl_.cand_comment_color_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.cand_comment_highlight_color_, &other->_impl_.cand_comment_highlight_color_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_comment_font_size_)
-      + sizeof(CustomizeUi::_impl_.cand_comment_font_size_)
+      PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_spacing_)
+      + sizeof(CustomizeUi::_impl_.cand_spacing_)
       - PROTOBUF_FIELD_OFFSET(CustomizeUi, _impl_.cand_font_size_)>(
           reinterpret_cast<char*>(&_impl_.cand_font_size_),
           reinterpret_cast<char*>(&other->_impl_.cand_font_size_));

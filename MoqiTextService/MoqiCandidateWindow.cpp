@@ -23,7 +23,7 @@ constexpr COLORREF kDividerColor = RGB(220, 220, 220);
 constexpr COLORREF kItemText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
 constexpr COLORREF kSelectedText = RGB(0, 0, 0);
-constexpr int kHorizontalItemTrailingGap = 20;
+constexpr int kDefaultCandidateSpacing = 20;
 
 std::wstring currentProcessPath() {
     std::wstring buffer(MAX_PATH, L'\0');
@@ -139,6 +139,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       commentWidth_(0),
       itemHeight_(0),
       candPerRow_(1),
+      candSpacing_(kDefaultCandidateSpacing),
       colSpacing_(0),
       rowSpacing_(0),
       padX_(service->isImmersive() ? 10 : 7),
@@ -303,6 +304,17 @@ void CandidateWindow::setCandPerRow(int n) {
     if (candPerRow_ != n) {
         candPerRow_ = n;
         recalculateSize();
+    }
+}
+
+void CandidateWindow::setCandSpacing(int spacing) {
+    spacing = (std::max)(0, spacing);
+    if (candSpacing_ != spacing) {
+        candSpacing_ = spacing;
+        recalculateSize();
+        if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
     }
 }
 
@@ -503,7 +515,7 @@ void CandidateWindow::recalculateSize() {
                          : (std::max)(preeditHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading));
 
     const int commentSectionWidth = commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0;
-    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? candSpacing_ : 0;
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ + commentSectionWidth + trailingGap;
     const int columns = (std::min)(itemsPerRow, static_cast<int>(items_.size()));
     const int rows = (static_cast<int>(items_.size()) + itemsPerRow - 1) / itemsPerRow;
@@ -596,7 +608,7 @@ void CandidateWindow::onPaint() {
     int col = 0;
     int x = borderWidth_ + padX_;
     y = contentTop_;
-    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? candSpacing_ : 0;
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
                           (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0) + trailingGap;
     for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
@@ -680,7 +692,7 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
 void CandidateWindow::itemRect(int index, RECT& rect) const {
     const int row = index / candPerRow_;
     const int col = index % candPerRow_;
-    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? candSpacing_ : 0;
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
                           (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0) + trailingGap;
     rect.left = borderWidth_ + padX_ + col * (itemWidth + colSpacing_);

@@ -363,6 +363,19 @@ fs::path BuildOldPath(const fs::path& destination) {
   return old_path;
 }
 
+fs::path BuildPendingRebootPath(const fs::path& source) {
+  for (int i = 0; i < 16; ++i) {
+    fs::path pending_path = source;
+    pending_path += L".pending.reboot." + std::to_wstring(i);
+    if (!fs::exists(pending_path)) {
+      return pending_path;
+    }
+  }
+  fs::path pending_path = source;
+  pending_path += L".pending.reboot";
+  return pending_path;
+}
+
 void CleanupStalePendingFiles(const fs::path& destination) {
   std::error_code ec;
   const fs::path directory = destination.parent_path();
@@ -371,6 +384,26 @@ void CleanupStalePendingFiles(const fs::path& destination) {
   }
 
   const std::wstring prefix = destination.filename().wstring() + L".pending.";
+  for (const auto& entry : fs::directory_iterator(directory, ec)) {
+    if (ec || !entry.is_regular_file(ec)) {
+      continue;
+    }
+    const std::wstring name = entry.path().filename().wstring();
+    if (name.rfind(prefix, 0) == 0) {
+      fs::remove(entry.path(), ec);
+      ec.clear();
+    }
+  }
+}
+
+void CleanupStaleRebootCopies(const fs::path& source) {
+  std::error_code ec;
+  const fs::path directory = source.parent_path();
+  if (!fs::exists(directory, ec)) {
+    return;
+  }
+
+  const std::wstring prefix = source.filename().wstring() + L".pending.reboot";
   for (const auto& entry : fs::directory_iterator(directory, ec)) {
     if (ec || !entry.is_regular_file(ec)) {
       continue;
@@ -403,6 +436,82 @@ bool RenameFileForDeleteOnReboot(const fs::path& path, bool& reboot_required) {
     return false;
   }
   return false;
+}
+
+bool ScheduleDeleteOnReboot(const fs::path& path, std::wstring* error) {
+  if (!fs::exists(path)) {
+    if (error != nullptr) {
+      error->clear();
+    }
+    return true;
+  }
+
+  const std::wstring normalized_path =
+      NormalizePathForPendingOperation(path.wstring());
+  if (MoveFileExW(normalized_path.c_str(), nullptr,
+                  MOVEFILE_DELAY_UNTIL_REBOOT) == TRUE) {
+    if (error != nullptr) {
+      error->clear();
+    }
+    return true;
+  }
+
+  if (error != nullptr) {
+    *error = FormatWindowsErrorMessage(GetLastError());
+  }
+  return false;
+}
+
+bool ScheduleReplaceOnReboot(const fs::path& source,
+                            const fs::path& destination,
+                            bool& reboot_required,
+                            std::wstring* error) {
+  CleanupStaleRebootCopies(source);
+
+  const fs::path staged_source = BuildPendingRebootPath(source);
+  if (CopyFileW(source.c_str(), staged_source.c_str(), FALSE) != TRUE) {
+    if (error != nullptr) {
+      *error = L"Failed to create staged reboot copy " + staged_source.wstring() +
+               L" (" + FormatWindowsErrorMessage(GetLastError()) + L").";
+    }
+    return false;
+  }
+
+  std::wstring delete_error;
+  if (!ScheduleDeleteOnReboot(destination, &delete_error)) {
+    std::error_code ec;
+    fs::remove(staged_source, ec);
+    if (error != nullptr) {
+      *error = L"Failed to schedule delete-on-reboot for " +
+               destination.wstring() + L" (" + delete_error + L").";
+    }
+    return false;
+  }
+
+  const std::wstring normalized_staged_source =
+      NormalizePathForPendingOperation(staged_source.wstring());
+  const std::wstring normalized_destination =
+      NormalizePathForPendingOperation(destination.wstring());
+  if (MoveFileExW(normalized_staged_source.c_str(),
+                  normalized_destination.c_str(),
+                  MOVEFILE_DELAY_UNTIL_REBOOT | MOVEFILE_REPLACE_EXISTING) !=
+      TRUE) {
+    const DWORD move_error = GetLastError();
+    std::error_code ec;
+    fs::remove(staged_source, ec);
+    if (error != nullptr) {
+      *error = L"Failed to schedule reboot replacement from " +
+               staged_source.wstring() + L" to " + destination.wstring() +
+               L" (" + FormatWindowsErrorMessage(move_error) + L").";
+    }
+    return false;
+  }
+
+  reboot_required = true;
+  if (error != nullptr) {
+    error->clear();
+  }
+  return true;
 }
 
 void CleanupStaleOldFiles(const fs::path& destination) {
@@ -477,21 +586,64 @@ bool DeleteFileWithFallback(const fs::path& path, bool& reboot_required) {
 }
 
 bool CopyFileWithFallback(const fs::path& source,
-                          const fs::path& destination,
-                          bool& reboot_required) {
+                         const fs::path& destination,
+                         bool& reboot_required,
+                         std::wstring* error,
+                         DWORD* initial_copy_error = nullptr,
+                         DWORD* fallback_error = nullptr) {
+  if (initial_copy_error != nullptr) {
+    *initial_copy_error = 0;
+  }
+  if (fallback_error != nullptr) {
+    *fallback_error = 0;
+  }
   if (!fs::exists(source)) {
+    if (error != nullptr) {
+      *error = L"Source file does not exist: " + source.wstring();
+    }
     return false;
   }
   CleanupStalePendingFiles(destination);
   if (CopyFileW(source.c_str(), destination.c_str(), FALSE) == TRUE) {
+    if (error != nullptr) {
+      error->clear();
+    }
     return true;
   }
+  const DWORD initial_copy_error_code = GetLastError();
+  if (initial_copy_error != nullptr) {
+    *initial_copy_error = initial_copy_error_code;
+  }
   if (RenameFileForDeleteOnReboot(destination, reboot_required)) {
-    const bool copied = CopyFileW(source.c_str(), destination.c_str(), FALSE) == TRUE;
-    if (copied) {
+    if (CopyFileW(source.c_str(), destination.c_str(), FALSE) == TRUE) {
+      if (error != nullptr) {
+        error->clear();
+      }
       CleanupStalePendingFiles(destination);
+      return true;
     }
-    return copied;
+    const DWORD retry_copy_error = GetLastError();
+    if (fallback_error != nullptr) {
+      *fallback_error = retry_copy_error;
+    }
+    if (error != nullptr) {
+      *error = L"Initial copy failed (" +
+               FormatWindowsErrorMessage(initial_copy_error_code) +
+               L"); existing destination was scheduled for delete-on-reboot, "
+               L"but retry copy also failed (" +
+               FormatWindowsErrorMessage(retry_copy_error) + L").";
+    }
+    return false;
+  }
+  if (error != nullptr) {
+    const DWORD rename_error = GetLastError();
+    if (fallback_error != nullptr) {
+      *fallback_error = rename_error;
+    }
+    *error = L"Initial copy failed (" +
+             FormatWindowsErrorMessage(initial_copy_error_code) +
+             L"); fallback rename/delete-on-reboot also failed (" +
+             FormatWindowsErrorMessage(rename_error) + L").";
   }
   return false;
 }
@@ -503,6 +655,8 @@ int ShowFailureAndReturn(const std::wstring& message, const bool silent) {
 
 int RunReregister(const Options& options) {
   const fs::path app_dir(options.app_dir);
+  const fs::path source32 = app_dir / L"MoqiTextService.dll";
+  const fs::path source64 = app_dir / L"x64" / L"MoqiTextService.dll";
   const fs::path dest32 = fs::path(GetSyswow64DirectoryPath()) / L"MoqiTextService.dll";
   const fs::path dest64 = fs::path(GetNativeSystemDirectoryPath()) / L"MoqiTextService.dll";
   const fs::path dest64_for_regsvr =
@@ -512,6 +666,8 @@ int RunReregister(const Options& options) {
 
   CleanupStaleOldFiles(dest32);
   CleanupStaleOldFiles(dest64);
+  CleanupStaleRebootCopies(source32);
+  CleanupStaleRebootCopies(source64);
 
   if (!RunRegsvr(regsvr32, dest32, app_dir, false)) {
     return ShowFailureAndReturn(L"Failed to register Win32 TSF DLL.",
@@ -554,13 +710,38 @@ int RunInstall(const Options& options) {
   // in place and overwrite the system DLLs before registering again.
 
   bool reboot_required = false;
-  if (!CopyFileWithFallback(source32, dest32, reboot_required)) {
-    return ShowFailureAndReturn(
-        L"Failed to update Win32 TSF DLL in " + dest32.wstring(), options.silent);
+  std::wstring copy_error;
+  DWORD initial_copy_error = 0;
+  DWORD fallback_error = 0;
+  if (!CopyFileWithFallback(source32, dest32, reboot_required, &copy_error,
+                            &initial_copy_error, &fallback_error)) {
+    if (!((initial_copy_error == ERROR_SHARING_VIOLATION ||
+           initial_copy_error == ERROR_ACCESS_DENIED ||
+           fallback_error == ERROR_SHARING_VIOLATION ||
+           fallback_error == ERROR_ACCESS_DENIED) &&
+          ScheduleReplaceOnReboot(source32, dest32, reboot_required,
+                                  &copy_error))) {
+      return ShowFailureAndReturn(
+          L"Failed to update Win32 TSF DLL in " + dest32.wstring() + L"\n\n" +
+              copy_error,
+          options.silent);
+    }
   }
-  if (!CopyFileWithFallback(source64, dest64, reboot_required)) {
-    return ShowFailureAndReturn(
-        L"Failed to update x64 TSF DLL in " + dest64.wstring(), options.silent);
+  initial_copy_error = 0;
+  fallback_error = 0;
+  if (!CopyFileWithFallback(source64, dest64, reboot_required, &copy_error,
+                            &initial_copy_error, &fallback_error)) {
+    if (!((initial_copy_error == ERROR_SHARING_VIOLATION ||
+           initial_copy_error == ERROR_ACCESS_DENIED ||
+           fallback_error == ERROR_SHARING_VIOLATION ||
+           fallback_error == ERROR_ACCESS_DENIED) &&
+          ScheduleReplaceOnReboot(source64, dest64, reboot_required,
+                                  &copy_error))) {
+      return ShowFailureAndReturn(
+          L"Failed to update x64 TSF DLL in " + dest64.wstring() + L"\n\n" +
+              copy_error,
+          options.silent);
+    }
   }
 
   if (reboot_required) {
