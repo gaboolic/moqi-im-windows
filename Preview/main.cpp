@@ -21,6 +21,7 @@ constexpr COLORREF kSelectedText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedAuxText = RGB(0, 0, 0);
 constexpr COLORREF kHintText = RGB(110, 110, 110);
 constexpr COLORREF kPreeditBackground = RGB(235, 245, 255);
+constexpr int kHorizontalItemTrailingGap = 20;
 
 int scalePx(HWND hwnd, int value) {
     HDC hdc = GetDC(hwnd);
@@ -194,7 +195,7 @@ private:
         }
         const int row = (y - contentTop) / rowHeight;
         const int col = candPerRow_ == 1 ? 0 : (x - (panelRect_.left + borderWidth_ + padX_)) /
-                                                (selKeyWidth_ + labelGap_ + textWidth_ + colSpacing_);
+                                                (itemWidth() + colSpacing_);
         if (row < 0 || col < 0) {
             return;
         }
@@ -318,7 +319,7 @@ private:
         SelectObject(hdc, oldFont);
         ReleaseDC(hwnd_, hdc);
 
-        const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_;
+        const int itemWidth = this->itemWidth();
         const int columns = (std::max)(1, (std::min)(candPerRow_, static_cast<int>(items_.size())));
         const int rows = items_.empty() ? 0 : (static_cast<int>(items_.size()) + candPerRow_ - 1) / candPerRow_;
         const int panelContentWidth = columns * itemWidth + (std::max)(0, columns - 1) * colSpacing_;
@@ -374,6 +375,7 @@ private:
         int col = 0;
         int x = panelRect_.left + borderWidth_ + padX_;
         int y = panelRect_.top + borderWidth_ + padY_;
+        const int itemWidth = this->itemWidth();
         for (int i = 0; i < static_cast<int>(items_.size()); ++i) {
             paintItem(hdc, i, x, y);
             ++col;
@@ -382,7 +384,7 @@ private:
                 x = panelRect_.left + borderWidth_ + padX_;
                 y += itemHeight_ + rowSpacing_;
             } else {
-                x += selKeyWidth_ + labelGap_ + textWidth_ + colSpacing_;
+                x += itemWidth + colSpacing_;
             }
         }
 
@@ -391,7 +393,7 @@ private:
 
     void paintItem(HDC hdc, int index, int x, int y) {
         const bool selected = useCursor_ && index == currentSel_;
-        RECT itemRect = {x, y, x + selKeyWidth_ + labelGap_ + textWidth_, y + itemHeight_};
+        RECT itemRect = {x, y, x + itemWidth(), y + itemHeight_};
         RECT highlightRect = itemRect;
         RECT labelRect = itemRect;
         labelRect.right = labelRect.left + selKeyWidth_;
@@ -414,6 +416,11 @@ private:
         SetTextColor(hdc, selected ? kSelectedText : kItemText);
         DrawTextW(hdc, items_[index].c_str(), static_cast<int>(items_[index].size()), &textRect,
                   DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    }
+
+    int itemWidth() const {
+        const int trailingGap = candPerRow_ > 1 ? scalePx(hwnd_, kHorizontalItemTrailingGap) : 0;
+        return selKeyWidth_ + labelGap_ + textWidth_ + trailingGap;
     }
 
     void onPaint() {

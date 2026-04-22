@@ -23,6 +23,7 @@ constexpr COLORREF kDividerColor = RGB(220, 220, 220);
 constexpr COLORREF kItemText = RGB(0, 0, 0);
 constexpr COLORREF kSelectedBackground = RGB(198, 221, 249);
 constexpr COLORREF kSelectedText = RGB(0, 0, 0);
+constexpr int kHorizontalItemTrailingGap = 20;
 
 std::wstring currentProcessPath() {
     std::wstring buffer(MAX_PATH, L'\0');
@@ -487,7 +488,8 @@ void CandidateWindow::recalculateSize() {
                          : (std::max)(preeditHeight_, static_cast<int>(metrics.tmHeight + metrics.tmExternalLeading));
 
     const int commentSectionWidth = commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0;
-    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ + commentSectionWidth;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
+    const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ + commentSectionWidth + trailingGap;
     const int columns = (std::min)(itemsPerRow, static_cast<int>(items_.size()));
     const int rows = (static_cast<int>(items_.size()) + itemsPerRow - 1) / itemsPerRow;
     const int candidateContentWidth = columns * itemWidth + (std::max)(0, columns - 1) * colSpacing_;
@@ -579,8 +581,9 @@ void CandidateWindow::onPaint() {
     int col = 0;
     int x = borderWidth_ + padX_;
     y = contentTop_;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
-                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0);
+                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0) + trailingGap;
     for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
         paintItem(memdc, i, x, y);
         ++col;
@@ -662,8 +665,9 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
 void CandidateWindow::itemRect(int index, RECT& rect) const {
     const int row = index / candPerRow_;
     const int col = index % candPerRow_;
+    const int trailingGap = candPerRow_ > 1 && commentWidth_ == 0 ? kHorizontalItemTrailingGap : 0;
     const int itemWidth = selKeyWidth_ + labelGap_ + textWidth_ +
-                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0);
+                          (commentWidth_ > 0 ? commentGap_ + commentWidth_ : 0) + trailingGap;
     rect.left = borderWidth_ + padX_ + col * (itemWidth + colSpacing_);
     rect.top = contentTop_ + row * (itemHeight_ + rowSpacing_);
     rect.right = rect.left + itemWidth;
