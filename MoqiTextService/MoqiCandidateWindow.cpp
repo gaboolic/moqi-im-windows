@@ -730,14 +730,6 @@ void CandidateWindow::onLButtonDown(WPARAM wp, LPARAM lp) {
         pressedSel_ = hitIndex;
         draggingWindow_ = false;
         ::SetCapture(hwnd_);
-        if (hitIndex != currentSel_) {
-            setCurrentSel(hitIndex);
-            if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
-                textService->highlightCandidate(hitIndex);
-            }
-        } else if (isVisible()) {
-            ::InvalidateRect(hwnd_, NULL, TRUE);
-        }
         return;
     }
 
@@ -783,15 +775,6 @@ void CandidateWindow::onMouseMove(WPARAM wp, LPARAM lp) {
     if (draggingWindow_) {
         Ime::ImeWindow::onMouseMove(wp, lp);
         return;
-    }
-
-    POINT pt = {GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    const int hitIndex = hitTestCandidate(pt);
-    if (hitIndex >= 0 && hitIndex != currentSel_) {
-        setCurrentSel(hitIndex);
-        if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
-            textService->highlightCandidate(hitIndex);
-        }
     }
 }
 
