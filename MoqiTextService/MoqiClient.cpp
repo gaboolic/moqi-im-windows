@@ -197,6 +197,12 @@ static moqi::protocol::Method methodNameToProto(const char *methodName) {
     return moqi::protocol::METHOD_ON_KEYBOARD_STATUS_CHANGED;
   if (strcmp(methodName, "onCompositionTerminated") == 0)
     return moqi::protocol::METHOD_ON_COMPOSITION_TERMINATED;
+  if (strcmp(methodName, "highlightCandidate") == 0)
+    return moqi::protocol::METHOD_HIGHLIGHT_CANDIDATE;
+  if (strcmp(methodName, "selectCandidate") == 0)
+    return moqi::protocol::METHOD_SELECT_CANDIDATE;
+  if (strcmp(methodName, "changePage") == 0)
+    return moqi::protocol::METHOD_CHANGE_PAGE;
   return moqi::protocol::METHOD_UNSPECIFIED;
 }
 
@@ -309,7 +315,9 @@ static Json::Value responseToJson(const moqi::protocol::ServerResponse &response
   result["showCandidates"] = response.show_candidates();
   result["cursorPos"] = response.cursor_pos();
   result["compositionCursor"] = response.composition_cursor();
-  result["candidateCursor"] = response.candidate_cursor();
+  if (response.has_candidate_cursor()) {
+    result["candidateCursor"] = response.candidate_cursor();
+  }
   result["selStart"] = response.sel_start();
   result["selEnd"] = response.sel_end();
 
@@ -1004,6 +1012,39 @@ bool Client::onKeyUp(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
     return ret["return"].asBool();
   }
   return false;
+}
+
+bool Client::highlightCandidate(int index) {
+  auto req = createRpcRequest("highlightCandidate");
+  req.set_candidate_index(index);
+
+  Json::Value ret;
+  if (!callRpcMethod(req, ret)) {
+    return false;
+  }
+  return applyAsyncResponse(ret);
+}
+
+bool Client::selectCandidate(int index) {
+  auto req = createRpcRequest("selectCandidate");
+  req.set_candidate_index(index);
+
+  Json::Value ret;
+  if (!callRpcMethod(req, ret)) {
+    return false;
+  }
+  return applyAsyncResponse(ret);
+}
+
+bool Client::changePage(bool backward) {
+  auto req = createRpcRequest("changePage");
+  req.set_page_backward(backward);
+
+  Json::Value ret;
+  if (!callRpcMethod(req, ret)) {
+    return false;
+  }
+  return applyAsyncResponse(ret);
 }
 
 bool Client::onPreservedKey(const GUID &guid) {

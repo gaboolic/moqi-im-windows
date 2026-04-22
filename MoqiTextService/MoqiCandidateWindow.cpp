@@ -3,12 +3,14 @@
 //
 
 #include "MoqiCandidateWindow.h"
+#include "MoqiTextService.h"
 
 #include <LibIME2/src/DebugLogConfig.h>
 #include <LibIME2/src/DebugLogFile.h>
 #include <LibIME2/src/DrawUtils.h>
 #include <LibIME2/src/EditSession.h>
 #include <LibIME2/src/TextService.h>
+#include <windowsx.h>
 
 #include <algorithm>
 #include <cassert>
@@ -159,6 +161,9 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       commentColor_(kItemText),
       commentHighlightColor_(kSelectedText),
       currentSel_(0),
+      pressedSel_(-1),
+      draggingWindow_(false),
+      trackingMouse_(false),
       useCursor_(false),
       commentFont_(nullptr) {
     margin_ = 0;
@@ -296,7 +301,9 @@ void CandidateWindow::add(CandidateUiItem item, wchar_t selKey) {
 void CandidateWindow::clear() {
     items_.clear();
     selKeys_.clear();
-    currentSel_ = 0;
+    if (::GetCapture() != hwnd_) {
+        pressedSel_ = -1;
+    }
 }
 
 void CandidateWindow::setCandPerRow(int n) {
@@ -556,6 +563,12 @@ LRESULT CandidateWindow::wndProc(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_LBUTTONUP:
         onLButtonUp(wp, lp);
         return 0;
+    case WM_MOUSELEAVE:
+        onMouseLeave();
+        return 0;
+    case WM_MOUSEWHEEL:
+        onMouseWheel(wp, lp);
+        return 0;
     case WM_MOUSEACTIVATE:
         return MA_NOACTIVATE;
     default:
@@ -687,6 +700,113 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     }
     ::SelectObject(hdc, oldFont);
     ::SetTextColor(hdc, oldColor);
+}
+
+int CandidateWindow::hitTestCandidate(POINT pt) const {
+    if (items_.empty()) {
+        return -1;
+    }
+
+    RECT clientRc = {};
+    ::GetClientRect(hwnd_, &clientRc);
+    for (int i = 0, n = static_cast<int>(items_.size()); i < n; ++i) {
+        RECT rect = {};
+        itemRect(i, rect);
+        if (candPerRow_ == 1) {
+            rect.left = borderWidth_ + padX_;
+            rect.right = clientRc.right - borderWidth_ - padX_;
+        }
+        if (::PtInRect(&rect, pt)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void CandidateWindow::onLButtonDown(WPARAM wp, LPARAM lp) {
+    POINT pt = {GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    const int hitIndex = hitTestCandidate(pt);
+    if (hitIndex >= 0) {
+        pressedSel_ = hitIndex;
+        draggingWindow_ = false;
+        ::SetCapture(hwnd_);
+        if (hitIndex != currentSel_) {
+            setCurrentSel(hitIndex);
+            if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
+                textService->highlightCandidate(hitIndex);
+            }
+        } else if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+        return;
+    }
+
+    pressedSel_ = -1;
+    draggingWindow_ = true;
+    Ime::ImeWindow::onLButtonDown(wp, lp);
+}
+
+void CandidateWindow::onLButtonUp(WPARAM wp, LPARAM lp) {
+    const bool hadCapture = ::GetCapture() == hwnd_;
+    if (hadCapture) {
+        ::ReleaseCapture();
+    }
+
+    if (draggingWindow_) {
+        draggingWindow_ = false;
+        Ime::ImeWindow::onLButtonUp(wp, lp);
+        return;
+    }
+
+    POINT pt = {GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    const int hitIndex = hitTestCandidate(pt);
+    if (pressedSel_ >= 0 && hitIndex >= 0 &&
+        (hitIndex == currentSel_ || hitIndex == pressedSel_)) {
+        if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
+            textService->selectCandidate(hitIndex);
+        }
+    }
+    pressedSel_ = -1;
+}
+
+void CandidateWindow::onMouseMove(WPARAM wp, LPARAM lp) {
+    if (!trackingMouse_) {
+        TRACKMOUSEEVENT tme = {};
+        tme.cbSize = sizeof(tme);
+        tme.dwFlags = TME_LEAVE;
+        tme.hwndTrack = hwnd_;
+        if (::TrackMouseEvent(&tme)) {
+            trackingMouse_ = true;
+        }
+    }
+
+    if (draggingWindow_) {
+        Ime::ImeWindow::onMouseMove(wp, lp);
+        return;
+    }
+
+    POINT pt = {GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    const int hitIndex = hitTestCandidate(pt);
+    if (hitIndex >= 0 && hitIndex != currentSel_) {
+        setCurrentSel(hitIndex);
+        if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
+            textService->highlightCandidate(hitIndex);
+        }
+    }
+}
+
+void CandidateWindow::onMouseLeave() {
+    trackingMouse_ = false;
+}
+
+void CandidateWindow::onMouseWheel(WPARAM wp, LPARAM) {
+    const short delta = GET_WHEEL_DELTA_WPARAM(wp);
+    if (delta == 0) {
+        return;
+    }
+    if (auto* textService = static_cast<Moqi::TextService*>(textService_)) {
+        textService->changeCandidatePage(delta > 0);
+    }
 }
 
 void CandidateWindow::itemRect(int index, RECT& rect) const {

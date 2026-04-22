@@ -140,6 +140,9 @@ enum Method : int {
   METHOD_ON_KEYBOARD_STATUS_CHANGED = 13,
   METHOD_ON_COMPOSITION_TERMINATED = 14,
   METHOD_ON_LANG_PROFILE_ACTIVATED = 15,
+  METHOD_HIGHLIGHT_CANDIDATE = 16,
+  METHOD_SELECT_CANDIDATE = 17,
+  METHOD_CHANGE_PAGE = 18,
   Method_INT_MIN_SENTINEL_DO_NOT_USE_ =
       ::std::numeric_limits<::int32_t>::min(),
   Method_INT_MAX_SENTINEL_DO_NOT_USE_ =
@@ -150,11 +153,11 @@ extern const uint32_t Method_internal_data_[];
 inline constexpr Method Method_MIN =
     static_cast<Method>(0);
 inline constexpr Method Method_MAX =
-    static_cast<Method>(15);
+    static_cast<Method>(18);
 inline bool Method_IsValid(int value) {
-  return 0 <= value && value <= 15;
+  return 0 <= value && value <= 18;
 }
-inline constexpr int Method_ARRAYSIZE = 15 + 1;
+inline constexpr int Method_ARRAYSIZE = 18 + 1;
 const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL Method_descriptor();
 template <typename T>
 const ::std::string& Method_Name(T value) {
@@ -165,7 +168,7 @@ const ::std::string& Method_Name(T value) {
 }
 template <>
 inline const ::std::string& Method_Name(Method value) {
-  return ::google::protobuf::internal::NameOfDenseEnum<Method_descriptor, 0, 15>(
+  return ::google::protobuf::internal::NameOfDenseEnum<Method_descriptor, 0, 18>(
       static_cast<int>(value));
 }
 inline bool Method_Parse(
@@ -2767,6 +2770,8 @@ class ClientRequest final : public ::google::protobuf::Message
     kSelStartFieldNumber = 16,
     kSelEndFieldNumber = 17,
     kCommandIdFieldNumber = 19,
+    kCandidateIndexFieldNumber = 24,
+    kPageBackwardFieldNumber = 25,
   };
   // repeated string candidate_list = 13;
   int candidate_list_size() const;
@@ -3051,12 +3056,34 @@ class ClientRequest final : public ::google::protobuf::Message
   void _internal_set_command_id(::uint32_t value);
 
   public:
+  // optional int32 candidate_index = 24;
+  bool has_candidate_index() const;
+  void clear_candidate_index() ;
+  ::int32_t candidate_index() const;
+  void set_candidate_index(::int32_t value);
+
+  private:
+  ::int32_t _internal_candidate_index() const;
+  void _internal_set_candidate_index(::int32_t value);
+
+  public:
+  // optional bool page_backward = 25;
+  bool has_page_backward() const;
+  void clear_page_backward() ;
+  bool page_backward() const;
+  void set_page_backward(bool value);
+
+  private:
+  bool _internal_page_backward() const;
+  void _internal_set_page_backward(bool value);
+
+  public:
   // @@protoc_insertion_point(class_scope:moqi.protocol.ClientRequest)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<5, 23,
-                                   1, 140,
+  static const ::google::protobuf::internal::TcParseTable<5, 25,
+                                   1, 148,
                                    2>
       _table_;
 
@@ -3100,6 +3127,8 @@ class ClientRequest final : public ::google::protobuf::Message
     ::int32_t sel_start_;
     ::int32_t sel_end_;
     ::uint32_t command_id_;
+    ::int32_t candidate_index_;
+    bool page_backward_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -3591,7 +3620,8 @@ class ServerResponse final : public ::google::protobuf::Message
   void _internal_set_composition_cursor(::int32_t value);
 
   public:
-  // int32 candidate_cursor = 12;
+  // optional int32 candidate_cursor = 12;
+  bool has_candidate_cursor() const;
   void clear_candidate_cursor() ;
   ::int32_t candidate_cursor() const;
   void set_candidate_cursor(::int32_t value);
@@ -6979,6 +7009,64 @@ inline void ClientRequest::set_allocated_client_id(::std::string* PROTOBUF_NULLA
   // @@protoc_insertion_point(field_set_allocated:moqi.protocol.ClientRequest.client_id)
 }
 
+// optional int32 candidate_index = 24;
+inline bool ClientRequest::has_candidate_index() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00800000U);
+  return value;
+}
+inline void ClientRequest::clear_candidate_index() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.candidate_index_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00800000U);
+}
+inline ::int32_t ClientRequest::candidate_index() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.ClientRequest.candidate_index)
+  return _internal_candidate_index();
+}
+inline void ClientRequest::set_candidate_index(::int32_t value) {
+  _internal_set_candidate_index(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00800000U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.ClientRequest.candidate_index)
+}
+inline ::int32_t ClientRequest::_internal_candidate_index() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.candidate_index_;
+}
+inline void ClientRequest::_internal_set_candidate_index(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.candidate_index_ = value;
+}
+
+// optional bool page_backward = 25;
+inline bool ClientRequest::has_page_backward() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x01000000U);
+  return value;
+}
+inline void ClientRequest::clear_page_backward() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.page_backward_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x01000000U);
+}
+inline bool ClientRequest::page_backward() const {
+  // @@protoc_insertion_point(field_get:moqi.protocol.ClientRequest.page_backward)
+  return _internal_page_backward();
+}
+inline void ClientRequest::set_page_backward(bool value) {
+  _internal_set_page_backward(value);
+  SetHasBit(_impl_._has_bits_[0], 0x01000000U);
+  // @@protoc_insertion_point(field_set:moqi.protocol.ClientRequest.page_backward)
+}
+inline bool ClientRequest::_internal_page_backward() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.page_backward_;
+}
+inline void ClientRequest::_internal_set_page_backward(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.page_backward_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // ServerResponse
@@ -7460,7 +7548,11 @@ inline void ServerResponse::_internal_set_composition_cursor(::int32_t value) {
   _impl_.composition_cursor_ = value;
 }
 
-// int32 candidate_cursor = 12;
+// optional int32 candidate_cursor = 12;
+inline bool ServerResponse::has_candidate_cursor() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00100000U);
+  return value;
+}
 inline void ServerResponse::clear_candidate_cursor() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.candidate_cursor_ = 0;

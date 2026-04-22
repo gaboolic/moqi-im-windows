@@ -74,6 +74,12 @@ private:
     void onPaint();
     void paintItem(HDC hdc, int index, int x, int y);
     void itemRect(int index, RECT& rect) const;
+    int hitTestCandidate(POINT pt) const;
+    void onLButtonDown(WPARAM wp, LPARAM lp);
+    void onLButtonUp(WPARAM wp, LPARAM lp);
+    void onMouseMove(WPARAM wp, LPARAM lp);
+    void onMouseLeave();
+    void onMouseWheel(WPARAM wp, LPARAM lp);
     void applyWindowShape();
 
 private:
@@ -107,6 +113,9 @@ private:
     std::vector<wchar_t> selKeys_;
     std::vector<CandidateUiItem> items_;
     int currentSel_;
+    int pressedSel_;
+    bool draggingWindow_;
+    bool trackingMouse_;
     bool useCursor_;
 };
 

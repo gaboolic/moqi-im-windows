@@ -21,6 +21,9 @@ enum Method {
   METHOD_ON_KEYBOARD_STATUS_CHANGED = 13;
   METHOD_ON_COMPOSITION_TERMINATED = 14;
   METHOD_ON_LANG_PROFILE_ACTIVATED = 15;
+  METHOD_HIGHLIGHT_CANDIDATE = 16;
+  METHOD_SELECT_CANDIDATE = 17;
+  METHOD_CHANGE_PAGE = 18;
 }
 
 enum ButtonType {
@@ -138,6 +141,8 @@ message ClientRequest {
   optional string compartment_guid = 21;
   bool is_keyboard_open = 22;
   optional string client_id = 23;
+  optional int32 candidate_index = 24;
+  optional bool page_backward = 25;
 }
 
 message ServerResponse {
@@ -152,7 +157,7 @@ message ServerResponse {
   bool show_candidates = 9;
   int32 cursor_pos = 10;
   int32 composition_cursor = 11;
-  int32 candidate_cursor = 12;
+  optional int32 candidate_cursor = 12;
   int32 sel_start = 13;
   int32 sel_end = 14;
   string set_sel_keys = 15;

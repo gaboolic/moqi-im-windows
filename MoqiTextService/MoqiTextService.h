@@ -274,6 +274,9 @@ public:
 	void updateCandidates(Ime::EditSession* session);
     void updateCandidatesWindow(Ime::EditSession* session);
 	void hideCandidates(bool preserveRecoveryState = false);
+	bool highlightCandidate(int index);
+	bool selectCandidate(int index);
+	bool changeCandidatePage(bool backward);
 
 	void refreshCandidates();
 	void setCandidateCursor(int cursor);

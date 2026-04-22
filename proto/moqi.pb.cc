@@ -373,7 +373,9 @@ inline constexpr ClientRequest::Impl_::Impl_(
         cursor_pos_{0},
         sel_start_{0},
         sel_end_{0},
-        command_id_{0u} {}
+        command_id_{0u},
+        candidate_index_{0},
+        page_backward_{false} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR ClientRequest::ClientRequest(::_pbi::ConstantInitialized)
@@ -593,7 +595,7 @@ const ::uint32_t
         2,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_._has_bits_),
-        26, // hasbit index offset
+        28, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.seq_num_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.method_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.guid_),
@@ -617,6 +619,8 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.compartment_guid_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.is_keyboard_open_),
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.client_id_),
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.candidate_index_),
+        PROTOBUF_FIELD_OFFSET(::moqi::protocol::ClientRequest, _impl_.page_backward_),
         8,
         9,
         1,
@@ -640,6 +644,8 @@ const ::uint32_t
         5,
         18,
         6,
+        23,
+        24,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::moqi::protocol::ServerResponse, _impl_._has_bits_),
         30, // hasbit index offset
@@ -711,7 +717,7 @@ static const ::_pbi::MigrationSchema
         {111, sizeof(::moqi::protocol::MessageWindow)},
         {118, sizeof(::moqi::protocol::TrayNotification)},
         {127, sizeof(::moqi::protocol::ClientRequest)},
-        {176, sizeof(::moqi::protocol::ServerResponse)},
+        {180, sizeof(::moqi::protocol::ServerResponse)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::moqi::protocol::_KeyEvent_default_instance_._instance,
@@ -772,7 +778,7 @@ const char descriptor_table_protodef_proto_2fmoqi_2eproto[] ABSL_ATTRIBUTE_SECTI
     "indow\022\017\n\007message\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005"
     "\"e\n\020TrayNotification\022\r\n\005title\030\001 \001(\t\022\017\n\007m"
     "essage\030\002 \001(\t\0221\n\004icon\030\003 \001(\0162#.moqi.protoc"
-    "ol.TrayNotificationIcon\"\235\005\n\rClientReques"
+    "ol.TrayNotificationIcon\"\375\005\n\rClientReques"
     "t\022\017\n\007seq_num\030\001 \001(\r\022%\n\006method\030\002 \001(\0162\025.moq"
     "i.protocol.Method\022\021\n\004guid\030\003 \001(\tH\000\210\001\001\022\031\n\021"
     "is_windows8_above\030\004 \001(\010\022\024\n\014is_metro_app\030"
@@ -786,59 +792,64 @@ const char descriptor_table_protodef_proto_2fmoqi_2eproto[] ABSL_ATTRIBUTE_SECTI
     "button_id\030\022 \001(\tH\001\210\001\001\022\027\n\ncommand_id\030\023 \001(\r"
     "H\002\210\001\001\022\037\n\022preserved_key_guid\030\024 \001(\tH\003\210\001\001\022\035"
     "\n\020compartment_guid\030\025 \001(\tH\004\210\001\001\022\030\n\020is_keyb"
-    "oard_open\030\026 \001(\010\022\026\n\tclient_id\030\027 \001(\tH\005\210\001\001B"
-    "\007\n\005_guidB\014\n\n_button_idB\r\n\013_command_idB\025\n"
-    "\023_preserved_key_guidB\023\n\021_compartment_gui"
-    "dB\014\n\n_client_id\"\260\007\n\016ServerResponse\022\026\n\tcl"
-    "ient_id\030\001 \001(\tH\000\210\001\001\022\017\n\007seq_num\030\002 \001(\r\022\017\n\007s"
-    "uccess\030\003 \001(\010\022\024\n\014return_value\030\004 \001(\005\022+\n\nme"
-    "nu_items\030\005 \003(\0132\027.moqi.protocol.MenuItem\022"
-    "\032\n\022composition_string\030\006 \001(\t\022\025\n\rcommit_st"
-    "ring\030\007 \001(\t\022\026\n\016candidate_list\030\010 \003(\t\022\027\n\017sh"
-    "ow_candidates\030\t \001(\010\022\022\n\ncursor_pos\030\n \001(\005\022"
-    "\032\n\022composition_cursor\030\013 \001(\005\022\030\n\020candidate"
-    "_cursor\030\014 \001(\005\022\021\n\tsel_start\030\r \001(\005\022\017\n\007sel_"
-    "end\030\016 \001(\005\022\024\n\014set_sel_keys\030\017 \001(\t\0225\n\014custo"
-    "mize_ui\030\020 \001(\0132\032.moqi.protocol.CustomizeU"
-    "iH\001\210\001\001\022-\n\nadd_button\030\021 \003(\0132\031.moqi.protoc"
-    "ol.ButtonInfo\022\025\n\rremove_button\030\022 \003(\t\0220\n\r"
-    "change_button\030\023 \003(\0132\031.moqi.protocol.Butt"
-    "onInfo\0227\n\014show_message\030\024 \001(\0132\034.moqi.prot"
-    "ocol.MessageWindowH\002\210\001\001\022\024\n\014hide_message\030"
-    "\025 \001(\010\022\025\n\ropen_keyboard\030\026 \001(\010\0226\n\021add_pres"
-    "erved_key\030\027 \003(\0132\033.moqi.protocol.Preserve"
-    "dKey\022\034\n\024remove_preserved_key\030\030 \003(\t\022\r\n\005er"
-    "ror\030\031 \001(\t\022\?\n\021tray_notification\030\032 \001(\0132\037.m"
-    "oqi.protocol.TrayNotificationH\003\210\001\001\0228\n\021ca"
-    "ndidate_entries\030\033 \003(\0132\035.moqi.protocol.Ca"
-    "ndidateEntryB\014\n\n_client_idB\017\n\r_customize"
-    "_uiB\017\n\r_show_messageB\024\n\022_tray_notificati"
-    "on*\267\003\n\006Method\022\026\n\022METHOD_UNSPECIFIED\020\000\022\017\n"
-    "\013METHOD_INIT\020\001\022\020\n\014METHOD_CLOSE\020\002\022\026\n\022METH"
-    "OD_ON_ACTIVATE\020\003\022\030\n\024METHOD_ON_DEACTIVATE"
-    "\020\004\022\032\n\026METHOD_FILTER_KEY_DOWN\020\005\022\026\n\022METHOD"
-    "_ON_KEY_DOWN\020\006\022\030\n\024METHOD_FILTER_KEY_UP\020\007"
-    "\022\024\n\020METHOD_ON_KEY_UP\020\010\022\033\n\027METHOD_ON_PRES"
-    "ERVED_KEY\020\t\022\025\n\021METHOD_ON_COMMAND\020\n\022\022\n\016ME"
-    "THOD_ON_MENU\020\013\022!\n\035METHOD_ON_COMPARTMENT_"
-    "CHANGED\020\014\022%\n!METHOD_ON_KEYBOARD_STATUS_C"
-    "HANGED\020\r\022$\n METHOD_ON_COMPOSITION_TERMIN"
-    "ATED\020\016\022$\n METHOD_ON_LANG_PROFILE_ACTIVAT"
-    "ED\020\017*o\n\nButtonType\022\033\n\027BUTTON_TYPE_UNSPEC"
-    "IFIED\020\000\022\026\n\022BUTTON_TYPE_BUTTON\020\001\022\026\n\022BUTTO"
-    "N_TYPE_TOGGLE\020\002\022\024\n\020BUTTON_TYPE_MENU\020\003*\245\001"
-    "\n\024TrayNotificationIcon\022&\n\"TRAY_NOTIFICAT"
-    "ION_ICON_UNSPECIFIED\020\000\022\037\n\033TRAY_NOTIFICAT"
-    "ION_ICON_INFO\020\001\022\"\n\036TRAY_NOTIFICATION_ICO"
-    "N_WARNING\020\002\022 \n\034TRAY_NOTIFICATION_ICON_ER"
-    "ROR\020\003B+Z)github.com/gaboolic/moqi-ime/pr"
-    "oto;moqipbb\006proto3"
+    "oard_open\030\026 \001(\010\022\026\n\tclient_id\030\027 \001(\tH\005\210\001\001\022"
+    "\034\n\017candidate_index\030\030 \001(\005H\006\210\001\001\022\032\n\rpage_ba"
+    "ckward\030\031 \001(\010H\007\210\001\001B\007\n\005_guidB\014\n\n_button_id"
+    "B\r\n\013_command_idB\025\n\023_preserved_key_guidB\023"
+    "\n\021_compartment_guidB\014\n\n_client_idB\022\n\020_ca"
+    "ndidate_indexB\020\n\016_page_backward\"\312\007\n\016Serv"
+    "erResponse\022\026\n\tclient_id\030\001 \001(\tH\000\210\001\001\022\017\n\007se"
+    "q_num\030\002 \001(\r\022\017\n\007success\030\003 \001(\010\022\024\n\014return_v"
+    "alue\030\004 \001(\005\022+\n\nmenu_items\030\005 \003(\0132\027.moqi.pr"
+    "otocol.MenuItem\022\032\n\022composition_string\030\006 "
+    "\001(\t\022\025\n\rcommit_string\030\007 \001(\t\022\026\n\016candidate_"
+    "list\030\010 \003(\t\022\027\n\017show_candidates\030\t \001(\010\022\022\n\nc"
+    "ursor_pos\030\n \001(\005\022\032\n\022composition_cursor\030\013 "
+    "\001(\005\022\035\n\020candidate_cursor\030\014 \001(\005H\001\210\001\001\022\021\n\tse"
+    "l_start\030\r \001(\005\022\017\n\007sel_end\030\016 \001(\005\022\024\n\014set_se"
+    "l_keys\030\017 \001(\t\0225\n\014customize_ui\030\020 \001(\0132\032.moq"
+    "i.protocol.CustomizeUiH\002\210\001\001\022-\n\nadd_butto"
+    "n\030\021 \003(\0132\031.moqi.protocol.ButtonInfo\022\025\n\rre"
+    "move_button\030\022 \003(\t\0220\n\rchange_button\030\023 \003(\013"
+    "2\031.moqi.protocol.ButtonInfo\0227\n\014show_mess"
+    "age\030\024 \001(\0132\034.moqi.protocol.MessageWindowH"
+    "\003\210\001\001\022\024\n\014hide_message\030\025 \001(\010\022\025\n\ropen_keybo"
+    "ard\030\026 \001(\010\0226\n\021add_preserved_key\030\027 \003(\0132\033.m"
+    "oqi.protocol.PreservedKey\022\034\n\024remove_pres"
+    "erved_key\030\030 \003(\t\022\r\n\005error\030\031 \001(\t\022\?\n\021tray_n"
+    "otification\030\032 \001(\0132\037.moqi.protocol.TrayNo"
+    "tificationH\004\210\001\001\0228\n\021candidate_entries\030\033 \003"
+    "(\0132\035.moqi.protocol.CandidateEntryB\014\n\n_cl"
+    "ient_idB\023\n\021_candidate_cursorB\017\n\r_customi"
+    "ze_uiB\017\n\r_show_messageB\024\n\022_tray_notifica"
+    "tion*\214\004\n\006Method\022\026\n\022METHOD_UNSPECIFIED\020\000\022"
+    "\017\n\013METHOD_INIT\020\001\022\020\n\014METHOD_CLOSE\020\002\022\026\n\022ME"
+    "THOD_ON_ACTIVATE\020\003\022\030\n\024METHOD_ON_DEACTIVA"
+    "TE\020\004\022\032\n\026METHOD_FILTER_KEY_DOWN\020\005\022\026\n\022METH"
+    "OD_ON_KEY_DOWN\020\006\022\030\n\024METHOD_FILTER_KEY_UP"
+    "\020\007\022\024\n\020METHOD_ON_KEY_UP\020\010\022\033\n\027METHOD_ON_PR"
+    "ESERVED_KEY\020\t\022\025\n\021METHOD_ON_COMMAND\020\n\022\022\n\016"
+    "METHOD_ON_MENU\020\013\022!\n\035METHOD_ON_COMPARTMEN"
+    "T_CHANGED\020\014\022%\n!METHOD_ON_KEYBOARD_STATUS"
+    "_CHANGED\020\r\022$\n METHOD_ON_COMPOSITION_TERM"
+    "INATED\020\016\022$\n METHOD_ON_LANG_PROFILE_ACTIV"
+    "ATED\020\017\022\036\n\032METHOD_HIGHLIGHT_CANDIDATE\020\020\022\033"
+    "\n\027METHOD_SELECT_CANDIDATE\020\021\022\026\n\022METHOD_CH"
+    "ANGE_PAGE\020\022*o\n\nButtonType\022\033\n\027BUTTON_TYPE"
+    "_UNSPECIFIED\020\000\022\026\n\022BUTTON_TYPE_BUTTON\020\001\022\026"
+    "\n\022BUTTON_TYPE_TOGGLE\020\002\022\024\n\020BUTTON_TYPE_ME"
+    "NU\020\003*\245\001\n\024TrayNotificationIcon\022&\n\"TRAY_NO"
+    "TIFICATION_ICON_UNSPECIFIED\020\000\022\037\n\033TRAY_NO"
+    "TIFICATION_ICON_INFO\020\001\022\"\n\036TRAY_NOTIFICAT"
+    "ION_ICON_WARNING\020\002\022 \n\034TRAY_NOTIFICATION_"
+    "ICON_ERROR\020\003B+Z)github.com/gaboolic/moqi"
+    "-ime/proto;moqipbb\006proto3"
 };
 static ::absl::once_flag descriptor_table_proto_2fmoqi_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_proto_2fmoqi_2eproto = {
     false,
     false,
-    4178,
+    4385,
     descriptor_table_protodef_proto_2fmoqi_2eproto,
     "proto/moqi.proto",
     &descriptor_table_proto_2fmoqi_2eproto_once,
@@ -858,7 +869,7 @@ const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL Method_descriptor() {
   return file_level_enum_descriptors_proto_2fmoqi_2eproto[0];
 }
 PROTOBUF_CONSTINIT const uint32_t Method_internal_data_[] = {
-    1048576u, 0u, };
+    1245184u, 0u, };
 const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL ButtonType_descriptor() {
   ::google::protobuf::internal::AssignDescriptors(&descriptor_table_proto_2fmoqi_2eproto);
   return file_level_enum_descriptors_proto_2fmoqi_2eproto[1];
@@ -4775,9 +4786,9 @@ ClientRequest::ClientRequest(
                offsetof(Impl_, seq_num_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, seq_num_),
-           offsetof(Impl_, command_id_) -
+           offsetof(Impl_, page_backward_) -
                offsetof(Impl_, seq_num_) +
-               sizeof(Impl_::command_id_));
+               sizeof(Impl_::page_backward_));
 
   // @@protoc_insertion_point(copy_constructor:moqi.protocol.ClientRequest)
 }
@@ -4798,9 +4809,9 @@ inline void ClientRequest::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, key_event_),
            0,
-           offsetof(Impl_, command_id_) -
+           offsetof(Impl_, page_backward_) -
                offsetof(Impl_, key_event_) +
-               sizeof(Impl_::command_id_));
+               sizeof(Impl_::page_backward_));
 }
 ClientRequest::~ClientRequest() {
   // @@protoc_insertion_point(destructor:moqi.protocol.ClientRequest)
@@ -4878,16 +4889,16 @@ ClientRequest::GetClassData() const {
   return ClientRequest_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 23, 1, 140, 2>
+const ::_pbi::TcParseTable<5, 25, 1, 148, 2>
 ClientRequest::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_._has_bits_),
     0, // no _extensions_
-    23, 248,  // max_field_number, fast_idx_mask
+    25, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4286578688,  // skipmap
+    4261412864,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    23,  // num_field_entries
+    25,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     ClientRequest_class_data_.base(),
@@ -4990,8 +5001,14 @@ ClientRequest::_table_ = {
     {::_pbi::TcParser::FastUS2,
      {442, 6, 0,
       PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.client_id_)}},
-    {::_pbi::TcParser::MiniParse, {}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // optional int32 candidate_index = 24;
+    {::_pbi::TcParser::FastV32S2,
+     {448, 23, 0,
+      PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.candidate_index_)}},
+    // optional bool page_backward = 25;
+    {::_pbi::TcParser::FastV8S2,
+     {456, 24, 0,
+      PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.page_backward_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -5047,12 +5064,16 @@ ClientRequest::_table_ = {
     {PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.is_keyboard_open_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // optional string client_id = 23;
     {PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.client_id_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // optional int32 candidate_index = 24;
+    {PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.candidate_index_), _Internal::kHasBitsOffset + 23, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    // optional bool page_backward = 25;
+    {PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.page_backward_), _Internal::kHasBitsOffset + 24, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::moqi::protocol::KeyEvent>()},
   }},
   {{
-    "\33\0\0\4\0\0\0\0\0\0\0\0\22\16\0\0\0\0\11\0\22\20\0\11"
+    "\33\0\0\4\0\0\0\0\0\0\0\0\22\16\0\0\0\0\11\0\22\20\0\11\0\0\0\0\0\0\0\0"
     "moqi.protocol.ClientRequest"
     "guid"
     "composition_string"
@@ -5103,11 +5124,12 @@ PROTOBUF_NOINLINE void ClientRequest::Clear() {
         reinterpret_cast<char*>(&_impl_.opened_) -
         reinterpret_cast<char*>(&_impl_.seq_num_)) + sizeof(_impl_.opened_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x007f0000U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     ::memset(&_impl_.forced_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.command_id_) -
-        reinterpret_cast<char*>(&_impl_.forced_)) + sizeof(_impl_.command_id_));
+        reinterpret_cast<char*>(&_impl_.candidate_index_) -
+        reinterpret_cast<char*>(&_impl_.forced_)) + sizeof(_impl_.candidate_index_));
   }
+  _impl_.page_backward_ = false;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -5331,6 +5353,20 @@ PROTOBUF_NOINLINE void ClientRequest::Clear() {
     target = stream->WriteStringMaybeAliased(23, _s, target);
   }
 
+  // optional int32 candidate_index = 24;
+  if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        24, this_._internal_candidate_index(), target);
+  }
+
+  // optional bool page_backward = 25;
+  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        25, this_._internal_page_backward(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -5356,6 +5392,7 @@ PROTOBUF_NOINLINE void ClientRequest::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
+  total_size += static_cast<bool>(0x01000000U & cached_has_bits) * 3;
   if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     // repeated string candidate_list = 13;
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000001U)) {
@@ -5457,7 +5494,7 @@ PROTOBUF_NOINLINE void ClientRequest::Clear() {
       }
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x007f0000U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     // bool forced = 9;
     if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (this_._internal_forced() != 0) {
@@ -5501,6 +5538,11 @@ PROTOBUF_NOINLINE void ClientRequest::Clear() {
     if (CheckHasBit(cached_has_bits, 0x00400000U)) {
       total_size += 2 + ::_pbi::WireFormatLite::UInt32Size(
                                       this_._internal_command_id());
+    }
+    // optional int32 candidate_index = 24;
+    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_candidate_index());
     }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -5603,7 +5645,7 @@ void ClientRequest::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x007f0000U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (from._internal_forced() != 0) {
         _this->_impl_.forced_ = from._impl_.forced_;
@@ -5637,6 +5679,12 @@ void ClientRequest::MergeImpl(::google::protobuf::MessageLite& to_msg,
     if (CheckHasBit(cached_has_bits, 0x00400000U)) {
       _this->_impl_.command_id_ = from._impl_.command_id_;
     }
+    if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+      _this->_impl_.candidate_index_ = from._impl_.candidate_index_;
+    }
+  }
+  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+    _this->_impl_.page_backward_ = from._impl_.page_backward_;
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
@@ -5665,8 +5713,8 @@ void ClientRequest::InternalSwap(ClientRequest* PROTOBUF_RESTRICT PROTOBUF_NONNU
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.compartment_guid_, &other->_impl_.compartment_guid_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.client_id_, &other->_impl_.client_id_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.command_id_)
-      + sizeof(ClientRequest::_impl_.command_id_)
+      PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.page_backward_)
+      + sizeof(ClientRequest::_impl_.page_backward_)
       - PROTOBUF_FIELD_OFFSET(ClientRequest, _impl_.key_event_)>(
           reinterpret_cast<char*>(&_impl_.key_event_),
           reinterpret_cast<char*>(&other->_impl_.key_event_));
@@ -5943,7 +5991,7 @@ ServerResponse::_table_ = {
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.composition_cursor_), 19>(),
      {88, 19, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_cursor_)}},
-    // int32 candidate_cursor = 12;
+    // optional int32 candidate_cursor = 12;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ServerResponse, _impl_.candidate_cursor_), 20>(),
      {96, 20, 0,
       PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_cursor_)}},
@@ -6036,7 +6084,7 @@ ServerResponse::_table_ = {
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.cursor_pos_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 composition_cursor = 11;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.composition_cursor_), _Internal::kHasBitsOffset + 19, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
-    // int32 candidate_cursor = 12;
+    // optional int32 candidate_cursor = 12;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.candidate_cursor_), _Internal::kHasBitsOffset + 20, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // int32 sel_start = 13;
     {PROTOBUF_FIELD_OFFSET(ServerResponse, _impl_.sel_start_), _Internal::kHasBitsOffset + 21, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
@@ -6293,13 +6341,11 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
     }
   }
 
-  // int32 candidate_cursor = 12;
+  // optional int32 candidate_cursor = 12;
   if (CheckHasBit(cached_has_bits, 0x00100000U)) {
-    if (this_._internal_candidate_cursor() != 0) {
-      target =
-          ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<12>(
-              stream, this_._internal_candidate_cursor(), target);
-    }
+    target =
+        ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<12>(
+            stream, this_._internal_candidate_cursor(), target);
   }
 
   // int32 sel_start = 13;
@@ -6619,12 +6665,10 @@ PROTOBUF_NOINLINE void ServerResponse::Clear() {
             this_._internal_composition_cursor());
       }
     }
-    // int32 candidate_cursor = 12;
+    // optional int32 candidate_cursor = 12;
     if (CheckHasBit(cached_has_bits, 0x00100000U)) {
-      if (this_._internal_candidate_cursor() != 0) {
-        total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
-            this_._internal_candidate_cursor());
-      }
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this_._internal_candidate_cursor());
     }
     // int32 sel_start = 13;
     if (CheckHasBit(cached_has_bits, 0x00200000U)) {
@@ -6815,9 +6859,7 @@ void ServerResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00100000U)) {
-      if (from._internal_candidate_cursor() != 0) {
-        _this->_impl_.candidate_cursor_ = from._impl_.candidate_cursor_;
-      }
+      _this->_impl_.candidate_cursor_ = from._impl_.candidate_cursor_;
     }
     if (CheckHasBit(cached_has_bits, 0x00200000U)) {
       if (from._internal_sel_start() != 0) {

@@ -64,6 +64,9 @@ public:
 	bool onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session);
 
 	bool onPreservedKey(const GUID& guid);
+	bool highlightCandidate(int index);
+	bool selectCandidate(int index);
+	bool changePage(bool backward);
 
 	bool onCommand(UINT id, Ime::TextService::CommandType type);
 

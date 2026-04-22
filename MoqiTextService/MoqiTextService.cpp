@@ -451,6 +451,24 @@ bool TextService::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	return client_->onKeyUp(keyEvent, session);
 }
 
+bool TextService::highlightCandidate(int index) {
+	if (!client_)
+		return false;
+	return client_->highlightCandidate(index);
+}
+
+bool TextService::selectCandidate(int index) {
+	if (!client_)
+		return false;
+	return client_->selectCandidate(index);
+}
+
+bool TextService::changeCandidatePage(bool backward) {
+	if (!client_)
+		return false;
+	return client_->changePage(backward);
+}
+
 // virtual
 bool TextService::onPreservedKey(const GUID& guid) {
 	if (::IsEqualGUID(guid, kToggleUiLessOverrideGuid)) {
