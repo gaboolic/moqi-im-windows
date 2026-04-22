@@ -2,6 +2,8 @@
 #include "resource.h"
 #include <iostream>
 #include <fstream>
+#include <mutex>
+#include <new>
 #include <vector>
 #include <ShlObj.h>
 #include <Shlwapi.h> // for PathIsRelative
@@ -124,14 +126,24 @@ void logDllMainEvent(const wchar_t* phase, HMODULE module, LPVOID reserved) {
 }
 
 Moqi::ImeModule* g_imeModule = NULL;
+HMODULE g_dllModule = NULL;
+std::mutex g_imeModuleMutex;
+
+Moqi::ImeModule* getOrCreateImeModule() {
+	std::lock_guard<std::mutex> lock(g_imeModuleMutex);
+	if (g_imeModule == nullptr && g_dllModule != nullptr) {
+		logDllMainEvent(L"module_init", g_dllModule, nullptr);
+		g_imeModule = new (std::nothrow) Moqi::ImeModule(g_dllModule);
+	}
+	return g_imeModule;
+}
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
 	switch (ul_reason_for_call) {
 	case DLL_PROCESS_ATTACH:
 		logDllMainEvent(L"process_attach", hModule, lpReserved);
 		::DisableThreadLibraryCalls(hModule); // disable DllMain calls due to new thread creation
-		//::MessageBox(0, L"X!", 0, 0);
-		g_imeModule = new Moqi::ImeModule(hModule);
+		g_dllModule = hModule;
 		break;
 	case DLL_PROCESS_DETACH:
 		logDllMainEvent(L"process_detach", hModule, lpReserved);
@@ -139,21 +151,24 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 			g_imeModule->Release();
 			g_imeModule = NULL;
 		}
+		g_dllModule = NULL;
 		break;
 	}
 	return TRUE;
 }
 
 STDAPI DllCanUnloadNow(void) {
-	return g_imeModule->canUnloadNow();
+	return g_imeModule ? g_imeModule->canUnloadNow() : S_OK;
 }
 
 STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppvObj) {
-	return g_imeModule->getClassObject(rclsid, riid, ppvObj);
+	Moqi::ImeModule* imeModule = getOrCreateImeModule();
+	return imeModule ? imeModule->getClassObject(rclsid, riid, ppvObj) : E_OUTOFMEMORY;
 }
 
 STDAPI DllUnregisterServer(void) {
-	return g_imeModule->unregisterServer();
+	Moqi::ImeModule* imeModule = getOrCreateImeModule();
+	return imeModule ? imeModule->unregisterServer() : E_FAIL;
 }
 
 static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::string& guid, int defaultIconIndex) {
@@ -194,15 +209,19 @@ static inline Ime::LangProfileInfo langProfileFromJson(std::wstring file, std::s
 }
 
 STDAPI DllRegisterServer(void) {
+	Moqi::ImeModule* imeModule = getOrCreateImeModule();
+	if (imeModule == nullptr) {
+		return E_FAIL;
+	}
 	int iconIndex = 0; // use classic icon
 	if(::IsWindows8OrGreater()) {
 		iconIndex = 1; // use Windows 8 style IME icon
     }
 	std::vector<Ime::LangProfileInfo> langProfiles;
 	std::wstring dirPath;
-	for (const auto backendDir: g_imeModule->backendDirs()) {
+	for (const auto backendDir: imeModule->backendDirs()) {
 		std::string backendName = utf16ToUtf8(backendDir.c_str());
-		dirPath = g_imeModule->programDir();
+		dirPath = imeModule->programDir();
 		dirPath += L'\\';
 		dirPath += backendDir;
 		dirPath += L"\\input_methods";
@@ -233,5 +252,5 @@ STDAPI DllRegisterServer(void) {
 			::FindClose(hFind);
 		}
 	}
-	return g_imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
+	return imeModule->registerServer(L"MoqiTextService", langProfiles.data(), langProfiles.size());
 }
