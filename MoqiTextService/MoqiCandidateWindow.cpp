@@ -95,6 +95,89 @@ void appendCandidateWindowLog(const std::wstring& message) {
     stream << formatCandidateWindowLogLine(message) << L"\n";
 }
 
+std::wstring hwndToString(HWND hwnd) {
+    std::wostringstream stream;
+    stream << L"0x" << std::hex << reinterpret_cast<UINT_PTR>(hwnd) << std::dec;
+    return stream.str();
+}
+
+void logCandidateWindowState(const std::wstring& tag, HWND hwnd) {
+    if (!hwnd) {
+        appendCandidateWindowLog(tag + L" hwnd=<null>");
+        return;
+    }
+
+    RECT rect{};
+    ::GetWindowRect(hwnd, &rect);
+    const DWORD style = static_cast<DWORD>(::GetWindowLongPtr(hwnd, GWL_STYLE));
+    const DWORD exStyle = static_cast<DWORD>(::GetWindowLongPtr(hwnd, GWL_EXSTYLE));
+    const HWND owner = reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd, GWLP_HWNDPARENT));
+    const HWND gwOwner = ::GetWindow(hwnd, GW_OWNER);
+    const HWND parent = ::GetParent(hwnd);
+    const HWND root = ::GetAncestor(hwnd, GA_ROOT);
+    const HWND rootOwner = ::GetAncestor(hwnd, GA_ROOTOWNER);
+
+    std::wostringstream log;
+    log << tag
+        << L" hwnd=" << hwndToString(hwnd)
+        << L" visible=" << (::IsWindowVisible(hwnd) ? L"true" : L"false")
+        << L" owner=" << hwndToString(owner)
+        << L" gw_owner=" << hwndToString(gwOwner)
+        << L" parent=" << hwndToString(parent)
+        << L" root=" << hwndToString(root)
+        << L" root_owner=" << hwndToString(rootOwner)
+        << L" style=0x" << std::hex << style
+        << L" exstyle=0x" << exStyle << std::dec
+        << L" rect=(" << rect.left << L"," << rect.top << L"," << rect.right << L"," << rect.bottom << L")";
+    appendCandidateWindowLog(log.str());
+}
+
+HWND normalizeCandidateOwnerWindow(HWND hwnd, bool immersive, const wchar_t* reason) {
+    if (hwnd == nullptr) {
+        return nullptr;
+    }
+
+    const HWND root = ::GetAncestor(hwnd, GA_ROOT);
+    const HWND rootOwner = ::GetAncestor(hwnd, GA_ROOTOWNER);
+    const HWND normalized = immersive ? hwnd : (root != nullptr ? root : hwnd);
+
+    std::wostringstream log;
+    log << L"[normalizeCandidateOwnerWindow] reason=" << reason
+        << L" immersive=" << (immersive ? L"true" : L"false")
+        << L" raw=" << hwndToString(hwnd)
+        << L" root=" << hwndToString(root)
+        << L" root_owner=" << hwndToString(rootOwner)
+        << L" normalized=" << hwndToString(normalized);
+    appendCandidateWindowLog(log.str());
+    return normalized;
+}
+
+void enforceCandidateWindowTopmost(HWND hwnd, bool showWindow, const wchar_t* reason) {
+    if (!hwnd) {
+        return;
+    }
+
+    UINT flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+    if (showWindow) {
+        flags |= SWP_SHOWWINDOW;
+    }
+
+    ::SetLastError(0);
+    const BOOL ok = ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+    const DWORD error = ok ? 0 : ::GetLastError();
+
+    std::wostringstream log;
+    log << L"[enforceCandidateWindowTopmost] reason=" << reason
+        << L" hwnd=" << hwndToString(hwnd)
+        << L" show=" << (showWindow ? L"true" : L"false")
+        << L" ok=" << (ok ? L"true" : L"false");
+    if (!ok) {
+        log << L" last_error=" << error;
+    }
+    appendCandidateWindowLog(log.str());
+    logCandidateWindowState(L"[CandidateWindow::state]", hwnd);
+}
+
 HWND resolveCandidateOwnerWindow(Ime::EditSession* session) {
     HWND hwnd = nullptr;
     const wchar_t* source = L"none";
@@ -168,13 +251,17 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       commentFont_(nullptr) {
     margin_ = 0;
 
-    HWND parent = resolveCandidateOwnerWindow(session);
-    create(parent, WS_POPUP | WS_CLIPCHILDREN,
+    const HWND rawOwner = resolveCandidateOwnerWindow(session);
+    const HWND owner = normalizeCandidateOwnerWindow(rawOwner, service->isImmersive(), L"ctor");
+    create(owner, WS_POPUP | WS_CLIPCHILDREN,
            WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE);
 
     std::wostringstream log;
-    log << L"[CandidateWindow::ctor] hwnd=" << hwnd_ << L" parent=" << parent;
+    log << L"[CandidateWindow::ctor] hwnd=" << hwnd_
+        << L" raw_owner=" << rawOwner
+        << L" owner=" << owner;
     appendCandidateWindowLog(log.str());
+    logCandidateWindowState(L"[CandidateWindow::ctor.state]", hwnd_);
 }
 
 CandidateWindow::~CandidateWindow(void) {
@@ -200,13 +287,18 @@ STDMETHODIMP CandidateWindow::Show(BOOL bShow) {
     shown_ = bShow;
     {
         std::wostringstream log;
-        log << L"[CandidateWindow::Show] bShow=" << bShow << L" hwnd=" << hwnd_;
+        log << L"[CandidateWindow::Show] bShow=" << bShow
+            << L" hwnd=" << hwnd_
+            << L" owner=" << reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd_, GWLP_HWNDPARENT))
+            << L" gw_owner=" << ::GetWindow(hwnd_, GW_OWNER);
         appendCandidateWindowLog(log.str());
     }
     if (shown_) {
         show();
+        enforceCandidateWindowTopmost(hwnd_, true, L"Show(TRUE)");
     } else {
         hide();
+        logCandidateWindowState(L"[CandidateWindow::hide.state]", hwnd_);
     }
     return S_OK;
 }
@@ -427,25 +519,41 @@ void CandidateWindow::syncOwner(Ime::EditSession* session) {
         return;
     }
 
-    HWND owner = resolveCandidateOwnerWindow(session);
+    const HWND rawOwner = resolveCandidateOwnerWindow(session);
+    const HWND owner = normalizeCandidateOwnerWindow(rawOwner, textService_->isImmersive(), L"syncOwner");
     if (owner == nullptr) {
         return;
     }
 
-    HWND currentOwner =
+    const HWND currentOwner =
         reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd_, GWLP_HWNDPARENT));
-    if (currentOwner == owner) {
-        return;
+    const HWND currentGwOwner = ::GetWindow(hwnd_, GW_OWNER);
+    bool ownerUpdated = false;
+    DWORD ownerError = 0;
+    if (currentOwner != owner) {
+        ::SetLastError(0);
+        ::SetWindowLongPtr(hwnd_, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+        ownerError = ::GetLastError();
+        ownerUpdated = ownerError == 0;
     }
 
-    ::SetWindowLongPtr(hwnd_, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+    if (shown_) {
+        enforceCandidateWindowTopmost(hwnd_, true, L"syncOwner");
+    }
 
     std::wostringstream log;
     log << L"[CandidateWindow::syncOwner] hwnd=" << hwnd_
         << L" old_owner=" << currentOwner
+        << L" old_gw_owner=" << currentGwOwner
+        << L" raw_owner=" << rawOwner
         << L" new_owner=" << owner
-        << L" shown=" << shown_;
+        << L" shown=" << shown_
+        << L" owner_updated=" << (ownerUpdated ? L"true" : L"false");
+    if (ownerError != 0) {
+        log << L" last_error=" << ownerError;
+    }
     appendCandidateWindowLog(log.str());
+    logCandidateWindowState(L"[CandidateWindow::syncOwner.state]", hwnd_);
 }
 
 void CandidateWindow::recalculateSize() {
