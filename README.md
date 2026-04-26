@@ -13,7 +13,7 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 默认输入法：[`白霜拼音`](https://github.com/gaboolic/rime-frost)。
 
 为什么选择白霜拼音？
-1. 白霜拼音经过评测，词频准确度是最高的，超过了商业输入法。
+1. 白霜拼音经过评测，词频准确度是最高的，超过了商业输入法。[查看rime各方案评测结果](https://github.com/gaboolic/rime-schema-compare/blob/main/report/latest.md) 
 2. 白霜拼音作者也是我，有问题改起来方便。
 
 ## 快速开始
