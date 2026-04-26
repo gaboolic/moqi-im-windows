@@ -8,9 +8,13 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 项目 TSF 层核心依赖：[`libIME2`](https://github.com/EasyIME/libIME2)。很大程度上参考了[PIME](https://github.com/EasyIME/PIME) 以及 [小狼毫](https://github.com/rime/weasel) 项目。
 
-核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。
+核心引擎：[`moqi-ime`](https://github.com/gaboolic/moqi-ime)。使用Go语言实现。
 
-默认输入法：[`白霜拼音`](https://github.com/gaboolic/rime-frost)
+默认输入法：[`白霜拼音`](https://github.com/gaboolic/rime-frost)。
+
+为什么选择白霜拼音？
+1. 白霜拼音经过评测，词频准确度是最高的，超过了商业输入法。
+2. 白霜拼音作者也是我，有问题改起来方便。
 
 ## 快速开始
 下载安装包：[moqi-im-windows-setup.exe](https://github.com/gaboolic/moqi-im-windows/releases)
@@ -19,10 +23,11 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 - 托盘切换输入法状态：中英文 全半角 简繁
 - 外观编辑：主题皮肤切换、字体调整、主题色切换、自定义快捷键
 - 默认使用白霜拼音，支持切换方案集、切换输入方案、更新配置
+- 修改了librime的组句算法，支持输出多条整句候选，正确率大大提升
 - 置顶短语、超级简拼
 - 输入设置：自动插入成对符号、分号键次选
-- 原生ai功能：支持整句优化、翻译、问答等，只有想不到没有做不到。编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
-- 修改了librime的组句算法，支持输出多条整句候选，正确率大大提升
+- 原生ai功能：支持整句优化、翻译、问答等，只有想不到没有做不到。编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键。为了方便体验，已在安装包里加了默认配置，可以替换成用户自己的apikey
+
 ```
 {
   "api": {
