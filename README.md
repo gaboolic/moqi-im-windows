@@ -1,4 +1,6 @@
-# Moqi IM for Windows
+# 墨奇输入法 Windows版
+
+墨染清风书雅韵，奇思逸趣入诗文。
 
 Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Text Services Framework (TSF)**，并提供候选窗、语言栏按钮、组合串上屏等 Windows 平台能力。
 
