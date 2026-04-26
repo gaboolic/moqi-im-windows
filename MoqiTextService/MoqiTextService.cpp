@@ -708,6 +708,14 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 		appendCandidateWindowLog(L"[TextService::updateCandidates] inputRect unavailable");
 	}
 
+	if (showingCandidates_) {
+		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
+		std::wostringstream log;
+		log << L"[TextService::updateCandidates] ensured visibility should_show_ui="
+			<< boolText(shouldShowCandidateWindowUI_);
+		appendCandidateWindowLog(log.str());
+	}
+
 	if (validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {

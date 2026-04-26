@@ -908,12 +908,15 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
     hasVisibleCandidates = !candidates.empty();
   }
 
-  const bool shouldRestoreCandidatesWithoutExplicitShow =
-      !hasExplicitShowCandidates && hasVisibleCandidates &&
-      (textService_->pendingCandidateRecovery() || textService_->showingCandidates() ||
-       textService_->isComposing() || !textService_->candidatePreedit().empty());
+  const bool hasCandidateRecoveryState =
+      textService_->pendingCandidateRecovery() || textService_->showingCandidates() ||
+      textService_->isComposing() || !textService_->candidatePreedit().empty();
+  const bool shouldRestoreCandidates =
+      hasVisibleCandidates && hasCandidateRecoveryState &&
+      (!hasExplicitShowCandidates || !explicitShowCandidates);
+  const bool shouldShowCandidates = explicitShowCandidates || shouldRestoreCandidates;
 
-  if (explicitShowCandidates || shouldRestoreCandidatesWithoutExplicitShow) {
+  if (shouldShowCandidates) {
     // start composition if we are not composing.
     // this is required to correctly position the candidate window
     if (!textService_->isComposing()) {
@@ -924,7 +927,8 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 
   if (hasCandidatePayload) {
     textService_->updateCandidates(session);
-    if ((hasExplicitShowCandidates && !explicitShowCandidates) || !hasVisibleCandidates) {
+    if (!hasVisibleCandidates ||
+        (hasExplicitShowCandidates && !explicitShowCandidates && !shouldRestoreCandidates)) {
       textService_->hideCandidates();
     }
   } else if (hasExplicitShowCandidates && !explicitShowCandidates) {

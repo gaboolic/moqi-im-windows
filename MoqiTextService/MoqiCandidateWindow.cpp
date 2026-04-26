@@ -522,6 +522,15 @@ void CandidateWindow::syncOwner(Ime::EditSession* session) {
     const HWND rawOwner = resolveCandidateOwnerWindow(session);
     const HWND owner = normalizeCandidateOwnerWindow(rawOwner, textService_->isImmersive(), L"syncOwner");
     if (owner == nullptr) {
+        std::wostringstream log;
+        log << L"[CandidateWindow::syncOwner] owner unavailable hwnd=" << hwnd_
+            << L" current_owner="
+            << reinterpret_cast<HWND>(::GetWindowLongPtr(hwnd_, GWLP_HWNDPARENT))
+            << L" current_gw_owner=" << ::GetWindow(hwnd_, GW_OWNER)
+            << L" raw_owner=" << rawOwner
+            << L" shown=" << shown_;
+        appendCandidateWindowLog(log.str());
+        logCandidateWindowState(L"[CandidateWindow::syncOwner.owner_unavailable.state]", hwnd_);
         return;
     }
 

@@ -20,7 +20,7 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 - 置顶短语、超级简拼
 - 输入设置：自动插入成对符号、分号键次选
 - 原生ai功能：支持整句优化、翻译、问答等，只有想不到没有做不到。编辑C:\Users\用户名\AppData\Roaming\Moqi\Rime\ai_config.json 可以接入ai大模型以及自定义提示词、快捷键
-
+- 修改了librime的组句算法，支持输出多条整句候选，正确率大大提升
 ```
 {
   "api": {
