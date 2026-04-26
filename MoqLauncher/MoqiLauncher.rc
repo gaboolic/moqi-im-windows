@@ -12,10 +12,10 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Chinese (Traditional, Taiwan) resources
+// Chinese (Simplified, PRC) resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHT)
-LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ IDI_MOQI_LAUNCHER       ICON    "..\\installer\\stage\\win32\\MoqiIM\\moqi-ime\\
 // String Table
 //
 
-#endif    // Chinese (Traditional, Taiwan) resources
+#endif    // Chinese (Simplified, PRC) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

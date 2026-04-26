@@ -49,7 +49,10 @@ if(MSVC)
         _HAS_DEPRECATED_RESULT_OF=1
         _SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING
     )
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zc:char8_t->)
+    add_compile_options(
+        $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+        $<$<COMPILE_LANGUAGE:CXX>:/Zc:char8_t->
+    )
 endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
