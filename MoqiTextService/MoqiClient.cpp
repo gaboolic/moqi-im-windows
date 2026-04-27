@@ -666,8 +666,7 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
         textService_->showCandidates(session);
         textService_->updateCandidates(session);
       }
-      if (textService_->hasCandidateWindow()) {
-        textService_->refreshCandidates();
+      if (textService_->hasCandidateWindow() && compositionString.empty()) {
         textService_->updateCandidatesWindow(session);
       }
       if (textService_->messageWindow_ != nullptr) {
@@ -938,8 +937,9 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
   const auto &candidateCursorVal = msg["candidateCursor"];
   if (candidateCursorVal.isInt()) {
     if (textService_->hasCandidateWindow()) {
-      textService_->setCandidateCursor(candidateCursorVal.asInt());
-      textService_->refreshCandidates();
+      if (textService_->setCandidateCursor(candidateCursorVal.asInt())) {
+        textService_->refreshCandidates();
+      }
     }
   }
 }

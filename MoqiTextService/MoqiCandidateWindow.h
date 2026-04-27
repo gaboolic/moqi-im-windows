@@ -20,6 +20,14 @@ struct CandidateUiItem {
     std::wstring text;
     std::wstring comment;
 
+    bool operator==(const CandidateUiItem& other) const {
+        return text == other.text && comment == other.comment;
+    }
+
+    bool operator!=(const CandidateUiItem& other) const {
+        return !(*this == other);
+    }
+
     std::wstring combinedText() const {
         if (comment.empty()) {
             return text;

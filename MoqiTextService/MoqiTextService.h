@@ -235,6 +235,7 @@ public:
 		inlinePreedit_ = inlinePreedit;
 		if (candidateWindow_) {
 			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
+			invalidateCandidateUiCache();
 		}
 	}
 
@@ -255,6 +256,9 @@ public:
 	}
 
 	void setCandidatePreedit(std::wstring preedit) {
+		if (candidatePreedit_ == preedit) {
+			return;
+		}
 		candidatePreedit_ = preedit;
 		if (candidateWindow_) {
 			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
@@ -279,7 +283,7 @@ public:
 	bool changeCandidatePage(bool backward);
 
 	void refreshCandidates();
-	void setCandidateCursor(int cursor);
+	bool setCandidateCursor(int cursor);
 	bool hasCandidateWindow() const {
 		return candidateWindow_ != nullptr;
 	}
@@ -304,6 +308,10 @@ private:
 	void applyCandidateAppearanceNow();
 	void refreshCandidateAppearance();
 	void applyUiLessOverrideState();
+	void invalidateCandidateUiCache();
+	bool isCandidateContentApplied(const std::wstring& renderedPreedit) const;
+	void markCandidateContentApplied(const std::wstring& renderedPreedit);
+	bool moveCandidateWindowToInputRect(Ime::EditSession* session, const wchar_t* reason, bool throttleSamePosition);
 
 	void closeClient();
 
@@ -320,6 +328,15 @@ private:
 	bool showingCandidates_;
 	bool pendingCandidateRecovery_;
 	std::vector<CandidateUiItem> candidates_; // current candidate list
+	std::vector<CandidateUiItem> appliedCandidates_;
+	std::wstring appliedSelKeys_;
+	std::wstring appliedCandidatePreedit_;
+	bool hasAppliedCandidateContent_;
+	bool hasAppliedCandidateCursor_;
+	int appliedCandidateCursor_;
+	bool hasLastCandidateWindowPos_;
+	POINT lastCandidateWindowPos_;
+	ULONGLONG lastCandidateWindowMoveTick_;
 	std::unique_ptr<Ime::MessageWindow> messageWindow_;
 	UINT messageTimerId_;
 	HFONT font_;

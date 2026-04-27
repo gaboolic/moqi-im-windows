@@ -45,6 +45,7 @@ std::wstring processBaseName(const std::wstring& imagePath);
 std::wstring timestampNow();
 std::wstring formatDebugLogLine(const std::wstring& message);
 constexpr wchar_t kDefaultCommentFontFace[] = L"Consolas";
+constexpr ULONGLONG kCandidateWindowMoveThrottleMs = 50;
 
 // {3FCBE4CC-CC03-4BD4-B39F-3B6B0BEA5D90}
 const GUID kToggleUiLessOverrideGuid = {
@@ -279,6 +280,12 @@ TextService::TextService(ImeModule* module):
 	candidateWindow_(nullptr),
 	showingCandidates_(false),
 	pendingCandidateRecovery_(false),
+	hasAppliedCandidateContent_(false),
+	hasAppliedCandidateCursor_(false),
+	appliedCandidateCursor_(0),
+	hasLastCandidateWindowPos_(false),
+	lastCandidateWindowPos_{0, 0},
+	lastCandidateWindowMoveTick_(0),
 	updateFont_(false),
 	candPerRow_(1),
 	candSpacing_(20),
@@ -658,6 +665,7 @@ void TextService::destroyCandidateWindow() {
 	showingCandidates_ = false;
 	pendingCandidateRecovery_ = false;
 	candidatePreedit_.clear();
+	invalidateCandidateUiCache();
 }
 
 void TextService::updateCandidates(Ime::EditSession* session) {
@@ -670,43 +678,37 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 		return;
 	}
 	candidateWindow_->syncOwner(session);
-	candidateWindow_->clear();
 
 	applyCandidateAppearanceNow();
 
-	candidateWindow_->setUseCursor(candUseCursor_);
-	candidateWindow_->setCandPerRow(candPerRow_);
-	candidateWindow_->setCandSpacing(candSpacing_);
-	candidateWindow_->setBackgroundColor(candBackgroundColor_);
-	candidateWindow_->setHighlightColor(candHighlightColor_);
-	candidateWindow_->setTextColor(candTextColor_);
-	candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
-	candidateWindow_->setCommentColor(candCommentColor_);
-	candidateWindow_->setCommentHighlightColor(candCommentHighlightColor_);
-	candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
+	const std::wstring renderedPreedit = effectiveInlinePreedit() ? L"" : candidatePreedit_;
+	const bool contentChanged = !isCandidateContentApplied(renderedPreedit);
+	if (contentChanged) {
+		candidateWindow_->clear();
+		candidateWindow_->setUseCursor(candUseCursor_);
+		candidateWindow_->setCandPerRow(candPerRow_);
+		candidateWindow_->setCandSpacing(candSpacing_);
+		candidateWindow_->setBackgroundColor(candBackgroundColor_);
+		candidateWindow_->setHighlightColor(candHighlightColor_);
+		candidateWindow_->setTextColor(candTextColor_);
+		candidateWindow_->setHighlightTextColor(candHighlightTextColor_);
+		candidateWindow_->setCommentColor(candCommentColor_);
+		candidateWindow_->setCommentHighlightColor(candCommentHighlightColor_);
+		candidateWindow_->setPreeditText(renderedPreedit);
 
-	// the items in the candidate list should not exist the
-	// number of available keys used to select them.
-	assert(candidates_.size() <= selKeys_.size());
-	for (int i = 0; i < candidates_.size(); ++i) {
-		candidateWindow_->add(candidates_[i], selKeys_[i]);
+		// the items in the candidate list should not exist the
+		// number of available keys used to select them.
+		assert(candidates_.size() <= selKeys_.size());
+		for (int i = 0; i < candidates_.size(); ++i) {
+			candidateWindow_->add(candidates_[i], selKeys_[i]);
+		}
+		candidateWindow_->recalculateSize();
+		candidateWindow_->refresh();
+		markCandidateContentApplied(renderedPreedit);
+		hasAppliedCandidateCursor_ = false;
 	}
-	candidateWindow_->recalculateSize();
-	candidateWindow_->refresh();
 
-	RECT textRect;
-	// get the position of composition area from TSF
-	if (inputRect(session, &textRect)) {
-		// FIXME: where should we put the candidate window?
-		candidateWindow_->move(textRect.left, textRect.bottom);
-		std::wostringstream log;
-		log << L"[TextService::updateCandidates] moved left=" << textRect.left
-			<< L" bottom=" << textRect.bottom;
-		appendCandidateWindowLog(log.str());
-	}
-	else {
-		appendCandidateWindowLog(L"[TextService::updateCandidates] inputRect unavailable");
-	}
+	moveCandidateWindowToInputRect(session, L"updateCandidates", true);
 
 	if (showingCandidates_) {
 		candidateWindow_->Show(shouldShowCandidateWindowUI_ ? TRUE : FALSE);
@@ -716,7 +718,7 @@ void TextService::updateCandidates(Ime::EditSession* session) {
 		appendCandidateWindowLog(log.str());
 	}
 
-	if (validCandidateListElementId_) {
+	if (contentChanged && validCandidateListElementId_) {
 		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
 		if (elementMgr) {
 			elementMgr->UpdateUIElement(candidateListElementId_);
@@ -730,19 +732,7 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
     }
     if (candidateWindow_) {
         candidateWindow_->syncOwner(session);
-        RECT textRect;
-        // get the position of composition area from TSF
-        if (inputRect(session, &textRect)) {
-            // FIXME: where should we put the candidate window?
-            candidateWindow_->move(textRect.left, textRect.bottom);
-			std::wostringstream log;
-			log << L"[TextService::updateCandidatesWindow] moved left=" << textRect.left
-				<< L" bottom=" << textRect.bottom;
-			appendCandidateWindowLog(log.str());
-        }
-		else {
-			appendCandidateWindowLog(L"[TextService::updateCandidatesWindow] inputRect unavailable");
-		}
+		moveCandidateWindowToInputRect(session, L"updateCandidatesWindow", true);
     }
 }
 
@@ -758,13 +748,83 @@ void TextService::refreshCandidates() {
 	}
 }
 
-void TextService::setCandidateCursor(int cursor) {
+bool TextService::setCandidateCursor(int cursor) {
 	if (!tsfCandidateUiEnabled()) {
-		return;
+		return false;
 	}
 	if (candidateWindow_) {
+		if (hasAppliedCandidateCursor_ && appliedCandidateCursor_ == cursor) {
+			return false;
+		}
 		candidateWindow_->setCurrentSel(cursor);
+		appliedCandidateCursor_ = cursor;
+		hasAppliedCandidateCursor_ = true;
+		return true;
 	}
+	return false;
+}
+
+void TextService::invalidateCandidateUiCache() {
+	appliedCandidates_.clear();
+	appliedSelKeys_.clear();
+	appliedCandidatePreedit_.clear();
+	hasAppliedCandidateContent_ = false;
+	hasAppliedCandidateCursor_ = false;
+	appliedCandidateCursor_ = 0;
+	hasLastCandidateWindowPos_ = false;
+	lastCandidateWindowPos_ = {0, 0};
+	lastCandidateWindowMoveTick_ = 0;
+}
+
+bool TextService::isCandidateContentApplied(const std::wstring& renderedPreedit) const {
+	return hasAppliedCandidateContent_ &&
+		appliedCandidatePreedit_ == renderedPreedit &&
+		appliedCandidates_ == candidates_ &&
+		appliedSelKeys_ == selKeys_;
+}
+
+void TextService::markCandidateContentApplied(const std::wstring& renderedPreedit) {
+	appliedCandidatePreedit_ = renderedPreedit;
+	appliedCandidates_ = candidates_;
+	appliedSelKeys_ = selKeys_;
+	hasAppliedCandidateContent_ = true;
+}
+
+bool TextService::moveCandidateWindowToInputRect(Ime::EditSession* session, const wchar_t* reason, bool throttleSamePosition) {
+	if (!candidateWindow_) {
+		return false;
+	}
+
+	RECT textRect;
+	// get the position of composition area from TSF
+	if (!inputRect(session, &textRect)) {
+		std::wstring tag = L"[TextService::";
+		tag += reason;
+		tag += L"] inputRect unavailable";
+		appendCandidateWindowLog(tag);
+		return false;
+	}
+
+	const POINT nextPos{textRect.left, textRect.bottom};
+	const ULONGLONG now = ::GetTickCount64();
+	if (throttleSamePosition && hasLastCandidateWindowPos_ &&
+		lastCandidateWindowPos_.x == nextPos.x &&
+		lastCandidateWindowPos_.y == nextPos.y &&
+		now - lastCandidateWindowMoveTick_ < kCandidateWindowMoveThrottleMs) {
+		return false;
+	}
+
+	// FIXME: where should we put the candidate window?
+	candidateWindow_->move(nextPos.x, nextPos.y);
+	hasLastCandidateWindowPos_ = true;
+	lastCandidateWindowPos_ = nextPos;
+	lastCandidateWindowMoveTick_ = now;
+
+	std::wostringstream log;
+	log << L"[TextService::" << reason << L"] moved left=" << nextPos.x
+		<< L" bottom=" << nextPos.y;
+	appendCandidateWindowLog(log.str());
+	return true;
 }
 
 // show candidate list window
@@ -806,6 +866,7 @@ void TextService::hideCandidates(bool preserveRecoveryState) {
 		candidateWindow_->Show(FALSE);
 		candidateWindow_->clear();
 	}
+	invalidateCandidateUiCache();
 	showingCandidates_ = false;
 	pendingCandidateRecovery_ = preserveRecoveryState;
 	std::wostringstream log;
