@@ -62,16 +62,22 @@ Windows 端的输入法前端，负责把 `moqi-ime` 后端接入 **Microsoft Te
 
 ## 功能演示
 ai功能演示：https://github.com/gaboolic/moqi-im-windows/issues/4
+![输入0-ai](others/imgs/input-ai.gif)
+![输入1-ai](others/imgs/input-zise.png)
 
+外观配置、切换方案
 ![菜单主题](others/imgs/caidan-zhuti.png)
 ![菜单方案集](others/imgs/caidan-schemas.png)
 ![菜单方案](others/imgs/caidan-schema.png)
-![输入0-ai](others/imgs/input-ai.gif)
-![输入1-ai](others/imgs/input-zise.png)
-![输入2](others/imgs/input-mo.png)
-![输入3](others/imgs/input-qi.png)
+
+多整句、句中任意辅助码演示
 ![输入整句组句](others/imgs/input-zuju.png)
 ![输入4-句中辅助码](others/imgs/input-liuxingyusamantianji.gif)
+
+一些输入效果
+![输入2](others/imgs/input-mo.png)
+![输入3](others/imgs/input-qi.png)
+
 
 ## 运行架构
 
