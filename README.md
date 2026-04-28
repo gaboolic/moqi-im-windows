@@ -70,8 +70,9 @@ ai功能演示：https://github.com/gaboolic/moqi-im-windows/issues/4
 ![输入1-ai](others/imgs/input-zise.png)
 ![输入2](others/imgs/input-mo.png)
 ![输入3](others/imgs/input-qi.png)
-
 ![输入整句组句](others/imgs/input-zuju.png)
+![输入4-句中辅助码](others/imgs/input-liuxingyusamantianji.gif)
+
 ## 运行架构
 
 ```
