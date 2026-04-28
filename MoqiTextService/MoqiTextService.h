@@ -303,6 +303,7 @@ private:
 
 	void createCandidateWindow(Ime::EditSession* session);
 	void destroyCandidateWindow();
+	bool ensureCandidateWindowValid(const wchar_t* reason);
 	int candFontHeight();
 	int candCommentFontHeight();
 	void applyCandidateAppearanceNow();

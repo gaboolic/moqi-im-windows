@@ -604,11 +604,38 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 	closeClient();
 }
 
+bool TextService::ensureCandidateWindowValid(const wchar_t* reason) {
+	if (!candidateWindow_) {
+		return false;
+	}
+	if (candidateWindow_->isWindow()) {
+		return true;
+	}
+
+	std::wostringstream log;
+	log << L"[TextService::" << reason << L"] candidate window hwnd invalid; recreating";
+	appendCandidateWindowLog(log.str());
+
+	if (validCandidateListElementId_) {
+		auto elementMgr = Ime::ComPtr<ITfUIElementMgr>::queryFrom(threadMgr());
+		if (elementMgr) {
+			elementMgr->EndUIElement(candidateListElementId_);
+		}
+		candidateListElementId_ = 0;
+		validCandidateListElementId_ = false;
+	}
+
+	candidateWindow_ = nullptr;
+	invalidateCandidateUiCache();
+	return false;
+}
+
 void TextService::createCandidateWindow(Ime::EditSession* session) {
 	if (!tsfCandidateUiEnabled()) {
 		appendCandidateWindowLog(L"[TextService::createCandidateWindow] skipped by process policy");
 		return;
 	}
+	ensureCandidateWindowValid(L"createCandidateWindow");
 	if (!candidateWindow_) {
 		appendCandidateWindowLog(L"[TextService::createCandidateWindow] creating");
 		shouldShowCandidateWindowUI_ = !effectiveUiLess();
@@ -730,6 +757,7 @@ void TextService::updateCandidatesWindow(Ime::EditSession* session) {
     if (!tsfCandidateUiEnabled()) {
         return;
     }
+    ensureCandidateWindowValid(L"updateCandidatesWindow");
     if (candidateWindow_) {
         candidateWindow_->syncOwner(session);
 		moveCandidateWindowToInputRect(session, L"updateCandidatesWindow", true);
@@ -861,7 +889,7 @@ void TextService::hideCandidates(bool preserveRecoveryState) {
 		appendCandidateWindowLog(L"[TextService::hideCandidates] skipped by process policy");
 		return;
 	}
-	if (candidateWindow_) {
+	if (ensureCandidateWindowValid(L"hideCandidates")) {
 		candidateWindow_->setPreeditText(L"");
 		candidateWindow_->Show(FALSE);
 		candidateWindow_->clear();
