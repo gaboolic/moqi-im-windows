@@ -80,6 +80,8 @@ public:
 
 	virtual void onLangProfileDeactivated(REFIID lang);
 
+	virtual void onLayoutChange(ITfContext* context, TfLayoutCode code, ITfContextView* view) override;
+
 	// methods called by Moqi::Client
 	int candPerRow() const {
 		return candPerRow_;

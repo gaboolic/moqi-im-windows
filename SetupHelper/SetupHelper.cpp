@@ -438,30 +438,6 @@ bool RenameFileForDeleteOnReboot(const fs::path& path, bool& reboot_required) {
   return false;
 }
 
-bool ScheduleDeleteOnReboot(const fs::path& path, std::wstring* error) {
-  if (!fs::exists(path)) {
-    if (error != nullptr) {
-      error->clear();
-    }
-    return true;
-  }
-
-  const std::wstring normalized_path =
-      NormalizePathForPendingOperation(path.wstring());
-  if (MoveFileExW(normalized_path.c_str(), nullptr,
-                  MOVEFILE_DELAY_UNTIL_REBOOT) == TRUE) {
-    if (error != nullptr) {
-      error->clear();
-    }
-    return true;
-  }
-
-  if (error != nullptr) {
-    *error = FormatWindowsErrorMessage(GetLastError());
-  }
-  return false;
-}
-
 bool ScheduleReplaceOnReboot(const fs::path& source,
                             const fs::path& destination,
                             bool& reboot_required,
@@ -473,17 +449,6 @@ bool ScheduleReplaceOnReboot(const fs::path& source,
     if (error != nullptr) {
       *error = L"Failed to create staged reboot copy " + staged_source.wstring() +
                L" (" + FormatWindowsErrorMessage(GetLastError()) + L").";
-    }
-    return false;
-  }
-
-  std::wstring delete_error;
-  if (!ScheduleDeleteOnReboot(destination, &delete_error)) {
-    std::error_code ec;
-    fs::remove(staged_source, ec);
-    if (error != nullptr) {
-      *error = L"Failed to schedule delete-on-reboot for " +
-               destination.wstring() + L" (" + delete_error + L").";
     }
     return false;
   }

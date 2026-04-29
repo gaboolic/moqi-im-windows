@@ -605,6 +605,29 @@ void TextService::onLangProfileDeactivated(REFIID lang) {
 	closeClient();
 }
 
+void TextService::onLayoutChange(ITfContext* context, TfLayoutCode code, ITfContextView* view) {
+	if (code != TF_LC_CHANGE || !context || !hasCandidateWindow()) {
+		return;
+	}
+
+	auto editSession = Ime::ComPtr<Ime::EditSession>::make(
+		Ime::ComPtr<ITfContext>(context),
+		[this](Ime::EditSession* session, TfEditCookie cookie) {
+			updateCandidatesWindow(session);
+			updateMessageWindow(session);
+		}
+	);
+
+	HRESULT sessionResult = E_FAIL;
+	context->RequestEditSession(clientId(), editSession, TF_ES_ASYNCDONTCARE | TF_ES_READ, &sessionResult);
+
+	std::wostringstream log;
+	log << L"[onLayoutChange] code=" << code
+		<< L" requested=" << boolText(SUCCEEDED(sessionResult))
+		<< L" has_candidate_window=" << boolText(hasCandidateWindow());
+	logDebug(log.str());
+}
+
 bool TextService::ensureCandidateWindowValid(const wchar_t* reason) {
 	if (!candidateWindow_) {
 		return false;
