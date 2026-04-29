@@ -28,6 +28,7 @@
 #include "MoqiCandidateWindow.h"
 #include <sys/types.h>
 #include "MoqiClient.h"
+#include <algorithm>
 #include <memory>
 
 
@@ -235,6 +236,7 @@ public:
 		inlinePreedit_ = inlinePreedit;
 		if (candidateWindow_) {
 			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
+			candidateWindow_->setPreeditCursor(effectiveInlinePreedit() ? 0 : candidatePreeditCursor_);
 			invalidateCandidateUiCache();
 		}
 	}
@@ -260,8 +262,23 @@ public:
 			return;
 		}
 		candidatePreedit_ = preedit;
+		if (candidatePreeditCursor_ > static_cast<int>(candidatePreedit_.length())) {
+			candidatePreeditCursor_ = static_cast<int>(candidatePreedit_.length());
+		}
 		if (candidateWindow_) {
 			candidateWindow_->setPreeditText(effectiveInlinePreedit() ? L"" : candidatePreedit_);
+			candidateWindow_->setPreeditCursor(effectiveInlinePreedit() ? 0 : candidatePreeditCursor_);
+		}
+	}
+
+	void setCandidatePreeditCursor(int cursor) {
+		cursor = (std::max)(0, (std::min)(cursor, static_cast<int>(candidatePreedit_.length())));
+		if (candidatePreeditCursor_ == cursor) {
+			return;
+		}
+		candidatePreeditCursor_ = cursor;
+		if (candidateWindow_) {
+			candidateWindow_->setPreeditCursor(effectiveInlinePreedit() ? 0 : candidatePreeditCursor_);
 		}
 	}
 
@@ -361,6 +378,7 @@ private:
 	bool autoPairQuotes_;
 	bool suppressNextCompositionTerminatedNotification_;
 	std::wstring candidatePreedit_;
+	int candidatePreeditCursor_;
 
 	HMENU popupMenu_;
 

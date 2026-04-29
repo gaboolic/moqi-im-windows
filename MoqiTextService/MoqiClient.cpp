@@ -79,6 +79,23 @@ void appendQuotePairLog(const std::wstring &message) {
   stream << L"[" << timestamp << L"] " << message << L"\n";
 }
 
+int utf16CursorFromCodePointCursor(const std::wstring &text, int cursor) {
+  if (cursor <= 0) {
+    return 0;
+  }
+
+  int utf16Cursor = 0;
+  const int textLength = static_cast<int>(text.length());
+  for (int i = 0; i < cursor && utf16Cursor < textLength; ++i) {
+    if (IS_HIGH_SURROGATE(text[utf16Cursor]) && utf16Cursor + 1 < textLength) {
+      utf16Cursor += 2;
+    } else {
+      ++utf16Cursor;
+    }
+  }
+  return utf16Cursor;
+}
+
 std::wstring formatCodePoints(const std::wstring &text) {
   if (text.empty()) {
     return L"(empty)";
@@ -708,26 +725,18 @@ void Client::updateComposition(Json::Value &msg, Ime::EditSession *session,
   const auto &compositionCursorVal = msg["compositionCursor"];
   if (compositionCursorVal.isInt()) {
     // composition cursor
+    int compositionCursor = compositionCursorVal.asInt();
+    if (!hasCompositionString) {
+      compositionString = textService_->effectiveInlinePreedit()
+                              ? textService_->compositionString(session)
+                              : textService_->candidatePreedit();
+    }
+    const int fixedCursorPos =
+        utf16CursorFromCodePointCursor(compositionString, compositionCursor);
+    textService_->setCandidatePreeditCursor(fixedCursorPos);
     if (textService_->effectiveInlinePreedit() && !emptyComposition) {
-      int compositionCursor = compositionCursorVal.asInt();
       if (!textService_->isComposing()) {
         textService_->startComposition(session->context());
-      }
-      // NOTE:
-      // This fixes Moqi bug #166: incorrect handling of UTF-16 surrogate pairs.
-      // The TSF API unfortunately treat a UTF-16 surrogate pair as two
-      // characters while they actually represent one unicode character only. To
-      // workaround this TSF bug, we get the composition string, and try to move
-      // the cursor twice when a UTF-16 surrogate pair is found.
-      if (!hasCompositionString)
-        compositionString = textService_->compositionString(session);
-      int fixedCursorPos = 0;
-      for (int i = 0; i < compositionCursor; ++i) {
-        ++fixedCursorPos;
-        if (IS_HIGH_SURROGATE(
-                compositionString[i])) // this is the first part of a UTF16
-                                       // surrogate pair (Windows uses UTF16-LE)
-          ++fixedCursorPos;
       }
       textService_->setCompositionCursor(session, fixedCursorPos);
     }

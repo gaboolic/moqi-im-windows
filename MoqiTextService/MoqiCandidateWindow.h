@@ -63,6 +63,7 @@ public:
     void setCurrentSel(int sel);
     void setUseCursor(bool use);
     void setPreeditText(std::wstring text);
+    void setPreeditCursor(int cursor);
     void setCommentFont(HFONT font);
     void setBackgroundColor(COLORREF color);
     void setHighlightColor(COLORREF color);
@@ -88,6 +89,7 @@ private:
     void onMouseMove(WPARAM wp, LPARAM lp);
     void onMouseLeave();
     void onMouseWheel(WPARAM wp, LPARAM lp);
+    void paintPreeditCursor(HDC hdc, const RECT& preeditRc);
     void applyWindowShape();
 
 private:
@@ -117,6 +119,7 @@ private:
     COLORREF commentColor_;
     COLORREF commentHighlightColor_;
     std::wstring preedit_;
+    int preeditCursor_;
     HFONT commentFont_;
     std::vector<wchar_t> selKeys_;
     std::vector<CandidateUiItem> items_;

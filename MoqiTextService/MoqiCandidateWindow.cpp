@@ -243,6 +243,7 @@ CandidateWindow::CandidateWindow(Ime::TextService* service, Ime::EditSession* se
       highlightTextColor_(kSelectedText),
       commentColor_(kItemText),
       commentHighlightColor_(kSelectedText),
+      preeditCursor_(0),
       currentSel_(0),
       pressedSel_(-1),
       draggingWindow_(false),
@@ -443,8 +444,21 @@ void CandidateWindow::setUseCursor(bool use) {
 void CandidateWindow::setPreeditText(std::wstring text) {
     if (preedit_ != text) {
         preedit_ = std::move(text);
+        if (preeditCursor_ > static_cast<int>(preedit_.length())) {
+            preeditCursor_ = static_cast<int>(preedit_.length());
+        }
         recalculateSize();
         if (isVisible()) {
+            ::InvalidateRect(hwnd_, NULL, TRUE);
+        }
+    }
+}
+
+void CandidateWindow::setPreeditCursor(int cursor) {
+    cursor = (std::max)(0, (std::min)(cursor, static_cast<int>(preedit_.length())));
+    if (preeditCursor_ != cursor) {
+        preeditCursor_ = cursor;
+        if (isVisible() && !preedit_.empty()) {
             ::InvalidateRect(hwnd_, NULL, TRUE);
         }
     }
@@ -725,6 +739,7 @@ void CandidateWindow::onPaint() {
         ::SetTextColor(memdc, textColor_);
         ::DrawTextW(memdc, preedit_.c_str(), static_cast<int>(preedit_.length()), &preeditRc,
                     DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        paintPreeditCursor(memdc, preeditRc);
 
         const int dividerY = preeditRc.bottom + preeditGap_ / 2;
         HPEN dividerPen = ::CreatePen(PS_SOLID, 1, kDividerColor);
@@ -817,6 +832,28 @@ void CandidateWindow::paintItem(HDC hdc, int index, int x, int y) {
     }
     ::SelectObject(hdc, oldFont);
     ::SetTextColor(hdc, oldColor);
+}
+
+void CandidateWindow::paintPreeditCursor(HDC hdc, const RECT& preeditRc) {
+    if (preedit_.empty()) {
+        return;
+    }
+
+    const int cursor = (std::max)(0, (std::min)(preeditCursor_, static_cast<int>(preedit_.length())));
+    SIZE beforeSize = {};
+    if (cursor > 0) {
+        ::GetTextExtentPoint32W(hdc, preedit_.c_str(), cursor, &beforeSize);
+    }
+    const int cursorX = preeditRc.left + static_cast<int>(beforeSize.cx);
+    const int cursorWidth = 2;
+    RECT cursorRc = {
+        cursorX,
+        preeditRc.top + 1,
+        cursorX + cursorWidth,
+        preeditRc.bottom - 1};
+    HBRUSH cursorBrush = ::CreateSolidBrush(textColor_);
+    ::FillRect(hdc, &cursorRc, cursorBrush);
+    ::DeleteObject(cursorBrush);
 }
 
 int CandidateWindow::hitTestCandidate(POINT pt) const {
