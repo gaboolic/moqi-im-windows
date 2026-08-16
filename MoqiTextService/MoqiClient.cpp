@@ -30,6 +30,8 @@
 #include <Shellapi.h>
 #include <VersionHelpers.h> // Provided by Windows SDK >= 8.1
 #include <Winnls.h> // for IS_HIGH_SURROGATE() macro for checking UTF16 surrogate pairs
+#include <mmsystem.h> // for timeBeginPeriod/timeEndPeriod (timer resolution during RPC waits)
+#pragma comment(lib, "winmm.lib")
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -49,6 +51,33 @@ namespace Moqi {
 static constexpr UINT ASYNC_RPC_POLL_INTERVAL_MS = 50;
 static constexpr int FIRST_PRINTABLE_KEY_RPC_WAIT_MS = 200;
 static constexpr DWORD RPC_BUSY_POLL_INTERVAL_MS = 5;
+// Poll interval while waiting for a pipe reply. Must stay small (1-2ms): the
+// reply normally arrives within a few ms, and a large Sleep() would add up to
+// that delay to every keystroke (the old 50ms poll made typing feel very
+// laggy). timeBeginPeriod(1) inside the wait keeps this a real ~2ms instead of
+// the default ~15.6ms system tick.
+static constexpr DWORD RPC_REPLY_POLL_INTERVAL_MS = 2;
+
+// Bounded waits so a not-yet-started or hung MoqiLauncher/backend can never
+// block the TSF thread indefinitely:
+// - RPC_REPLY_TIMEOUT_MS: max time to wait for a backend reply after sending a
+//   request (replaces the unbounded blocking TransactNamedPipe). Kept generous
+//   because the backend's first request per engine can take seconds at boot
+//   (cold dictionary load).
+// - RPC_ASYNC_REPLY_WAIT_MS: extra wait when draining a reply that arrived as
+//   async notification(s) before the synchronous response.
+// - CONNECT_ATTEMPT_TIMEOUT_MS * MAX_CONNECT_ATTEMPTS: total budget for
+//   establishing the pipe connection on the key path.
+// - ACTIVATION_CONNECT_ATTEMPTS: much smaller budget for the TSF activation
+//   callback so Windows never sees a frozen text service at logon (which made
+//   it fall back to another IME and persist that as the new default).
+static constexpr DWORD RPC_REPLY_TIMEOUT_MS = 8000;
+static constexpr DWORD RPC_ASYNC_REPLY_WAIT_MS = 2000;
+static constexpr int CONNECT_ATTEMPT_TIMEOUT_MS = 500;
+static constexpr int MAX_CONNECT_ATTEMPTS = 6;          // ~3s total
+static constexpr int ACTIVATION_CONNECT_ATTEMPTS = 2;   // ~1s total
+static constexpr ULONGLONG LAUNCHER_START_RETRY_COOLDOWN_MS = 3000;
+static constexpr ULONGLONG LAUNCHER_KILL_RETRY_COOLDOWN_MS = 15000;
 
 namespace {
 
@@ -519,7 +548,9 @@ Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), guid_{uuidToString(langProfileGuid)},
       pipe_(INVALID_HANDLE_VALUE), rpcInProgress_(0),
       activationInProgress_(false), nextSeqNum_(0), isActivated_(false),
-      shouldWaitConnection_{true}, launcherStartAttempted_{false},
+      shouldWaitConnection_{true}, handshakeComplete_{false},
+      connectAttempts_{MAX_CONNECT_ATTEMPTS},
+      lastLauncherStartAttemptTick_{0}, lastLauncherKillTick_{0},
       asyncPollTimerWindow_(nullptr),
       asyncPollTimerId_(0), asyncFlushInProgress_(false),
       autoPairRules_(defaultAutoPairRules()) {}
@@ -1030,6 +1061,14 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 // handlers for the text service
 void Client::onActivate() {
   activationInProgress_.store(true, std::memory_order_release);
+  // Use a much smaller connection budget during TSF activation. At logon the
+  // system activates the default input method very early; blocking the TSF
+  // callback for tens of seconds made Windows consider Moqi dead and fall back
+  // to another IME (and remember that fallback as the new default). With a ~1s
+  // budget the activation always returns promptly; if the launcher is not up
+  // yet the connection (and this onActivate RPC) is completed lazily by
+  // waitForRpcConnection() on the first key press instead.
+  connectAttempts_ = ACTIVATION_CONNECT_ATTEMPTS;
   auto req = createRpcRequest("onActivate");
   req.set_is_keyboard_open(textService_->isKeyboardOpened());
 
@@ -1039,14 +1078,13 @@ void Client::onActivate() {
   }
   activationInProgress_.store(false, std::memory_order_release);
   isActivated_ = true;
+  connectAttempts_ = MAX_CONNECT_ATTEMPTS;
 }
 
 void Client::onDeactivate() {
-  auto req = createRpcRequest("onDeactivate");
-  Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
-  }
+  // Fire-and-forget: never block the app's TSF thread waiting for a reply to
+  // a notification (e.g. when the backend is hung at boot).
+  sendRpcNoWait("onDeactivate");
   LangBarButton::clearIconCache();
   isActivated_ = false;
 }
@@ -1502,31 +1540,105 @@ void Client::pollAsyncResponses() {
   flushPendingAsyncResponsesWithCurrentContext();
 }
 
-bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
-                         std::string &serializedReply) {
-  char buf[1024];
-  DWORD rlen = 0;
-  bool hasMoreData = false;
-  if (!TransactNamedPipe(pipe, (void *)serializedRequest.data(),
-                         serializedRequest.size(), buf, sizeof(buf), &rlen,
-                         NULL)) {
-    if (GetLastError() == ERROR_MORE_DATA) {
-      hasMoreData = true;
-    } else { // unknown error
-      return false;
-    }
+// Wait up to timeoutMs for the next pipe message and read it fully.
+// Returns false on error or timeout. A hung backend can therefore no longer
+// block the TSF thread forever (the old TransactNamedPipe had no timeout).
+// When the wait expires without a pipe error, *timedOut is set to true so the
+// caller can distinguish "backend is slow" from "connection is broken".
+bool Client::readPipeMessageWithTimeout(HANDLE pipe, std::string &message,
+                                        DWORD timeoutMs, bool *timedOut) {
+  message.clear();
+  if (timedOut != nullptr) {
+    *timedOut = false;
   }
-  serializedReply.append(buf, rlen);
+  if (pipe == INVALID_HANDLE_VALUE) {
+    return false;
+  }
+  const ULONGLONG deadline = ::GetTickCount64() + timeoutMs;
 
-  while (hasMoreData) {
-    if (ReadFile(pipe, buf, sizeof(buf), &rlen, NULL)) {
-      hasMoreData = false;
-    } else if (::GetLastError() != ERROR_MORE_DATA) { // unknown error
+  // Raise the timer resolution for the duration of the wait. PeekNamedPipe +
+  // Sleep() polling is how the reply is discovered, and with the default
+  // ~15.6ms system tick a reply that arrives a few ms after the poll would not
+  // be noticed for up to ~50ms -- once per RPC, and each keystroke issues
+  // several RPCs, which made typing feel very laggy. timeBeginPeriod is
+  // ref-counted by the OS and released as soon as the reply arrives, so the
+  // impact on the rest of the system is limited to the wait itself.
+  const MMRESULT timerResult = ::timeBeginPeriod(1);
+  const bool timerPeriodActive = timerResult == TIMERR_NOERROR;
+
+  char buf[1024];
+  while (true) {
+    DWORD bytesAvailable = 0;
+    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &bytesAvailable, nullptr)) {
+      if (timerPeriodActive) {
+        ::timeEndPeriod(1);
+      }
       return false;
     }
-    serializedReply.append(buf, rlen);
+    if (bytesAvailable > 0) {
+      DWORD rlen = 0;
+      bool hasMoreData = false;
+      if (!::ReadFile(pipe, buf, sizeof(buf), &rlen, nullptr)) {
+        if (::GetLastError() == ERROR_MORE_DATA) {
+          hasMoreData = true;
+        } else { // unknown error
+          if (timerPeriodActive) {
+            ::timeEndPeriod(1);
+          }
+          return false;
+        }
+      }
+      message.append(buf, rlen);
+
+      while (hasMoreData) {
+        if (::ReadFile(pipe, buf, sizeof(buf), &rlen, nullptr)) {
+          hasMoreData = false;
+        } else if (::GetLastError() != ERROR_MORE_DATA) { // unknown error
+          if (timerPeriodActive) {
+            ::timeEndPeriod(1);
+          }
+          return false;
+        }
+        message.append(buf, rlen);
+      }
+      if (timerPeriodActive) {
+        ::timeEndPeriod(1);
+      }
+      return true;
+    }
+    const ULONGLONG now = ::GetTickCount64();
+    if (now >= deadline) {
+      if (timedOut != nullptr) {
+        *timedOut = true;
+      }
+      if (timerPeriodActive) {
+        ::timeEndPeriod(1);
+      }
+      return false; // timed out waiting for the reply
+    }
+    ::Sleep(static_cast<DWORD>(
+        (std::min)(static_cast<ULONGLONG>(RPC_REPLY_POLL_INTERVAL_MS),
+                   deadline - now)));
   }
-  return true;
+}
+
+bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
+                         std::string &serializedReply, bool *timedOut) {
+  if (pipe == INVALID_HANDLE_VALUE) {
+    return false;
+  }
+  // Write the request as one pipe message, then wait for the reply with a
+  // bounded deadline (WriteFile + ReadFile instead of the unbounded
+  // TransactNamedPipe).
+  DWORD written = 0;
+  if (!::WriteFile(pipe, serializedRequest.data(),
+                   static_cast<DWORD>(serializedRequest.size()), &written,
+                   nullptr) ||
+      written != serializedRequest.size()) {
+    return false;
+  }
+  return readPipeMessageWithTimeout(pipe, serializedReply,
+                                    RPC_REPLY_TIMEOUT_MS, timedOut);
 }
 
 // send the request to the server
@@ -1535,7 +1647,7 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
                            Json::Value &response) {
   try {
     ScopedRpcInProgress rpcGuard(rpcInProgress_);
-    if (shouldWaitConnection_ && !waitForRpcConnection()) {
+    if (shouldWaitConnection_ && !waitForRpcConnection(connectAttempts_)) {
       return false;
     }
 
@@ -1552,7 +1664,8 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
 
     std::string serializedResponse;
     bool success = false;
-    if (callRpcPipe(pipe_, serializedRequest, serializedResponse)) {
+    bool timedOut = false;
+    if (callRpcPipe(pipe_, serializedRequest, serializedResponse, &timedOut)) {
       while (true) {
         Proto::FrameBuffer responseBuffer;
         responseBuffer.append(serializedResponse.data(), serializedResponse.size());
@@ -1570,7 +1683,10 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
 
         enqueueAsyncResponse(protoResponse);
         serializedResponse.clear();
-        if (!readPendingPipeMessage(serializedResponse)) {
+        // The synchronous reply may arrive in a later pipe message than an
+        // async notification; wait for it with a bounded timeout.
+        if (!readPipeMessageWithTimeout(pipe_, serializedResponse,
+                                        RPC_ASYNC_REPLY_WAIT_MS, &timedOut)) {
           success = false;
           break;
         }
@@ -1581,10 +1697,19 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
 
     flushPendingAsyncResponses();
 
-    if (!success) {            // fail to send the request to the server
-      closeRpcConnection();    // close the pipe connection since it's broken
-      resetTextServiceState(); // since we lost the connection, the state is
-                               // unknonw so we reset.
+    if (!success) {
+      // A pure timeout on an already-initialized connection usually means the
+      // backend is slow (cold start: first request per engine can take seconds),
+      // not dead. Keep the connection warm so the next request does not pay
+      // for a reconnect + re-init cycle, which made cold starts even slower
+      // (each reconnect created a fresh engine that had to reload everything).
+      // Genuine pipe errors and pre-handshake timeouts still close the
+      // connection so it can be re-established and re-initialized.
+      if (!timedOut || !handshakeComplete_) {
+        closeRpcConnection();    // close the pipe connection since it's broken
+        resetTextServiceState(); // since we lost the connection, the state is
+                                 // unknown so we reset.
+      }
     }
     return success;
   } catch (const std::exception &) {
@@ -1631,11 +1756,68 @@ HANDLE Client::connectPipe(const wchar_t *pipeName, int timeoutMs) {
   return pipe;
 }
 
-bool Client::ensureLauncherRunning() {
-  if (launcherStartAttempted_) {
+// True when this text service is hosted in a SYSTEM-context process (e.g. the
+// logon screen / LogonUI). In that context we must NOT start MoqiLauncher:
+// a launcher started by SYSTEM binds its pipe with a DACL that user processes
+// cannot open and spawns the backend under the SYSTEM profile. The user-session
+// autostart (Run key + scheduled task) is the only correct owner of the
+// launcher; the client just waits for it.
+static bool isSystemAccount() {
+  HANDLE token = nullptr;
+  if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &token)) {
     return false;
   }
-  launcherStartAttempted_ = true;
+  bool isSystem = false;
+  DWORD size = 0;
+  ::GetTokenInformation(token, TokenUser, nullptr, 0, &size);
+  std::vector<BYTE> buffer(size, 0);
+  TOKEN_USER *user = reinterpret_cast<TOKEN_USER *>(buffer.data());
+  if (::GetTokenInformation(token, TokenUser, user, size, &size) &&
+      user->User.Sid != nullptr) {
+    SID_IDENTIFIER_AUTHORITY ntAuthority = SECURITY_NT_AUTHORITY;
+    PSID systemSid = nullptr;
+    if (::AllocateAndInitializeSid(&ntAuthority, 1, SECURITY_LOCAL_SYSTEM_RID,
+                                   0, 0, 0, 0, 0, 0, 0, &systemSid)) {
+      isSystem = ::EqualSid(user->User.Sid, systemSid);
+      ::FreeSid(systemSid);
+    }
+  }
+  ::CloseHandle(token);
+  return isSystem;
+}
+
+// Send a notification to the server without waiting for the reply.
+// Used for fire-and-forget notifications (deactivate, composition terminated)
+// so a slow/hung backend can never block the TSF thread.
+void Client::sendRpcNoWait(const char *methodName) {
+  if (pipe_ == INVALID_HANDLE_VALUE) {
+    return;
+  }
+  auto req = createRpcRequest(methodName);
+  std::string serializedRequest;
+  if (!Proto::serializeMessage(req, serializedRequest)) {
+    return;
+  }
+  DWORD written = 0;
+  ::WriteFile(pipe_, serializedRequest.data(),
+              static_cast<DWORD>(serializedRequest.size()), &written, nullptr);
+}
+
+bool Client::ensureLauncherRunning() {
+  // Never start the launcher from a SYSTEM-context process (logon screen):
+  // it would create a launcher/backend that user apps cannot use.
+  if (isSystemAccount()) {
+    return false;
+  }
+  // Retryable: unlike the previous one-shot attempt, we allow re-launching
+  // the launcher with a cooldown so a failed early attempt (e.g. during the
+  // logon screen before the shell is ready) no longer poisons the client
+  // forever.
+  const ULONGLONG now = ::GetTickCount64();
+  if (now - lastLauncherStartAttemptTick_ < LAUNCHER_START_RETRY_COOLDOWN_MS) {
+    return false;
+  }
+  lastLauncherStartAttemptTick_ = now;
 
   auto module =
       static_cast<Moqi::ImeModule *>(textService_->imeModule().operator->());
@@ -1650,16 +1832,70 @@ bool Client::ensureLauncherRunning() {
     return false;
   }
 
-  HINSTANCE result =
-      ::ShellExecuteW(nullptr, L"open", launcherPath.c_str(), nullptr,
-                      module->programDir().c_str(), SW_SHOWNORMAL);
-  return reinterpret_cast<INT_PTR>(result) > 32;
+  // Use CreateProcessW instead of ShellExecuteW: it cannot fail on the secure
+  // desktop / early logon and we control the working directory explicitly.
+  std::wstring commandLine = L"\"" + launcherPath + L"\"";
+  STARTUPINFOW startupInfo = {};
+  startupInfo.cb = sizeof(startupInfo);
+  PROCESS_INFORMATION processInfo = {};
+  const BOOL created = ::CreateProcessW(
+      nullptr, commandLine.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+      nullptr, module->programDir().c_str(), &startupInfo, &processInfo);
+  if (created) {
+    ::CloseHandle(processInfo.hThread);
+    ::CloseHandle(processInfo.hProcess);
+    return true;
+  }
+  return false;
+}
+
+// Check whether a MoqiLauncher process exists (via its single-instance mutex).
+bool Client::isLauncherProcessRunning() {
+  HANDLE mutex = ::OpenMutexW(MUTEX_ALL_ACCESS, FALSE, L"MoqiLauncherMutex");
+  if (mutex != nullptr) {
+    ::CloseHandle(mutex);
+    return true;
+  }
+  return false;
+}
+
+// Last-resort self-heal: a MoqiLauncher process exists but its pipe is not
+// reachable, which means it is stuck (dead uv loop / unbound pipe). Force-kill
+// it and start a fresh one — the same thing the user does manually
+// ("kill MoqiLauncher.exe, then switch the input method").
+bool Client::forceRestartLauncher() {
+  const ULONGLONG now = ::GetTickCount64();
+  if (now - lastLauncherKillTick_ < LAUNCHER_KILL_RETRY_COOLDOWN_MS) {
+    return false;
+  }
+  lastLauncherKillTick_ = now;
+  appendRpcGuardLog(L"[launcher] force-restarting unreachable MoqiLauncher");
+
+  wchar_t systemDir[MAX_PATH] = {};
+  if (::GetSystemDirectoryW(systemDir, _countof(systemDir)) == 0) {
+    return false;
+  }
+  std::wstring taskkillPath = std::wstring(systemDir) + L"\\taskkill.exe";
+  std::wstring commandLine =
+      L"\"" + taskkillPath + L"\" /F /IM MoqiLauncher.exe";
+  STARTUPINFOW startupInfo = {};
+  startupInfo.cb = sizeof(startupInfo);
+  PROCESS_INFORMATION processInfo = {};
+  if (::CreateProcessW(nullptr, commandLine.data(), nullptr, nullptr, FALSE,
+                       CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo,
+                       &processInfo)) {
+    ::CloseHandle(processInfo.hThread);
+    ::CloseHandle(processInfo.hProcess);
+  }
+  // Give the old process (and its children) a moment to die before relaunch.
+  ::Sleep(300);
+  return ensureLauncherRunning();
 }
 
 // Ensure that we're connected to the Moqi input method server
 // If we are already connected, the method simply returns true;
-// otherwise, it tries to establish the connection.
-bool Client::waitForRpcConnection() {
+// otherwise, it tries to establish the connection with a bounded budget.
+bool Client::waitForRpcConnection(int connectAttempts) {
   if (pipe_ != INVALID_HANDLE_VALUE) {
     return true;
   }
@@ -1670,30 +1906,47 @@ bool Client::waitForRpcConnection() {
     ensureLauncherRunning();
   }
 
-  for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < 10;
+  for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < connectAttempts;
        ++attempt) {
     // try to connect to the server
-    pipe_ = connectPipe(serverPipeName.c_str(), 3000);
+    pipe_ = connectPipe(serverPipeName.c_str(), CONNECT_ATTEMPT_TIMEOUT_MS);
+  }
+
+  if (pipe_ == INVALID_HANDLE_VALUE && isLauncherProcessRunning()) {
+    // A launcher process exists but we cannot reach its pipe: it is stuck.
+    // Force a restart and retry once.
+    forceRestartLauncher();
+    for (int attempt = 0;
+         pipe_ == INVALID_HANDLE_VALUE && attempt < connectAttempts; ++attempt) {
+      pipe_ = connectPipe(serverPipeName.c_str(), CONNECT_ATTEMPT_TIMEOUT_MS);
+    }
   }
 
   if (pipe_ != INVALID_HANDLE_VALUE) {
-    // send initialization info to the server for hand-shake.
-    shouldWaitConnection_ =
-        false; // prevent recursive call of waitForRpcConnection
-    if (!init()) {
-      closeRpcConnection();
-      shouldWaitConnection_ = true;
-      return false;
-    }
-
-    if (isActivated_) {
-      // we lost connection while being activated previously
-      // re-initialize the whole text service.
-      // activate the text service again.
-      onActivate();
-    }
-    shouldWaitConnection_ = true;
+    return completeConnectionHandshake();
   }
+  return false;
+}
+
+bool Client::completeConnectionHandshake() {
+  // send initialization info to the server for hand-shake.
+  shouldWaitConnection_ =
+      false; // prevent recursive call of waitForRpcConnection
+  const bool initOk = init();
+  if (!initOk) {
+    closeRpcConnection();
+    shouldWaitConnection_ = true;
+    return false;
+  }
+  handshakeComplete_ = true;
+
+  if (isActivated_) {
+    // we lost connection while being activated previously
+    // re-initialize the whole text service.
+    // activate the text service again.
+    onActivate();
+  }
+  shouldWaitConnection_ = true;
   // if init() or onActivate() RPC fails, the pipe_ might have been closed.
   return pipe_ != INVALID_HANDLE_VALUE;
 }
@@ -1717,6 +1970,7 @@ void Client::resetTextServiceState() {
 
 void Client::closeRpcConnection() {
   pendingAsyncResponses_.clear();
+  handshakeComplete_ = false;
   if (asyncPollTimerId_ != 0) {
     ::KillTimer(asyncPollTimerWindow_, asyncPollTimerId_);
     asyncPollTimerId_ = 0;

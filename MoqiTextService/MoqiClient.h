@@ -91,13 +91,18 @@ private:
     static std::wstring getPipeName(const wchar_t* base_name);
     HANDLE connectPipe(const wchar_t* pipeName, int timeoutMs);
     bool ensureLauncherRunning();
+    bool isLauncherProcessRunning();
+    bool forceRestartLauncher();
 
     moqi::protocol::ClientRequest createRpcRequest(const char* methodName);
 	bool callRpcMethod(moqi::protocol::ClientRequest& request, Json::Value& response);
+    void sendRpcNoWait(const char* methodName);
 
     bool isPipeCreatedByMoqiServer(HANDLE pipe);
-    bool waitForRpcConnection();
-    bool callRpcPipe(HANDLE pipe, const std::string& serializedRequest, std::string& serializedReply);
+    bool waitForRpcConnection(int connectAttempts);
+    bool completeConnectionHandshake();
+    bool callRpcPipe(HANDLE pipe, const std::string& serializedRequest, std::string& serializedReply, bool* timedOut = nullptr);
+    bool readPipeMessageWithTimeout(HANDLE pipe, std::string& message, DWORD timeoutMs, bool* timedOut = nullptr);
 	bool waitForRpcIdle(int timeoutMs) const;
 	bool readPendingPipeMessage(std::string& serializedReply);
 	void refreshAsyncPollTimer();
@@ -139,7 +144,10 @@ private:
 	unsigned int nextSeqNum_;
 	bool isActivated_;
     bool shouldWaitConnection_;
-    bool launcherStartAttempted_;
+    bool handshakeComplete_;
+    int connectAttempts_;
+    ULONGLONG lastLauncherStartAttemptTick_;
+    ULONGLONG lastLauncherKillTick_;
 	HWND asyncPollTimerWindow_;
 	UINT_PTR asyncPollTimerId_;
 	bool asyncFlushInProgress_;

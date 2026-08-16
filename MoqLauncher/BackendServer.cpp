@@ -50,6 +50,13 @@ static wstring_convert<codecvt_utf8<wchar_t>> utf8Codec;
 static constexpr auto MAX_RESPONSE_WAITING_TIME =
     30; // if a backend is non-responsive for 30 seconds, it's considered dead
 static constexpr uint32_t RIME_DEPLOY_COMMAND_ID = 10;
+// Minimum lifetime a backend must have before a pipe read error triggers an
+// automatic restart. If the process dies sooner (startup crash, session being
+// torn down at logon/logoff), restarting it immediately only spawns a hot loop
+// (the launcher was observed respawning ~100x per second while logging the
+// warmup). In that case the backend is left stopped and the next client
+// message respawns it lazily.
+static constexpr ULONGLONG MIN_BACKEND_RESTART_INTERVAL_MS = 2000;
 
 static DWORD trayNotificationInfoFlags(moqi::protocol::TrayNotificationIcon icon) {
   switch (icon) {
@@ -99,6 +106,12 @@ void BackendServer::handleClientMessage(PipeClient *client,
                                         const moqi::protocol::ClientRequest &request) {
   if (!isProcessRunning()) {
     startProcess();
+  }
+
+  if (request.method() == moqi::protocol::METHOD_INIT &&
+      !request.guid().empty()) {
+    // Remember the language profile GUID so we can warm up the backend.
+    lastInitGuid_ = request.guid();
   }
 
   if (name_ == "moqi-ime" &&
@@ -152,24 +165,32 @@ uv::Pipe *BackendServer::createStdinPipe() {
 
 uv::Pipe *BackendServer::createStdoutPipe() {
   auto stdoutPipe = new uv::Pipe();
+  const unsigned int generation = pipeGeneration_;
   stdoutPipe->setReadCallback(
       [this](const char *buf, size_t len) { onStdoutRead(buf, len); });
-  stdoutPipe->setReadErrorCallback([this](int error) { onReadError(error); });
+  stdoutPipe->setReadErrorCallback(
+      [this, generation](int error) { onReadError(error, generation); });
   stdoutPipe->setCloseCallback([stdoutPipe]() { delete stdoutPipe; });
   return stdoutPipe;
 }
 
 uv::Pipe *BackendServer::createStderrPipe() {
   auto stderrPipe = new uv::Pipe();
+  const unsigned int generation = pipeGeneration_;
   stderrPipe->setReadCallback(
       [this](const char *buf, size_t len) { onStderrRead(buf, len); });
-  stderrPipe->setReadErrorCallback([this](int error) { onReadError(error); });
+  stderrPipe->setReadErrorCallback(
+      [this, generation](int error) { onReadError(error, generation); });
   stderrPipe->setCloseCallback([this, stderrPipe]() { delete stderrPipe; });
   return stderrPipe;
 }
 
 void BackendServer::startProcess() {
   process_ = new uv_process_t{};
+  // Bump the generation before creating the pipes so their read-error
+  // callbacks are tagged with the new generation (stale errors from a previous
+  // process's pipes will then be ignored).
+  ++pipeGeneration_;
   // create pipes for stdio of the child process
   stdoutPipe_ = createStdoutPipe();
   stdoutFrameBuf_.clear();
@@ -226,13 +247,79 @@ void BackendServer::startProcess() {
     closeStdioPipes();
     return;
   }
+  lastProcessStartTick_ = ::GetTickCount64();
 
   // start receiving data from the backend server
   stdoutPipe_->startRead();
   stderrPipe_->startRead();
+
+  // Warm the backend up right away: the first request of a fresh backend
+  // (Rime engine creation, dictionary load, deferred UI init) can take many
+  // seconds when the OS cache is cold after a reboot. Doing it here, in the
+  // background at logon, means the user's first keystroke after boot is fast
+  // instead of blocking for several seconds (and instead of the client
+  // timing out and reconnecting, which made it worse).
+  sendWarmupRequests();
+}
+
+// Send synthetic init/onActivate/filterKeyDown requests to a freshly spawned
+// backend so its expensive first-request work happens in the background. The
+// backend treats "warmup" like any other client; its responses are dropped by
+// the launcher (no PipeClient with that id exists).
+void BackendServer::sendWarmupRequests() {
+  if (stdinPipe_ == nullptr || lastInitGuid_.empty()) {
+    return;
+  }
+  logger()->info("Warming up backend {} (guid={})", name_, lastInitGuid_);
+
+  moqi::protocol::ClientRequest request;
+  request.set_client_id("warmup");
+
+  request.set_method(moqi::protocol::METHOD_INIT);
+  request.set_guid(lastInitGuid_);
+  request.set_is_windows8_above(true);
+  request.set_is_metro_app(false);
+  request.set_is_ui_less(true);
+  request.set_is_console(false);
+  std::string framedMessage;
+  if (!Proto::serializeMessage(request, framedMessage)) {
+    logger()->error("Failed to serialize warmup init request");
+    return;
+  }
+  stdinPipe_->write(std::move(framedMessage));
+
+  request.set_method(moqi::protocol::METHOD_ON_ACTIVATE);
+  request.set_is_keyboard_open(true);
+  framedMessage.clear();
+  if (!Proto::serializeMessage(request, framedMessage)) {
+    logger()->error("Failed to serialize warmup activate request");
+    return;
+  }
+  stdinPipe_->write(std::move(framedMessage));
+
+  // One harmless key press to trigger lazy dictionary loading / deferred UI.
+  request.set_method(moqi::protocol::METHOD_FILTER_KEY_DOWN);
+  auto *keyEvent = request.mutable_key_event();
+  keyEvent->set_char_code('a');
+  keyEvent->set_key_code(0x41);
+  keyEvent->set_scan_code(0);
+  keyEvent->set_repeat_count(1);
+  keyEvent->set_is_extended(false);
+  for (int i = 0; i < 256; ++i) {
+    keyEvent->add_key_states(0);
+  }
+  framedMessage.clear();
+  if (!Proto::serializeMessage(request, framedMessage)) {
+    logger()->error("Failed to serialize warmup key request");
+    return;
+  }
+  stdinPipe_->write(std::move(framedMessage));
 }
 
 void BackendServer::restartProcess() {
+  if (process_ == nullptr) {
+    return;
+  }
   terminateProcess();
   startProcess();
 }
@@ -260,8 +347,25 @@ void BackendServer::onStdoutRead(const char *buf, size_t len) {
   handleBackendReply();
 }
 
-void BackendServer::onReadError(int status) {
-  // the backend server is broken, restart it.
+void BackendServer::onReadError(int status, unsigned int generation) {
+  // Ignore read errors from a previous process's pipes. When a backend dies,
+  // both its stdout and stderr pipes report an error; without this guard the
+  // second callback would kill/restart the freshly spawned replacement.
+  if (generation != pipeGeneration_ || process_ == nullptr) {
+    return;
+  }
+
+  // The backend exited or its pipes broke. Restart it, but throttled: if it
+  // died almost immediately after being spawned (e.g. a startup crash, or the
+  // session being torn down at logon/logoff), respawning right away only
+  // creates a restart storm (the launcher was observed respawning ~100x per
+  // second while logging the warmup). In that case just clean up and let the
+  // next client message respawn the backend lazily.
+  const ULONGLONG now = ::GetTickCount64();
+  if (now - lastProcessStartTick_ < MIN_BACKEND_RESTART_INTERVAL_MS) {
+    terminateProcess();
+    return;
+  }
   restartProcess();
 }
 

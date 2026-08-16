@@ -16,6 +16,7 @@ constexpr int kExitRestartRequired = 2;
 constexpr int kExitInvalidArgs = 3;
 constexpr wchar_t kProgramDirEnvVar[] = L"MOQI_PROGRAM_DIR";
 constexpr wchar_t kReregisterTaskName[] = L"MoqiIM-ReRegisterTSF";
+constexpr wchar_t kLauncherAutostartTaskName[] = L"MoqiIM-LauncherAutoStart";
 
 enum class Action {
   kHelp,
@@ -512,6 +513,63 @@ bool DeleteReregisterTask() {
   return exit_code == 0 || exit_code == 1;
 }
 
+// Create a per-user "at logon" scheduled task that starts MoqiLauncher.exe.
+// This is a backup for the HKCU Run key: it runs in the interactive user
+// session even if the Run key is disabled/delayed, so by the time the TSF
+// framework activates Moqi at logon the launcher pipe is already listening.
+// Best-effort only: failure must not fail the install (the Run key remains the
+// primary autostart path).
+bool ScheduleLauncherAutostartTask(const Options& options, std::wstring* error) {
+  const fs::path launcher_path =
+      fs::path(options.app_dir) / L"MoqiLauncher.exe";
+  if (!fs::exists(launcher_path)) {
+    if (error != nullptr) {
+      *error = L"MoqiLauncher.exe not found in app dir; skip autostart task.";
+    }
+    return false;
+  }
+  const fs::path schtasks =
+      fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
+  const std::wstring task_command = QuoteCommandLineArgument(launcher_path.wstring());
+  std::wstring command = QuoteCommandLineArgument(schtasks.wstring()) +
+                         L" /Create /TN " +
+                         QuoteCommandLineArgument(kLauncherAutostartTaskName) +
+                         L" /SC ONLOGON /TR " +
+                         QuoteCommandLineArgument(task_command) + L" /F";
+  DWORD exit_code = 0;
+  DWORD error_code = 0;
+  if (!RunProcess(schtasks.wstring(), command, GetModuleDirectory(), &exit_code,
+                  &error_code)) {
+    if (error != nullptr) {
+      *error = L"Failed to launch schtasks.exe (" +
+               FormatWindowsErrorMessage(error_code) + L").";
+    }
+    return false;
+  }
+  if (exit_code != 0) {
+    if (error != nullptr) {
+      *error = L"Failed to schedule launcher autostart task (schtasks exit code " +
+               std::to_wstring(exit_code) + L").";
+    }
+    return false;
+  }
+  return true;
+}
+
+bool DeleteLauncherAutostartTask() {
+  const fs::path schtasks =
+      fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
+  std::wstring command = QuoteCommandLineArgument(schtasks.wstring()) +
+                         L" /Delete /TN " +
+                         QuoteCommandLineArgument(kLauncherAutostartTaskName) +
+                         L" /F";
+  DWORD exit_code = 0;
+  if (!RunProcess(schtasks.wstring(), command, GetModuleDirectory(), &exit_code)) {
+    return false;
+  }
+  return exit_code == 0 || exit_code == 1;
+}
+
 bool ScheduleReregisterTask(const Options& options, std::wstring& error) {
   const fs::path schtasks =
       fs::path(GetNativeSystemDirectoryForChildProcess()) / L"schtasks.exe";
@@ -725,6 +783,9 @@ int RunInstall(const Options& options) {
     return ShowFailureAndReturn(L"Failed to register x64 TSF DLL.",
                                 options.silent);
   }
+  // Backup autostart for the launcher (the HKCU Run key remains primary).
+  std::wstring autostart_error;
+  ScheduleLauncherAutostartTask(options, &autostart_error);
   return kExitSuccess;
 }
 
@@ -738,6 +799,7 @@ int RunUninstall(const Options& options) {
   const fs::path regsvr64 = fs::path(GetNativeSystemDirectoryPath()) / L"regsvr32.exe";
 
   DeleteReregisterTask();
+  DeleteLauncherAutostartTask();
   RunRegsvr(regsvr32, dest32, app_dir, true);
   RunRegsvr(regsvr64, dest64_for_regsvr, app_dir, true);
 

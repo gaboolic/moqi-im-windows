@@ -70,6 +70,8 @@ public:
 	void uploadCloudClipboardText(const std::string& utf8Text);
 
 private:
+    void sendWarmupRequests();
+
     uv::Pipe* createStdinPipe();
 
     uv::Pipe* createStdoutPipe();
@@ -80,7 +82,7 @@ private:
 
     void onStderrRead(const char* buf, size_t len);
 
-    void onReadError(int status);
+    void onReadError(int status, unsigned int generation);
 
     void closeStdioPipes();
 
@@ -99,6 +101,20 @@ private:
 	std::string command_;
 	std::string params_;
 	std::string workingDir_;
+
+	// GUID of the language profile seen in the last METHOD_INIT request.
+	// Used to warm up the backend right after it is spawned.
+	std::string lastInitGuid_;
+
+	// Monotonic tick when the current backend process was spawned. Used to
+	// throttle restarts so a backend that dies on startup (e.g. during logon /
+	// logoff) can never trigger a restart storm.
+	ULONGLONG lastProcessStartTick_ = 0;
+
+	// Bumped on every spawn. The stdout/stderr read-error callbacks capture the
+	// generation of the pipes they belong to, so an error from a previous
+	// process's pipe cannot kill (or restart) the freshly spawned replacement.
+	unsigned int pipeGeneration_ = 0;
 };
 
 } // namespace Moqi
