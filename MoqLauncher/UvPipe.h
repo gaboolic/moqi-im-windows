@@ -124,7 +124,7 @@ public:
         buf.len = writeReqData->dataToWrite.size();
         buf.base = const_cast<char*>(writeReqData->dataToWrite.data());
 
-        uv_write(&writeReqData->req,
+        const int result = uv_write(&writeReqData->req,
             streamHandle(), &buf, 1,
             [](uv_write_t* req, int status) {
                 auto writeReqData = reinterpret_cast<WriteReqData*>(req->data);
@@ -136,6 +136,14 @@ public:
                 }
                 delete writeReqData;
             });
+        // libuv does not call the completion callback for synchronous errors.
+        if (result < 0) {
+            delete writeReqData;
+            if (writeCallback_) {
+                auto callback = writeCallback_;
+                callback(result);
+            }
+        }
     }
 
     void close() {

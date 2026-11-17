@@ -49,6 +49,13 @@ foreach ($path in $requiredPaths) {
     }
 }
 
+. (Join-Path $PSScriptRoot 'PayloadValidation.ps1')
+Assert-MoqiPayload -Root $win32Root
+if ((Get-FileHash -LiteralPath (Join-Path $win32Root 'x64\MoqiTextService.dll')).Hash -ne
+    (Get-FileHash -LiteralPath (Join-Path $x64Root 'MoqiTextService.dll')).Hash) {
+    throw 'The two x64 DLL payload copies do not match'
+}
+
 if ([string]::IsNullOrWhiteSpace($IssPath)) {
     $IssPath = Join-Path $PSScriptRoot 'MoqiTsf.iss'
 }

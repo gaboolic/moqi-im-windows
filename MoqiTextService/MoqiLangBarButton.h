@@ -36,13 +36,21 @@ public:
 	static LangBarButton* fromJson(TextService* service, const Json::Value& info);
 	void updateFromJson(const Json::Value& info);
 
+	void setLocalFallback(bool value) {
+		if (localFallback_ && !value) {
+			setEnabled(true);
+			setTooltip(L"Moqi");
+		}
+		localFallback_ = value;
+	}
+
 	const std::string& id() const {
 		return id_;
 	}
 
     void setIconFile(std::wstring filePath);
 
-	static void clearIconCache();
+	STDMETHODIMP GetIcon(HICON *phIcon) override;
 
 	// ITfLangBarItemButton
 	STDMETHODIMP OnClick(TfLBIClick click, POINT pt, const RECT *prcArea);
@@ -54,7 +62,9 @@ protected:
 private:
 	std::string id_;
     std::wstring iconFile_;
-	static std::unordered_map<std::wstring, HICON> iconCache_; // cache loaded icons
+	HICON ownedIcon_ = nullptr; // base class only borrows this handle
+	bool iconLoaded_ = false;
+	bool localFallback_ = false;
 };
 
 } // namespace Moqi

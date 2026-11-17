@@ -11,4 +11,7 @@ target_include_directories(SetupHelper PRIVATE
 target_link_libraries(SetupHelper
     Advapi32
     Shell32
+    Ole32
+    OleAut32
+    Taskschd
 )

@@ -7,12 +7,14 @@
 namespace Moqi {
 
 bool loadJsonFile(const std::wstring filename, Json::Value& result) {
-	std::ifstream fp(filename, std::ifstream::binary);
-	if (fp) {
-		fp >> result;
-		return true;
-	}
-	return false;
+    result.clear();
+    std::ifstream fp(filename, std::ifstream::binary);
+    if (!fp) {
+        return false;
+    }
+    Json::CharReaderBuilder builder;
+    std::string errors;
+    return Json::parseFromStream(builder, fp, &result, &errors);
 }
 
 bool saveJsonFile(const std::wstring filename, Json::Value& data) {
@@ -25,21 +27,25 @@ bool saveJsonFile(const std::wstring filename, Json::Value& data) {
 }
 
 std::wstring getCurrentExecutableDir() {
-    wchar_t exeFilePathBuf[MAX_PATH];
-    DWORD len = GetModuleFileNameW(NULL, exeFilePathBuf, MAX_PATH);
-    exeFilePathBuf[len] = '\0';
-
-    // strip the filename part to get dir path
-    wchar_t* p = wcsrchr(exeFilePathBuf, '\\');
-    if (p) {
-        *p = '\0';
+    std::wstring path(MAX_PATH, L'\0');
+    for (;;) {
+        DWORD len = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
+        if (len == 0) {
+            return L"";
+        }
+        if (len < path.size() - 1) {
+            path.resize(len);
+            return path.substr(0, path.find_last_of(L"\\/"));
+        }
+        path.resize(path.size() * 2);
     }
-    return exeFilePathBuf;
 }
 
 std::wstring getAppLocalDir() {
     wchar_t* appLocalDataDirPath = nullptr;
-    ::SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &appLocalDataDirPath);
+    if (FAILED(::SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &appLocalDataDirPath))) {
+        return L"";
+    }
     std::wstring result{appLocalDataDirPath};
     ::CoTaskMemFree(appLocalDataDirPath);
     return result;

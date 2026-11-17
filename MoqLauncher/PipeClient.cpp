@@ -54,6 +54,11 @@ PipeClient::PipeClient(PipeServer* server, DWORD pipeMode, SECURITY_ATTRIBUTES* 
             onReadError(status);
         }
     );
+    pipe_.setWriteCallback([this](int status) {
+        if (status < 0) {
+            onReadError(status);
+        }
+    });
     pipe_.setCloseCallback(
         [this]() {
             server_->removeClient(this);
@@ -83,11 +88,30 @@ std::shared_ptr<spdlog::logger>& PipeClient::logger() {
 }
 
 void PipeClient::close() {
-    pipe_.close();
+    if (!closing_) {
+        closing_ = true;
+        stopRequestTimeoutTimer();
+        pipe_.close();
+    }
+}
+
+void PipeClient::sendError(const moqi::protocol::ClientRequest& request,
+                           const std::string& message) {
+    moqi::protocol::ServerResponse response;
+    response.set_seq_num(request.seq_num());
+    response.set_client_id(clientId_);
+    response.set_success(false);
+    response.set_error(message);
+    std::string framed;
+    if (Proto::serializeMessage(response, framed)) {
+        writePipe(framed.data(), framed.size());
+    }
 }
 
 void PipeClient::onReadError(int error) {
-    // the client connection seems to be broken. close it.
+    if (closing_) {
+        return;
+    }
     disconnectFromBackend();
     close();
 }
@@ -110,6 +134,11 @@ void PipeClient::handleClientMessage(const char* readBuf, size_t len) {
         if (backend_) {
             startRequestTimeoutTimer(BACKEND_REQUEST_TIMEOUT_MS);
             backend_->handleClientMessage(this, request);
+        } else {
+            sendError(request, "No backend matches this input method profile; repair the installation");
+        }
+        if (closing_) {
+            return;
         }
     }
 }
@@ -118,9 +147,9 @@ bool PipeClient::initBackend(const moqi::protocol::ClientRequest &params) {
 	if (params.method() == moqi::protocol::METHOD_INIT) {  // the client connects to us the first time
 		// find a backend for the client text service
 		const auto& guid = params.guid();
+        textServiceGuid_ = guid;
 		backend_ = server_->backendFromLangProfileGuid(guid.c_str());
 		if (backend_ != nullptr) {
-			// FIXME: write some response to indicate the failure
 			return true;
 		}
 		else {
@@ -134,7 +163,9 @@ void PipeClient::disconnectFromBackend() {
 	if (backend_ != nullptr) {
 		moqi::protocol::ClientRequest request;
 		request.set_method(moqi::protocol::METHOD_CLOSE);
-		backend_->handleClientMessage(this, request);
+        auto* backend = backend_;
+        backend_ = nullptr;
+		backend->handleClientMessage(this, request);
 	}
 }
 

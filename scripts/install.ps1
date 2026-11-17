@@ -23,7 +23,8 @@
     2. sibling ..\moqi-ime
 
 .PARAMETER SkipMoqiImeCopy
-  If set, do not include the backend tree in the staged installer payload.
+  Unsupported for a complete installer: fails before modifying the stage.
+  Complete installations require the moqi-ime backend; use -MoqiImeSource.
 
 .PARAMETER StageDir
   Installer staging directory (default: RepoRoot\installer\stage).
@@ -42,6 +43,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Reject the old partial-payload mode before resolving artifacts or clearing an
+# existing stage. Payload validation requires a backend for every full install.
+if ($SkipMoqiImeCopy) {
+    throw "-SkipMoqiImeCopy is not supported: a complete installer must include the moqi-ime backend (server.exe and valid profiles). Use -MoqiImeSource. The existing stage has not been modified."
+}
 
 function New-CleanDirectory {
     param([string] $Path)
@@ -205,16 +212,11 @@ $dll64 = Resolve-ArtifactPath -Label "x64 MoqiTextService.dll" -Candidates @(
 Copy-IfExists -Source $dll64 -Destination (Join-Path $stageX64Root "MoqiTextService.dll")
 Copy-IfExists -Source $dll64 -Destination (Join-Path $stageWin32X64Root "MoqiTextService.dll")
 
-if (-not $SkipMoqiImeCopy) {
-    if (-not (Test-Path -LiteralPath $MoqiImeSource)) {
-        throw "Moqi IME source not found: $MoqiImeSource (use -MoqiImeSource or -SkipMoqiImeCopy)."
-    }
-    $imeDest = Join-Path $stageWin32Root "moqi-ime"
-    Copy-MoqiImeRuntime -SourceRoot $MoqiImeSource -DestinationRoot $imeDest
+if (-not (Test-Path -LiteralPath $MoqiImeSource)) {
+    throw "Moqi IME source not found: $MoqiImeSource (use -MoqiImeSource; complete installers require the backend)."
 }
-else {
-    Write-Warning "Skipped copying moqi-ime backend; ensure the final installer payload is sufficient for your deployment."
-}
+$imeDest = Join-Path $stageWin32Root "moqi-ime"
+Copy-MoqiImeRuntime -SourceRoot $MoqiImeSource -DestinationRoot $imeDest
 
 $installerScript = Join-Path $RepoRoot "installer\build-installer.ps1"
 if (-not (Test-Path -LiteralPath $installerScript)) {
@@ -223,6 +225,9 @@ if (-not (Test-Path -LiteralPath $installerScript)) {
 if (-not (Test-Path -LiteralPath $IssPath)) {
     throw "Installer ISS file not found: $IssPath"
 }
+
+. (Join-Path $RepoRoot 'installer\PayloadValidation.ps1')
+Assert-MoqiPayload -Root $stageWin32Root
 
 Write-Host "Stage prepared at: $StageDir"
 Write-Host "Win32 payload: $stageWin32Root"

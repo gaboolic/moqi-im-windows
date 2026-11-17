@@ -482,8 +482,8 @@ bool TextService::filterKeyDown(Ime::KeyEvent& keyEvent) {
 	//	return true;
 	if (!client_ && !ensureClientForCurrentProfile(L"filterKeyDown")) {
 		if (isOrdinaryPrintableKey(keyEvent)) {
-			logDebug(L"[filterKeyDown] consumed printable key while client is not ready " + keyEventSummary(keyEvent));
-			return true;
+			logDebug(L"[filterKeyDown] passing through printable key while client is not ready " + keyEventSummary(keyEvent));
+			return false;
 		}
 		return false;
 	}

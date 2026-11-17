@@ -151,6 +151,11 @@ else()
     set(MOQI_PROTOBUF_TARGET libprotobuf)
 endif()
 
+option(MOQI_BUILD_TESTS "Build non-installing Windows recovery regression tests" OFF)
+if(MOQI_BUILD_TESTS)
+    enable_testing()
+endif()
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/jsoncpp")
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/libIME2")

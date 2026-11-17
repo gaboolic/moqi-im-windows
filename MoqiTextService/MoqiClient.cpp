@@ -71,13 +71,15 @@ static constexpr DWORD RPC_REPLY_POLL_INTERVAL_MS = 2;
 // - ACTIVATION_CONNECT_ATTEMPTS: much smaller budget for the TSF activation
 //   callback so Windows never sees a frozen text service at logon (which made
 //   it fall back to another IME and persist that as the new default).
-static constexpr DWORD RPC_REPLY_TIMEOUT_MS = 8000;
+static constexpr DWORD RPC_REPLY_TIMEOUT_MS = 8000; // explicit command/menu compatibility
+static constexpr DWORD KEY_RPC_TOTAL_TIMEOUT_MS = 2000;
 static constexpr DWORD RPC_ASYNC_REPLY_WAIT_MS = 2000;
 static constexpr int CONNECT_ATTEMPT_TIMEOUT_MS = 500;
 static constexpr int MAX_CONNECT_ATTEMPTS = 6;          // ~3s total
 static constexpr int ACTIVATION_CONNECT_ATTEMPTS = 2;   // ~1s total
 static constexpr ULONGLONG LAUNCHER_START_RETRY_COOLDOWN_MS = 3000;
-static constexpr ULONGLONG LAUNCHER_KILL_RETRY_COOLDOWN_MS = 15000;
+static constexpr ULONGLONG CONNECTION_RETRY_COOLDOWN_MS = 1000;
+static constexpr DWORD ACTIVATION_TOTAL_TIMEOUT_MS = 1000;
 
 namespace {
 
@@ -547,10 +549,11 @@ bool parseHexColor(const std::string &text, COLORREF &result) {
 Client::Client(TextService *service, REFIID langProfileGuid)
     : textService_(service), guid_{uuidToString(langProfileGuid)},
       pipe_(INVALID_HANDLE_VALUE), rpcInProgress_(0),
-      activationInProgress_(false), nextSeqNum_(0), isActivated_(false),
+      activationInProgress_(false), nextSeqNum_(0), activationRequested_(false),
       shouldWaitConnection_{true}, handshakeComplete_{false},
       connectAttempts_{MAX_CONNECT_ATTEMPTS},
-      lastLauncherStartAttemptTick_{0}, lastLauncherKillTick_{0},
+      lastLauncherStartAttemptTick_{0}, nextConnectionAttemptTick_{0},
+      rpcDeadlineTick_{0},
       asyncPollTimerWindow_(nullptr),
       asyncPollTimerId_(0), asyncFlushInProgress_(false),
       autoPairRules_(defaultAutoPairRules()) {}
@@ -561,9 +564,8 @@ Client::~Client(void) {
     asyncPollTimerId_ = 0;
     asyncPollTimerWindow_ = nullptr;
   }
-  closeRpcConnection();
-  resetTextServiceState();
-  LangBarButton::clearIconCache();
+  closeRpcConnection(false);
+  resetTextServiceState(false);
 }
 
 // pack a keyEvent object into a json value
@@ -583,9 +585,23 @@ void Client::addKeyEventToRpcRequest(moqi::protocol::ClientRequest &request,
 }
 
 bool Client::handleRpcResponse(Json::Value &msg, Ime::EditSession *session) {
+  if (offlineCleanupPending_) return false;
   bool success = msg.get("success", false).asBool();
   if (success) {
+    // Remember the owning context, not whichever document has focus when a
+    // later disconnect is detected (filterKeyDown has no edit session).
+    if (session) compositionContext_ = session->context();
+    const auto generation = connectionGeneration_;
     updateStatus(msg, session);
+    if (generation != connectionGeneration_) return false;
+    if (textService_->isComposing()) {
+      if (session) compositionContext_ = session->context();
+    } else {
+      compositionContext_ = nullptr;
+    }
+  } else {
+    closeRpcConnection();
+    resetTextServiceState();
   }
   return success;
 }
@@ -855,7 +871,16 @@ void Client::updateLanguageButtons(Json::Value &msg) {
   const auto &addButtonVal = msg["addButton"];
   if (addButtonVal.isArray()) {
     for (const auto &btn : addButtonVal) {
-      // FIXME: when to clear the id <=> button map??
+      if (!btn.isObject() || !btn["id"].isString()) continue;
+      const std::string id = btn["id"].asString();
+      auto existing = buttons_.find(id);
+      if (existing != buttons_.end()) {
+        // Repeated add (including the local mode placeholder) updates in place,
+        // preserving GUID and one registered TSF item per backend ID.
+        existing->second->setLocalFallback(false);
+        existing->second->updateFromJson(btn);
+        continue;
+      }
       auto langBtn = Ime::ComPtr<Moqi::LangBarButton>::takeover(
           Moqi::LangBarButton::fromJson(textService_, btn));
       if (langBtn != nullptr) {
@@ -887,11 +912,13 @@ void Client::updateLanguageButtons(Json::Value &msg) {
         string id = btn["id"].asString();
         auto map_it = buttons_.find(id);
         if (map_it != buttons_.end()) {
+          map_it->second->setLocalFallback(false);
           map_it->second->updateFromJson(btn);
         }
       }
     }
   }
+  retryLanguageButtonRegistration();
 }
 
 void Client::updatePreservedKeys(Json::Value &msg) {
@@ -1060,6 +1087,8 @@ void Client::updateCandidateList(Json::Value &msg, Ime::EditSession *session) {
 
 // handlers for the text service
 void Client::onActivate() {
+  ensureLocalStatusButton();
+  retryLanguageButtonRegistration();
   activationInProgress_.store(true, std::memory_order_release);
   // Use a much smaller connection budget during TSF activation. At logon the
   // system activates the default input method very early; blocking the TSF
@@ -1073,11 +1102,13 @@ void Client::onActivate() {
   req.set_is_keyboard_open(textService_->isKeyboardOpened());
 
   Json::Value ret;
-  callRpcMethod(req, ret);
-  if (handleRpcResponse(ret)) {
+  if (!callRpcMethod(req, ret) || !handleRpcResponse(ret)) {
+    appendRpcGuardLog(L"[onActivate] backend not ready; retaining activation intent for retry");
+    closeRpcConnection();
+    resetTextServiceState();
   }
   activationInProgress_.store(false, std::memory_order_release);
-  isActivated_ = true;
+  activationRequested_ = true;
   connectAttempts_ = MAX_CONNECT_ATTEMPTS;
 }
 
@@ -1085,15 +1116,16 @@ void Client::onDeactivate() {
   // Fire-and-forget: never block the app's TSF thread waiting for a reply to
   // a notification (e.g. when the backend is hung at boot).
   sendRpcNoWait("onDeactivate");
-  LangBarButton::clearIconCache();
-  isActivated_ = false;
+  activationRequested_ = false;
 }
 
 bool Client::filterKeyDown(Ime::KeyEvent &keyEvent) {
+  retryLanguageButtonRegistration();
+  if (!cleanupOfflineComposition()) return true;
   if (isOrdinaryPrintableKey(keyEvent) &&
       !waitForRpcIdle(FIRST_PRINTABLE_KEY_RPC_WAIT_MS)) {
     std::wostringstream log;
-    log << L"[filterKeyDown] RPC busy timeout; consume printable key"
+    log << L"[filterKeyDown] RPC busy timeout; retiring stream before key fallback"
         << L" vk=" << keyEvent.keyCode()
         << L" char=" << keyEvent.charCode()
         << L" wait_ms=" << FIRST_PRINTABLE_KEY_RPC_WAIT_MS
@@ -1102,7 +1134,9 @@ bool Client::filterKeyDown(Ime::KeyEvent &keyEvent) {
         << L" rpc_in_progress="
         << rpcInProgress_.load(std::memory_order_acquire);
     appendRpcGuardLog(log.str());
-    return true;
+    closeRpcConnection();
+    resetTextServiceState();
+    return !cleanupOfflineComposition();
   }
 
   auto req = createRpcRequest("filterKeyDown");
@@ -1113,19 +1147,26 @@ bool Client::filterKeyDown(Ime::KeyEvent &keyEvent) {
   if (rpcOk && handleRpcResponse(ret)) {
     return ret["return"].asBool();
   }
+  closeRpcConnection();
+  resetTextServiceState();
+  if (!cleanupOfflineComposition()) return true;
   if (isOrdinaryPrintableKey(keyEvent)) {
     std::wostringstream log;
-    log << L"[filterKeyDown] RPC failed or invalid response; consume printable key"
+    log << L"[filterKeyDown] RPC failed or invalid response; pass through printable key"
         << L" vk=" << keyEvent.keyCode()
         << L" char=" << keyEvent.charCode()
         << L" rpc_ok=" << (rpcOk ? L"true" : L"false");
     appendRpcGuardLog(log.str());
-    return true;
+    return false;
   }
   return false;
 }
 
 bool Client::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
+  // filterKeyDown may have requested a write lock solely for offline cleanup.
+  // If the host still refuses termination, consume this key rather than let it
+  // become part of a composition that no longer has a backend owner.
+  if (offlineCleanupPending_) return !cleanupOfflineComposition();
   auto req = createRpcRequest("onKeyDown");
   addKeyEventToRpcRequest(req, keyEvent);
 
@@ -1136,7 +1177,7 @@ bool Client::onKeyDown(Ime::KeyEvent &keyEvent, Ime::EditSession *session) {
     flushPendingAsyncResponses(session);
     return ret["return"].asBool();
   }
-  return false;
+  return !cleanupOfflineComposition();
 }
 
 bool Client::filterKeyUp(Ime::KeyEvent &keyEvent) {
@@ -1354,6 +1395,10 @@ void Client::onKeyboardStatusChanged(bool opened) {
 
 // called just before current composition is terminated for doing cleanup.
 void Client::onCompositionTerminated(bool forced) {
+  // Offline termination is local: never reconnect or replay backend state from
+  // inside endComposition's write session.
+  if (offlineCleanupPending_ || offlineCleanupInProgress_) return;
+  compositionContext_ = nullptr;
   auto req = createRpcRequest("onCompositionTerminated");
   req.set_forced(forced);
 
@@ -1475,12 +1520,18 @@ bool Client::applyAsyncResponse(Json::Value &msg, Ime::EditSession *session) {
 }
 
 void Client::flushPendingAsyncResponses(Ime::EditSession *session) {
-  while (!pendingAsyncResponses_.empty()) {
+  const auto generation = connectionGeneration_;
+  while (!offlineCleanupPending_ && !pendingAsyncResponses_.empty()) {
     Json::Value msg = pendingAsyncResponses_.front();
-    if (!applyAsyncResponse(msg, session)) {
+    pendingAsyncResponses_.pop_front();
+    const bool applied = applyAsyncResponse(msg, session);
+    // Applying a response can reenter TSF and retire the stream, clearing the
+    // queue. Never pop that cleared queue or replay a reply on its replacement.
+    if (generation != connectionGeneration_) break;
+    if (!applied) {
+      pendingAsyncResponses_.push_front(std::move(msg));
       break;
     }
-    pendingAsyncResponses_.pop_front();
   }
 }
 
@@ -1503,9 +1554,15 @@ void Client::flushPendingAsyncResponsesWithCurrentContext() {
   asyncFlushInProgress_ = true;
   auto editSession = Ime::ComPtr<Ime::EditSession>::make(
       context,
-      [this](Ime::EditSession *session, TfEditCookie) {
-        flushPendingAsyncResponses(session);
-        asyncFlushInProgress_ = false;
+      [service = Ime::ComPtr<TextService>(textService_), client = this,
+       token = lifetimeToken_, generation = connectionGeneration_](Ime::EditSession *session, TfEditCookie) {
+        // TSF can execute this after profile switch/deactivation. Keep the
+        // service alive, but never dereference an already-destroyed Client.
+        if (service->client_.get() != client ||
+            service->client_->lifetimeToken_ != token ||
+            client->connectionGeneration_ != generation) return;
+        client->flushPendingAsyncResponses(session);
+        client->asyncFlushInProgress_ = false;
       });
   context->RequestEditSession(textService_->clientId(), editSession,
                               TF_ES_ASYNCDONTCARE | TF_ES_READWRITE,
@@ -1523,7 +1580,7 @@ void Client::pollAsyncResponses() {
   }
 
   std::string serializedResponse;
-  while (readPendingPipeMessage(serializedResponse)) {
+  for (int count = 0; count < 32 && readPendingPipeMessage(serializedResponse); ++count) {
     Proto::FrameBuffer responseBuffer;
     responseBuffer.append(serializedResponse.data(), serializedResponse.size());
     std::string payload;
@@ -1627,6 +1684,10 @@ bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
   if (pipe == INVALID_HANDLE_VALUE) {
     return false;
   }
+  if (remainingRpcTime(RPC_REPLY_TIMEOUT_MS) == 0) {
+    if (timedOut) *timedOut = true;
+    return false;
+  }
   // Write the request as one pipe message, then wait for the reply with a
   // bounded deadline (WriteFile + ReadFile instead of the unbounded
   // TransactNamedPipe).
@@ -1638,20 +1699,36 @@ bool Client::callRpcPipe(HANDLE pipe, const std::string &serializedRequest,
     return false;
   }
   return readPipeMessageWithTimeout(pipe, serializedReply,
-                                    RPC_REPLY_TIMEOUT_MS, timedOut);
+                                    remainingRpcTime(RPC_REPLY_TIMEOUT_MS), timedOut);
 }
 
 // send the request to the server
 // a sequence number will be added to the req object automatically.
 bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
                            Json::Value &response) {
+  response = Json::Value();
+  if (!cleanupOfflineComposition()) return false;
   try {
+    // Nested init/activate share the caller's budget, not a fresh 8s each.
+    const bool outermost = rpcInProgress_.load(std::memory_order_acquire) == 0;
+    if (outermost) {
+      const bool explicitCommand =
+          request.method() == moqi::protocol::METHOD_ON_COMMAND ||
+          request.method() == moqi::protocol::METHOD_ON_MENU;
+      const DWORD budget = activationInProgress_.load(std::memory_order_acquire)
+          ? ACTIVATION_TOTAL_TIMEOUT_MS
+          : (explicitCommand ? RPC_REPLY_TIMEOUT_MS : KEY_RPC_TOTAL_TIMEOUT_MS);
+      rpcDeadlineTick_ = ::GetTickCount64() + budget;
+    }
     ScopedRpcInProgress rpcGuard(rpcInProgress_);
+    if (remainingRpcTime(RPC_REPLY_TIMEOUT_MS) == 0) return false;
     if (shouldWaitConnection_ && !waitForRpcConnection(connectAttempts_)) {
       return false;
     }
 
+    const auto generation = connectionGeneration_;
     pollAsyncResponses();
+    if (generation != connectionGeneration_ || offlineCleanupPending_) return false;
 
     // Add a sequence number for the request.
     auto seqNum = nextSeqNum_++;
@@ -1667,6 +1744,11 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
     bool timedOut = false;
     if (callRpcPipe(pipe_, serializedRequest, serializedResponse, &timedOut)) {
       while (true) {
+        if (remainingRpcTime(RPC_REPLY_TIMEOUT_MS) == 0) {
+          timedOut = true;
+          success = false;
+          break;
+        }
         Proto::FrameBuffer responseBuffer;
         responseBuffer.append(serializedResponse.data(), serializedResponse.size());
         std::string payload;
@@ -1686,7 +1768,7 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
         // The synchronous reply may arrive in a later pipe message than an
         // async notification; wait for it with a bounded timeout.
         if (!readPipeMessageWithTimeout(pipe_, serializedResponse,
-                                        RPC_ASYNC_REPLY_WAIT_MS, &timedOut)) {
+                                        remainingRpcTime(RPC_ASYNC_REPLY_WAIT_MS), &timedOut)) {
           success = false;
           break;
         }
@@ -1695,21 +1777,22 @@ bool Client::callRpcMethod(moqi::protocol::ClientRequest &request,
       success = false;
     }
 
-    flushPendingAsyncResponses();
+    if (generation != connectionGeneration_) {
+      response = Json::Value();
+      return false;
+    }
+    if (success) flushPendingAsyncResponses();
+    if (generation != connectionGeneration_) {
+      response = Json::Value();
+      return false;
+    }
 
     if (!success) {
-      // A pure timeout on an already-initialized connection usually means the
-      // backend is slow (cold start: first request per engine can take seconds),
-      // not dead. Keep the connection warm so the next request does not pay
-      // for a reconnect + re-init cycle, which made cold starts even slower
-      // (each reconnect created a fresh engine that had to reload everything).
-      // Genuine pipe errors and pre-handshake timeouts still close the
-      // connection so it can be re-established and re-initialized.
-      if (!timedOut || !handshakeComplete_) {
-        closeRpcConnection();    // close the pipe connection since it's broken
-        resetTextServiceState(); // since we lost the connection, the state is
-                                 // unknown so we reset.
-      }
+      // A timed-out response can contain a late commit. Once a key has been
+      // passed through, applying that reply would duplicate/reorder user input.
+      // Retire this stream; reconnect and initialize a fresh backend context.
+      closeRpcConnection();
+      resetTextServiceState();
     }
     return success;
   } catch (const std::exception &) {
@@ -1737,23 +1820,40 @@ bool Client::isPipeCreatedByMoqiServer(HANDLE pipe) {
 // establish a connection to the specified pipe and returns its handle
 // static
 HANDLE Client::connectPipe(const wchar_t *pipeName, int timeoutMs) {
+  const ULONGLONG deadline = ::GetTickCount64() + (std::max)(0, timeoutMs);
   HANDLE pipe = INVALID_HANDLE_VALUE;
-  if (WaitNamedPipe(pipeName, timeoutMs)) {
-    pipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                      OPEN_EXISTING, 0, NULL);
-  }
+  do {
+    // WaitNamedPipe returns immediately if the name does not exist. Also, 0
+    // means the server's default timeout, NOT a nonblocking availability check.
+    pipe = ::CreateFileW(pipeName, GENERIC_READ | GENERIC_WRITE, 0, nullptr,
+                         OPEN_EXISTING, 0, nullptr);
+    if (pipe != INVALID_HANDLE_VALUE) break;
+    const DWORD error = ::GetLastError();
+    const ULONGLONG now = ::GetTickCount64();
+    if (now >= deadline || (error != ERROR_FILE_NOT_FOUND &&
+        error != ERROR_PIPE_BUSY && error != ERROR_PIPE_NOT_CONNECTED)) break;
+    const DWORD remaining = static_cast<DWORD>((std::min)(deadline - now, 25ULL));
+    if (error == ERROR_PIPE_BUSY) ::WaitNamedPipeW(pipeName, remaining);
+    else ::Sleep(remaining);
+  } while (true);
 
   if (pipe != INVALID_HANDLE_VALUE) {
-    DWORD mode = PIPE_READMODE_MESSAGE;
-    // The pipe is connected; change to message-read mode.
+    // Nonblocking synchronous writes are essential: an unresponsive reader
+    // must never leave WriteFile (including deactivate) stuck in the host.
+    DWORD mode = PIPE_READMODE_MESSAGE | PIPE_NOWAIT;
     if (!isPipeCreatedByMoqiServer(pipe) ||
-        !::SetNamedPipeHandleState(pipe, &mode, NULL, NULL)) {
-      DisconnectNamedPipe(pipe);
-      CloseHandle(pipe);
+        !::SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr)) {
+      ::CloseHandle(pipe);
       pipe = INVALID_HANDLE_VALUE;
     }
   }
   return pipe;
+}
+
+DWORD Client::remainingRpcTime(DWORD maximum) const {
+  const ULONGLONG now = ::GetTickCount64();
+  return now >= rpcDeadlineTick_ ? 0 : static_cast<DWORD>(
+      (std::min)(static_cast<ULONGLONG>(maximum), rpcDeadlineTick_ - now));
 }
 
 // True when this text service is hosted in a SYSTEM-context process (e.g. the
@@ -1814,7 +1914,8 @@ bool Client::ensureLauncherRunning() {
   // logon screen before the shell is ready) no longer poisons the client
   // forever.
   const ULONGLONG now = ::GetTickCount64();
-  if (now - lastLauncherStartAttemptTick_ < LAUNCHER_START_RETRY_COOLDOWN_MS) {
+  if (lastLauncherStartAttemptTick_ != 0 &&
+      now - lastLauncherStartAttemptTick_ < LAUNCHER_START_RETRY_COOLDOWN_MS) {
     return false;
   }
   lastLauncherStartAttemptTick_ = now;
@@ -1849,49 +1950,6 @@ bool Client::ensureLauncherRunning() {
   return false;
 }
 
-// Check whether a MoqiLauncher process exists (via its single-instance mutex).
-bool Client::isLauncherProcessRunning() {
-  HANDLE mutex = ::OpenMutexW(MUTEX_ALL_ACCESS, FALSE, L"MoqiLauncherMutex");
-  if (mutex != nullptr) {
-    ::CloseHandle(mutex);
-    return true;
-  }
-  return false;
-}
-
-// Last-resort self-heal: a MoqiLauncher process exists but its pipe is not
-// reachable, which means it is stuck (dead uv loop / unbound pipe). Force-kill
-// it and start a fresh one — the same thing the user does manually
-// ("kill MoqiLauncher.exe, then switch the input method").
-bool Client::forceRestartLauncher() {
-  const ULONGLONG now = ::GetTickCount64();
-  if (now - lastLauncherKillTick_ < LAUNCHER_KILL_RETRY_COOLDOWN_MS) {
-    return false;
-  }
-  lastLauncherKillTick_ = now;
-  appendRpcGuardLog(L"[launcher] force-restarting unreachable MoqiLauncher");
-
-  wchar_t systemDir[MAX_PATH] = {};
-  if (::GetSystemDirectoryW(systemDir, _countof(systemDir)) == 0) {
-    return false;
-  }
-  std::wstring taskkillPath = std::wstring(systemDir) + L"\\taskkill.exe";
-  std::wstring commandLine =
-      L"\"" + taskkillPath + L"\" /F /IM MoqiLauncher.exe";
-  STARTUPINFOW startupInfo = {};
-  startupInfo.cb = sizeof(startupInfo);
-  PROCESS_INFORMATION processInfo = {};
-  if (::CreateProcessW(nullptr, commandLine.data(), nullptr, nullptr, FALSE,
-                       CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo,
-                       &processInfo)) {
-    ::CloseHandle(processInfo.hThread);
-    ::CloseHandle(processInfo.hProcess);
-  }
-  // Give the old process (and its children) a moment to die before relaunch.
-  ::Sleep(300);
-  return ensureLauncherRunning();
-}
-
 // Ensure that we're connected to the Moqi input method server
 // If we are already connected, the method simply returns true;
 // otherwise, it tries to establish the connection with a bounded budget.
@@ -1900,26 +1958,23 @@ bool Client::waitForRpcConnection(int connectAttempts) {
     return true;
   }
 
+  if (::GetTickCount64() < nextConnectionAttemptTick_) return false;
   wstring serverPipeName = getPipeName(L"Launcher");
+  if (serverPipeName.empty()) return false;
   pipe_ = connectPipe(serverPipeName.c_str(), 0);
-  if (pipe_ == INVALID_HANDLE_VALUE) {
-    ensureLauncherRunning();
-  }
+  if (pipe_ == INVALID_HANDLE_VALUE) ensureLauncherRunning();
 
   for (int attempt = 0; pipe_ == INVALID_HANDLE_VALUE && attempt < connectAttempts;
        ++attempt) {
-    // try to connect to the server
-    pipe_ = connectPipe(serverPipeName.c_str(), CONNECT_ATTEMPT_TIMEOUT_MS);
+    const DWORD budget = remainingRpcTime(CONNECT_ATTEMPT_TIMEOUT_MS);
+    if (budget == 0) break;
+    pipe_ = connectPipe(serverPipeName.c_str(), static_cast<int>(budget));
   }
-
-  if (pipe_ == INVALID_HANDLE_VALUE && isLauncherProcessRunning()) {
-    // A launcher process exists but we cannot reach its pipe: it is stuck.
-    // Force a restart and retry once.
-    forceRestartLauncher();
-    for (int attempt = 0;
-         pipe_ == INVALID_HANDLE_VALUE && attempt < connectAttempts; ++attempt) {
-      pipe_ = connectPipe(serverPipeName.c_str(), CONNECT_ATTEMPT_TIMEOUT_MS);
-    }
+  // An absent pipe can mean a normal cold start, not a stuck launcher. Never
+  // kill by image name: that can terminate other users/sessions/instances.
+  if (pipe_ == INVALID_HANDLE_VALUE) {
+    nextConnectionAttemptTick_ = ::GetTickCount64() + CONNECTION_RETRY_COOLDOWN_MS;
+    appendRpcGuardLog(L"[launcher] pipe unavailable; deferred retry (no process termination)");
   }
 
   if (pipe_ != INVALID_HANDLE_VALUE) {
@@ -1940,18 +1995,80 @@ bool Client::completeConnectionHandshake() {
   }
   handshakeComplete_ = true;
 
-  if (isActivated_) {
+  if (activationRequested_) {
     // we lost connection while being activated previously
     // re-initialize the whole text service.
     // activate the text service again.
-    onActivate();
+    auto request = createRpcRequest("onActivate");
+    request.set_is_keyboard_open(textService_->isKeyboardOpened());
+    Json::Value response;
+    if (!callRpcMethod(request, response) || !handleRpcResponse(response)) {
+      closeRpcConnection();
+      resetTextServiceState();
+    }
   }
   shouldWaitConnection_ = true;
   // if init() or onActivate() RPC fails, the pipe_ might have been closed.
   return pipe_ != INVALID_HANDLE_VALUE;
 }
 
-void Client::resetTextServiceState() {
+void Client::retryLanguageButtonRegistration() {
+  const ULONGLONG now = ::GetTickCount64();
+  if (now < nextButtonRegistrationTick_ || buttons_.empty()) return;
+  // Base addButton stores the item but discards AddItem's HRESULT. Verify the
+  // actual manager state before retrying, without adding to its vector again.
+  nextButtonRegistrationTick_ = now + 1000;
+  auto manager = textService_->threadMgr().query<ITfLangBarItemMgr>();
+  if (!manager) {
+    appendRpcGuardLog(L"[langbar] ITfLangBarItemMgr unavailable; retry deferred");
+    return;
+  }
+  for (const auto &entry : buttons_) {
+    TF_LANGBARITEMINFO info{};
+    HRESULT hr = entry.second->GetInfo(&info);
+    if (FAILED(hr)) {
+      appendRpcGuardLog(L"[langbar] GetInfo failed hr=" + std::to_wstring(hr));
+      continue;
+    }
+    Ime::ComPtr<ITfLangBarItem> registered;
+    const HRESULT lookup = manager->GetItem(info.guidItem, &registered);
+    if (SUCCEEDED(lookup) && registered) {
+      auto actual = registered.query<IUnknown>();
+      Ime::ComPtr<ITfLangBarItem> item(static_cast<ITfLangBarItem*>(entry.second.operator->()));
+      auto expected = item.query<IUnknown>();
+      if (actual != expected.operator->()) {
+        // A foreign item with this GUID must not be removed or overwritten.
+        appendRpcGuardLog(L"[langbar] GUID occupied by another item; add skipped");
+      }
+      continue;
+    }
+    hr = manager->AddItem(entry.second);
+    std::wostringstream log;
+    log << L"[langbar] registration retry id=" << utf8ToUtf16(entry.first.c_str())
+        << L" GetItem_hr=" << lookup << L" AddItem_hr=" << hr;
+    appendRpcGuardLog(log.str());
+    // Keep the button regardless of failure. Activation or a subsequent key
+    // will check GetItem again, at most once per second, until it is present.
+  }
+}
+
+void Client::ensureLocalStatusButton() {
+  if (buttons_.find("windows-mode-icon") != buttons_.end()) return;
+  Json::Value info;
+  info["id"] = "windows-mode-icon";
+  info["text"] = "Moqi";
+  info["tooltip"] = "Moqi: backend mode unavailable; input passes through on communication failure";
+  info["enable"] = false;
+  auto button = Ime::ComPtr<Moqi::LangBarButton>::takeover(
+      Moqi::LangBarButton::fromJson(textService_, info));
+  if (!button) return;
+  button->setLocalFallback(true);
+  button->setIcon(::LoadIconW(nullptr, IDI_APPLICATION));
+  buttons_.emplace(button->id(), button);
+  textService_->addButton(button);
+}
+
+void Client::resetTextServiceState(bool showOfflineStatus) {
   // we lost connection while being activated previously
   // re-initialize the whole text service.
 
@@ -1966,9 +2083,58 @@ void Client::resetTextServiceState() {
     buttons_.clear();
   }
   autoPairRules_ = defaultAutoPairRules();
+  if (showOfflineStatus) ensureLocalStatusButton();
 }
 
-void Client::closeRpcConnection() {
+bool Client::cleanupOfflineComposition(bool allowAsync) {
+  if (!offlineCleanupPending_) return true;
+  if (offlineCleanupInProgress_) return false;
+  if (!textService_->isComposing()) {
+    offlineCleanupPending_ = false;
+    compositionContext_ = nullptr;
+    return true;
+  }
+
+  auto context = compositionContext_;
+  if (!context) context = textService_->currentContext();
+  if (!context) return false;
+  compositionContext_ = context;
+  offlineCleanupInProgress_ = true;
+  // libIME2 requests a synchronous write session internally. It retains real
+  // preedit text, clears display attributes and removes only its dummy anchor.
+  textService_->endComposition(context);
+  offlineCleanupInProgress_ = false;
+  if (!textService_->isComposing()) {
+    offlineCleanupPending_ = false;
+    compositionContext_ = nullptr;
+    return true;
+  }
+
+  // OnTestKeyDown has no edit session and the host may refuse a synchronous
+  // write lock. Defer termination, but fence all RPC/UI responses and consume
+  // keys until cleanup succeeds; passing through now would edit the old range.
+  if (allowAsync && !offlineCleanupQueued_) {
+    offlineCleanupQueued_ = true;
+    auto editSession = Ime::ComPtr<Ime::EditSession>::make(
+        context,
+        [service = Ime::ComPtr<TextService>(textService_), client = this,
+         token = lifetimeToken_](Ime::EditSession*, TfEditCookie) {
+          if (service->client_.get() != client ||
+              service->client_->lifetimeToken_ != token) return;
+          client->offlineCleanupQueued_ = false;
+          client->cleanupOfflineComposition(false);
+        });
+    HRESULT sessionResult = E_FAIL;
+    const HRESULT hr = context->RequestEditSession(textService_->clientId(), editSession,
+        TF_ES_ASYNCDONTCARE | TF_ES_READWRITE, &sessionResult);
+    if (FAILED(hr) || FAILED(sessionResult)) offlineCleanupQueued_ = false;
+  }
+  return !offlineCleanupPending_;
+}
+
+void Client::closeRpcConnection(bool cleanupComposition) {
+  ++connectionGeneration_;
+  asyncFlushInProgress_ = false;
   pendingAsyncResponses_.clear();
   handshakeComplete_ = false;
   if (asyncPollTimerId_ != 0) {
@@ -1977,9 +2143,18 @@ void Client::closeRpcConnection() {
     asyncPollTimerWindow_ = nullptr;
   }
   if (pipe_ != INVALID_HANDLE_VALUE) {
-    DisconnectNamedPipe(pipe_);
+    nextConnectionAttemptTick_ = ::GetTickCount64() + CONNECTION_RETRY_COOLDOWN_MS;
     CloseHandle(pipe_);
     pipe_ = INVALID_HANDLE_VALUE;
+  }
+  if (cleanupComposition) {
+    textService_->hideCandidates();
+    textService_->hideMessage();
+    textService_->candidates_.clear();
+    textService_->setCandidatePreedit(L"");
+    textService_->setCandidatePreeditCursor(0);
+    offlineCleanupPending_ = textService_->isComposing();
+    cleanupOfflineComposition();
   }
 }
 

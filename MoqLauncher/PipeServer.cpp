@@ -87,7 +87,7 @@ static void copyNotifyText(wchar_t *dest, size_t destCount, const std::wstring &
   wcsncpy_s(dest, destCount, text.c_str(), _TRUNCATE);
 }
 
-PipeServer::PipeServer()
+PipeServer::PipeServer(const std::wstring& dataDir)
     : quitExistingLauncher_(false), hwnd_(nullptr),
       singleInstanceMutex_(nullptr),
       shutdownRequested_(false),
@@ -98,14 +98,23 @@ PipeServer::PipeServer()
   // this can only be assigned once
   assert(singleton_ == nullptr);
   singleton_ = this;
+  topDirPath_ = getCurrentExecutableDir();
 
-  initDataDir();
+  if (dataDir.empty()) {
+    initDataDir();
+  } else {
+    dataDirPath_ = dataDir;
+    makeDirs(dataDirPath_);
+  }
   loadConfig();
   initLogger();
 }
 
 PipeServer::~PipeServer() {
   singleton_ = nullptr;
+  // Release the registry's shared ownership as well as our own logger. Tests
+  // and other short-lived server instances must not keep their log file open.
+  spdlog::drop("MoqiLauncher");
 
   if (singleInstanceMutex_) {
     ::CloseHandle(singleInstanceMutex_);
@@ -138,7 +147,8 @@ void PipeServer::initLogger() {
 void PipeServer::loadConfig() {
   auto configFile = dataDirPath_ + CONFIG_FILE_REL_PATH;
   Json::Value config;
-  if (loadJsonFile(configFile, config)) {
+  if (loadJsonFile(configFile, config) && config.isObject() &&
+      config["logLevel"].isString()) {
     auto loadedLevel = spdlog::level::from_str(config["logLevel"].asString());
     logLevel_ = loadedLevel <= spdlog::level::debug ? spdlog::level::debug
                                                     : spdlog::level::err;
@@ -160,13 +170,30 @@ void PipeServer::initBackendServers(const std::wstring &topDirPath) {
   if (loadJsonFile(topDirPath + L"\\backends.json", backends) &&
       backends.isArray()) {
     for (auto &backendInfo : backends) {
+      if (!backendInfo.isObject() || !backendInfo["name"].isString() ||
+          !backendInfo["command"].isString() || !backendInfo["workingDir"].isString() ||
+          (backendInfo.isMember("params") && !backendInfo["params"].isString()) ||
+          backendInfo["name"].asString().empty() ||
+          backendInfo["command"].asString().empty() ||
+          backendInfo["workingDir"].asString().empty()) {
+        logger_->error("Invalid backend definition in backends.json");
+        continue;
+      }
       backends_.emplace_back(
           std::make_unique<BackendServer>(this, backendInfo));
     }
   }
+  if (backends_.empty()) {
+    logger_->error("No valid backends found in {}", utf8Codec.to_bytes(topDirPath));
+    enqueueTrayNotification(L"墨奇安装不完整", L"未找到有效的算法配置，请重新安装墨奇输入法。", NIIF_ERROR);
+  }
 
   // maps language profiles to backend names
   initInputMethods(topDirPath);
+  if (backendMap_.empty()) {
+    logger_->error("No language profile metadata found in {}", utf8Codec.to_bytes(topDirPath));
+    enqueueTrayNotification(L"墨奇安装不完整", L"未找到输入法配置，请重新安装墨奇输入法。", NIIF_ERROR);
+  }
 }
 
 void PipeServer::initInputMethods(const std::wstring &topDirPath) {
@@ -196,13 +223,26 @@ void PipeServer::initInputMethods(const std::wstring &topDirPath) {
             // load the json file to get the info of input method
             Json::Value json;
             if (loadJsonFile(imejson, json)) {
+              if (!json.isObject() || !json["guid"].isString() || json["guid"].asString().empty()) {
+                logger_->error("Missing language profile GUID in {}", utf8Codec.to_bytes(imejson));
+                continue;
+              }
               std::string guid = json["guid"].asString();
+              GUID parsedGuid{};
+              if (FAILED(::CLSIDFromString(utf8Codec.from_bytes(guid).c_str(), &parsedGuid))) {
+                logger_->error("Invalid language profile GUID in {}", utf8Codec.to_bytes(imejson));
+                continue;
+              }
               std::transform(
                   guid.begin(), guid.end(), guid.begin(),
                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); }); // convert GUID to lower case
                                   // map text service GUID to its backend server
-              backendMap_.insert(std::make_pair(
-                  guid, backendFromName(backend->name_.c_str())));
+              if (!backendMap_.emplace(guid, backend.get()).second) {
+                logger_->error("Duplicate language profile GUID: {}", guid);
+              }
+              if (backend->lastInitGuid_.empty()) {
+                backend->lastInitGuid_ = guid;
+              }
             }
           }
         }
@@ -215,9 +255,7 @@ void PipeServer::initInputMethods(const std::wstring &topDirPath) {
 void PipeServer::restartAllBackends() {
   logger_->info("Restart all backends");
   for (auto &backend : backends_) {
-    if (backend->isProcessRunning()) {
-      backend->restartProcess();
-    }
+    backend->restartProcess();
   }
 }
 
@@ -386,24 +424,44 @@ PipeClient *PipeServer::clientFromId(const std::string &clientId) {
 
 // References:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365588(v=vs.85).aspx
-void PipeServer::initPipe(uv_pipe_t *pipe, const wchar_t *appName,
+bool PipeServer::initPipe(uv_pipe_t *pipe, const wchar_t *appName,
                           SECURITY_ATTRIBUTES *sa) {
   auto utf8PipeName = utf8Codec.to_bytes(getPipeName(appName));
-  uv_pipe_init_windows_named_pipe(uv_default_loop(), pipe, 0,
+  int status = uv_pipe_init_windows_named_pipe(uv_default_loop(), pipe, 0,
                                   PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE,
                                   sa);
+  if (status < 0) {
+    logger_->error("Cannot initialize launcher pipe: {}", uv_strerror(status));
+    return false;
+  }
   pipe->data = this;
-  uv_pipe_bind(pipe, utf8PipeName.c_str());
+  status = uv_pipe_bind(pipe, utf8PipeName.c_str());
+  if (status < 0) {
+    logger_->error("Cannot bind launcher pipe {}: {}", utf8PipeName, uv_strerror(status));
+    uv_close(reinterpret_cast<uv_handle_t*>(pipe), nullptr);
+    uv_run(uv_default_loop(), UV_RUN_NOWAIT);
+    return false;
+  }
+  return true;
 }
 
 void PipeServer::acceptClient(PipeClient *client) {
   auto serverStream = reinterpret_cast<uv_stream_t *>(&serverPipe_);
-  uv_accept(serverStream, client->stream());
+  const int status = uv_accept(serverStream, client->stream());
+  if (status < 0) {
+    logger_->error("Cannot accept TSF client: {}", uv_strerror(status));
+    client->close();
+    return;
+  }
   clients_.push_back(client);
+  client->startRead();
 }
 
 void PipeServer::removeClient(PipeClient *client) {
-  clients_.erase(find(clients_.begin(), clients_.end(), client));
+  auto it = find(clients_.begin(), clients_.end(), client);
+  if (it != clients_.end()) {
+    clients_.erase(it);
+  }
   delete client;
 }
 
@@ -420,15 +478,31 @@ void PipeServer::enqueueTrayNotification(const std::wstring &title,
 }
 
 void PipeServer::onNewClientConnected(uv_stream_t *server, int status) {
+  if (status < 0) {
+    logger_->error("Launcher pipe connection failed: {}", uv_strerror(status));
+    return;
+  }
   auto server_pipe = reinterpret_cast<uv_pipe_t *>(server);
   auto client = new PipeClient{this, server_pipe->pipe_mode,
                                server_pipe->security_attributes};
   acceptClient(client);
-  client->startRead();
 }
 
 bool PipeServer::initSingleInstance() {
-  singleInstanceMutex_ = ::CreateMutex(NULL, FALSE, singleInstanceMutexName_);
+  // One launcher per user/session, matching the per-user pipe. A different
+  // account's elevated app must not prevent this user's engine from starting.
+  wchar_t username[UNLEN + 1] = {};
+  DWORD length = UNLEN + 1;
+  if (!::GetUserNameW(username, &length)) {
+    logger_->error("Cannot identify launcher user: {}", ::GetLastError());
+    return false;
+  }
+  const std::wstring mutexName = std::wstring(singleInstanceMutexName_) + L"-" + username;
+  singleInstanceMutex_ = ::CreateMutex(NULL, FALSE, mutexName.c_str());
+  if (singleInstanceMutex_ == nullptr) {
+    logger_->error("Cannot create launcher mutex: {}", ::GetLastError());
+    return false;
+  }
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
     // mutex already exists: found an existing process.
     return false;
@@ -457,7 +531,10 @@ int PipeServer::exec(LPSTR cmd) {
   // get the Moqi installation directory
   topDirPath_ = getCurrentExecutableDir();
   // must set CWD to our dir. otherwise the backends won't launch.
-  ::SetCurrentDirectoryW(topDirPath_.c_str());
+  if (!::SetCurrentDirectoryW(topDirPath_.c_str())) {
+    logger_->error("Cannot set launcher working directory: {}", ::GetLastError());
+    return 1;
+  }
 
   // this is the first instance
   initBackendServers(topDirPath_);
@@ -472,14 +549,28 @@ int PipeServer::exec(LPSTR cmd) {
     sa = securityAttributes_.get();
   }
   // initialize the server pipe
-  initPipe(&serverPipe_, L"Launcher", sa);
+  if (!initPipe(&serverPipe_, L"Launcher", sa)) {
+    return 1;
+  }
 
-  // listen to events from clients
-  uv_listen(reinterpret_cast<uv_stream_t *>(&serverPipe_), 32,
+  // Do not advertise a healthy tray if no TSF client can reach this instance.
+  const int listenStatus = uv_listen(reinterpret_cast<uv_stream_t *>(&serverPipe_), 32,
             [](uv_stream_t *server, int status) {
               auto _this = reinterpret_cast<PipeServer *>(server->data);
               _this->onNewClientConnected(server, status);
             });
+  if (listenStatus < 0) {
+    logger_->error("Cannot listen on launcher pipe: {}", uv_strerror(listenStatus));
+    uv_close(reinterpret_cast<uv_handle_t*>(&serverPipe_), nullptr);
+    uv_run(uv_default_loop(), UV_RUN_NOWAIT);
+    return 1;
+  }
+
+  // Start and warm the engine before the first TSF activation/keystroke.
+  // Failures remain retryable and are shown in the tray and error log.
+  for (auto& backend : backends_) {
+    backend->startProcess();
+  }
 
   // run GUI message loop in another worker thread
   uv_thread_t uiThread;
@@ -783,6 +874,7 @@ void PipeServer::runGuiThread() {
   }
 
   createShellNotifyIcon();
+  flushTrayNotifications(); // includes failures queued before the window existed
 
   MSG msg;
   while (::GetMessage(&msg, NULL, 0, 0)) {

@@ -69,6 +69,9 @@ public:
 
 	void close();
 
+    void sendError(const moqi::protocol::ClientRequest& request,
+                   const std::string& message);
+
 private:
     void onReadError(int error);
 
@@ -87,6 +90,7 @@ private:
 	// timer used to wait for response from backend server
 	std::unique_ptr<uv_timer_t> waitResponseTimer_;
     Proto::FrameBuffer readBuffer_;
+    bool closing_ = false;
 };
 
 } // namespace Moqi
