@@ -561,6 +561,15 @@ Client::~Client(void) {
     asyncPollTimerId_ = 0;
     asyncPollTimerWindow_ = nullptr;
   }
+  // 从 TSF 注销本实例注册的语言栏按钮，再让 map 析构释放引用：
+  // 只 Release 不 RemoveItem 的话 msctf 侧引用永不归还，每次
+  // "打字×切走"泄漏一批按钮对象（2026-10-24 mem-audit 实测定位）。
+  if (!buttons_.empty()) {
+    for (auto &item : buttons_) {
+      textService_->removeButton(item.second);
+    }
+    buttons_.clear();
+  }
   closeRpcConnection();
   resetTextServiceState();
   LangBarButton::clearIconCache();
@@ -855,11 +864,19 @@ void Client::updateLanguageButtons(Json::Value &msg) {
   const auto &addButtonVal = msg["addButton"];
   if (addButtonVal.isArray()) {
     for (const auto &btn : addButtonVal) {
-      // FIXME: when to clear the id <=> button map??
+      // 后端 onActivate 与首键建会话会各发一次 addButton（同 id）：
+      // 已注册的按钮就地更新即可，重复 AddItem 会多出一份无人释放的
+      // msctf 引用（2026-10-24 实测每次打字×切换泄漏 5 个按钮对象）。
+      const std::string addId = btn["id"].asString();
+      auto existing = buttons_.find(addId);
+      if (existing != buttons_.end()) {
+        existing->second->updateFromJson(btn);
+        continue;
+      }
       auto langBtn = Ime::ComPtr<Moqi::LangBarButton>::takeover(
           Moqi::LangBarButton::fromJson(textService_, btn));
       if (langBtn != nullptr) {
-        buttons_.emplace(langBtn->id(), langBtn); // insert into the map
+        buttons_.emplace(addId, langBtn); // insert into the map
         textService_->addButton(langBtn);
       }
     }
