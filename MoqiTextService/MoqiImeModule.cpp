@@ -25,6 +25,7 @@
 #include <Shlwapi.h>
 #include <cstring>
 #include <fstream>
+#include <filesystem>
 #include <json/json.h>
 #include <string>
 
@@ -43,8 +44,31 @@ namespace {
 std::wstring getConfiguredProgramDir() {
   wchar_t path[MAX_PATH] = {};
   DWORD len = ::GetEnvironmentVariableW(L"MOQI_PROGRAM_DIR", path, _countof(path));
-  if (len > 0 && len < _countof(path)) {
-    return path;
+  if (len >= _countof(path) || (len > 0 && !std::filesystem::path(path).is_absolute())) {
+    OutputDebugStringW(L"Moqi: invalid MOQI_PROGRAM_DIR; refusing fallback.\n");
+    return {};
+  }
+  if (len > 0) return path;
+
+  // The installer writes both registry views. Do not infer a custom install
+  // location from the system-directory copy of this DLL.
+  DWORD bytes = sizeof(path);
+  HKEY key = nullptr;
+  LONG configured = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\MoqiIM", 0,
+                                   KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key);
+  if (configured == ERROR_SUCCESS) {
+    configured = ::RegGetValueW(key, nullptr, L"InstallDir",
+                                 RRF_RT_REG_SZ, nullptr, path, &bytes);
+    ::RegCloseKey(key);
+  }
+  if (configured == ERROR_SUCCESS) {
+    if (path[0] && std::filesystem::path(path).is_absolute()) return path;
+    OutputDebugStringW(L"Moqi: invalid InstallDir; refusing fallback.\n");
+    return {};
+  }
+  if (configured != ERROR_FILE_NOT_FOUND && configured != ERROR_PATH_NOT_FOUND) {
+    OutputDebugStringW(L"Moqi: unreadable/oversized InstallDir; refusing fallback.\n");
+    return {};
   }
 
   HRESULT result;
@@ -68,15 +92,24 @@ void loadBackendDirs(const std::wstring& programDir,
     return;
   }
 
-  Json::Value backendsInfo;
-  fp >> backendsInfo;
-  if (!backendsInfo.isArray()) {
-    return;
-  }
-
-  for (const auto& backend : backendsInfo) {
-    std::wstring name = utf8ToUtf16(backend["name"].asCString());
-    backendDirs.push_back(name);
+  try {
+    Json::Value backendsInfo;
+    fp >> backendsInfo;
+    if (!backendsInfo.isArray() || backendsInfo.empty()) return;
+    for (const auto& backend : backendsInfo) {
+      if (!backend.isObject() || !backend["name"].isString()) {
+        backendDirs.clear(); return;
+      }
+      std::wstring name = utf8ToUtf16(backend["name"].asCString());
+      // Backend names are single directories, never paths outside the payload.
+      if (name.empty() || name == L"." || name == L".." ||
+          name.find_first_of(L"\\/:\"") != std::wstring::npos) {
+        backendDirs.clear(); return;
+      }
+      backendDirs.push_back(name);
+    }
+  } catch (...) {
+    backendDirs.clear();
   }
 }
 

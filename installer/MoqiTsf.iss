@@ -46,14 +46,15 @@ Source: "{#StageDir}\win32\MoqiIM\*"; DestDir: "{app}"; Flags: ignoreversion rec
 Name: "{autoprograms}\{#MyAppName}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{autoprograms}\{#MyAppName}\Logs"; Filename: "{win}\explorer.exe"; Parameters: """{localappdata}\MoqiIM\Log"""
 
-[Run]
-Filename: "{app}\MoqiLauncher.exe"; Flags: nowait; Check: ShouldLaunchLauncher
-
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
-  ValueType: string; ValueName: "MoqiLauncher"; \
-  ValueData: """{app}\MoqiLauncher.exe"""; \
+; This runs as the actual interactive user at logon, never the UAC credential
+; account or SYSTEM. It retries user enablement if reboot registration raced logon.
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
+  ValueType: string; ValueName: "MoqiUserSetup"; \
+  ValueData: """{app}\SetupHelper.exe"" /user /s --appdir ""{app}"""; \
   Flags: uninsdeletevalue
+Root: HKLM32; Subkey: "Software\MoqiIM"; Flags: uninsdeletekey
+Root: HKLM64; Subkey: "Software\MoqiIM"; Flags: uninsdeletekey
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\moqi-ime"
@@ -80,23 +81,6 @@ begin
     RegKeyExists(HKEY_CURRENT_USER, 'Software\Microsoft\CTF\TIP\{#ImeClsid}') or
     RegKeyExists(HKEY_CLASSES_ROOT, 'CLSID\{#ImeClsid}') or
     RegKeyExists(HKEY_CURRENT_USER, 'Software\Classes\CLSID\{#ImeClsid}');
-end;
-
-procedure RegPurgeMoqiResiduals;
-var
-  ClsidKey: String;
-  TipKey: String;
-begin
-  ClsidKey := 'CLSID\{#ImeClsid}';
-  TipKey := 'SOFTWARE\Microsoft\CTF\TIP\{#ImeClsid}';
-  if RegKeyExists(HKEY_CLASSES_ROOT, ClsidKey) then
-    RegDeleteKeyIncludingSubkeys(HKEY_CLASSES_ROOT, ClsidKey);
-  if RegKeyExists(HKEY_LOCAL_MACHINE, TipKey) then
-    RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE, TipKey);
-  if RegKeyExists(HKEY_CURRENT_USER, 'Software\Microsoft\CTF\TIP\{#ImeClsid}') then
-    RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Microsoft\CTF\TIP\{#ImeClsid}');
-  if RegKeyExists(HKEY_CURRENT_USER, 'Software\Classes\CLSID\{#ImeClsid}') then
-    RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Classes\CLSID\{#ImeClsid}');
 end;
 
 procedure TryKillProcessImage(const ImageName: String);
@@ -188,6 +172,19 @@ begin
     if (ResultCode <> SetupHelperExitSuccess) and
        (ResultCode <> SetupHelperExitRestartRequired) then
       HandleSetupHelperResult('SetupHelper install', ResultCode);
+    if not HelperInstallNeedsRestart then
+    begin
+      if not ExecAsOriginalUser(GetSetupHelperPath,
+        BuildInstallSetupHelperParameters('/user'), ExpandConstant('{app}'),
+        SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+        HandleSetupHelperResult('Interactive-user setup', -1);
+      if ResultCode = 4 then
+        SuppressibleMsgBox(
+          '机器注册已完成。安装程序由提升身份直接启动，无法安全启用其他用户的输入法。请注销并重新登录目标用户；登录时将自动完成用户启用。',
+          mbInformation, MB_OK, IDOK)
+      else if ResultCode <> SetupHelperExitSuccess then
+        HandleSetupHelperResult('Interactive-user profile enable/verification', ResultCode);
+    end;
   end;
 end;
 
@@ -217,7 +214,8 @@ begin
   end;
   if CurUninstallStep = usPostUninstall then
   begin
-    RegPurgeMoqiResiduals;
+    { The helper now reports checked machine-unregistration results. Do not
+      silently purge HKCR/HKCU belonging to the elevated credential account. }
     if HelperUninstallNeedsRestart then
       SuppressibleMsgBox(
         '部分 TSF DLL 已安排在系统重启后删除。请尽快重启 Windows，以完成卸载清理。',

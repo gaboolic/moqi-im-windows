@@ -21,6 +21,7 @@
 #include "MoqiLangBarButton.h"
 #include "MoqiTextService.h"
 #include "libIME2/src/Utils.h"
+#include <filesystem>
 
 // this is the GUID of the IME mode icon in Windows 8
 // the value is not available in older SDK versions, so let's define it ourselves.
@@ -31,8 +32,6 @@ static const char WINDOWS_MODE_ICON_ID[] = "windows-mode-icon";
 
 namespace Moqi {
 
-// static
-std::unordered_map<std::wstring, HICON> LangBarButton::iconCache_; // cache loaded icons
 
 LangBarButton::LangBarButton(TextService* service, const std::string& id, const GUID& guid, UINT commandId, const wchar_t* text, DWORD style):
 	Ime::LangBarButton(service, guid, commandId, text, style),
@@ -40,6 +39,7 @@ LangBarButton::LangBarButton(TextService* service, const std::string& id, const 
 }
 
 LangBarButton::~LangBarButton() {
+	if (ownedIcon_) ::DestroyIcon(ownedIcon_);
 }
 
 LangBarButton* LangBarButton::fromJson(TextService* service, const Json::Value& info) {
@@ -70,21 +70,41 @@ LangBarButton* LangBarButton::fromJson(TextService* service, const Json::Value& 
 }
 
 void LangBarButton::setIconFile(std::wstring filePath) {
-    if (filePath != iconFile_) {
-        iconFile_ = std::move(filePath);
+    // Never resolve a backend-relative path against the embedding application's
+    // CWD. programDir is the installed payload root, including for x86 hosts.
+    std::filesystem::path path(filePath);
+    if (!filePath.empty() && !path.is_absolute()) {
+        auto* module = static_cast<Moqi::ImeModule*>(textService()->imeModule().operator->());
+        if (!module || module->programDir().empty() || path.has_root_name() || path.has_root_directory())
+            return; // reject drive/root-relative paths rather than consult host CWD
+        path = std::filesystem::path(module->programDir()) / path;
+    }
+    filePath = path.lexically_normal().wstring();
+    if (filePath == iconFile_ && iconLoaded_) return;
+    iconFile_ = std::move(filePath);
+    HICON loaded = iconFile_.empty() ? nullptr : static_cast<HICON>(::LoadImageW(
+        nullptr, iconFile_.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE));
+    iconLoaded_ = loaded != nullptr;
+    // A failed load is retryable, including when Windows asks for the icon
+    // before the backend sends another changeButton. Do not show a stale mode.
+    HICON previous = ownedIcon_;
+    ownedIcon_ = loaded;
+    HICON display = loaded ? loaded : ::LoadIconW(nullptr, IDI_APPLICATION);
+    // Missing-file retries can happen from GetIcon itself. Do not recursively
+    // notify TSF of the same fallback on every unsuccessful load.
+    if (icon() != display) setIcon(display);
+    if (previous) ::DestroyIcon(previous);
+}
 
-        HICON icon = NULL;
-        auto icon_it = iconCache_.find(iconFile_);
-        if (icon_it != iconCache_.end()) { // found in the cache
-            icon = icon_it->second;
-        }
-        else { // not in the cache
-            icon = (HICON)LoadImageW(NULL, iconFile_.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE);
-            iconCache_[iconFile_] = icon; // cache the icon
-        }
-        if (icon) {
-            setIcon(icon);
-        }
+STDMETHODIMP LangBarButton::GetIcon(HICON *phIcon) {
+    if (!phIcon) return E_INVALIDARG;
+    try {
+        if (!iconLoaded_ && !iconFile_.empty()) setIconFile(iconFile_);
+        if (!icon()) setIcon(::LoadIconW(nullptr, IDI_APPLICATION));
+        return Ime::LangBarButton::GetIcon(phIcon);
+    } catch (...) {
+        *phIcon = nullptr;
+        return E_FAIL;
     }
 }
 
@@ -138,14 +158,9 @@ void LangBarButton::updateFromJson(const Json::Value& info) {
 }
 
 
-void LangBarButton::clearIconCache() {
-	for (auto it = iconCache_.begin(); it != iconCache_.end(); ++it) {
-		DestroyIcon(it->second);
-	}
-	iconCache_.clear();
-}
 
 STDMETHODIMP LangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *prcArea) {
+	if (localFallback_) return S_OK; // never send an invented backend command
 	// special handling for right click on windows 8 mode icon
 	if (id_ == WINDOWS_MODE_ICON_ID && click == TF_LBI_CLK_RIGHT) {
 		TextService* service = static_cast<TextService*>(textService());
@@ -165,6 +180,7 @@ STDMETHODIMP LangBarButton::OnClick(TfLBIClick click, POINT pt, const RECT *prcA
 }
 
 STDMETHODIMP LangBarButton::InitMenu(ITfMenu *pMenu) {
+	if (localFallback_) return E_NOTIMPL;
 	TextService* service = static_cast<TextService*>(textService());
 	if (service && service->onMenu(this, pMenu)) {
 		return S_OK;

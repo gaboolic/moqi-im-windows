@@ -61,3 +61,16 @@ target_link_libraries(MoqiLauncher
     Rpcrt4 # for uuid stuff
     libuv
 )
+
+if(MOQI_BUILD_TESTS)
+    add_executable(LauncherRecoveryTests
+        ${CMAKE_SOURCE_DIR}/tests/LauncherRecoveryTests.cpp
+        ${MOQI_PROTO_CPP}
+        PipeServer.cpp PipeClient.cpp PipeSecurity.cpp BackendServer.cpp Utils.cpp
+    )
+    add_dependencies(LauncherRecoveryTests moqi_proto_cpp_gen)
+    target_link_libraries(LauncherRecoveryTests
+        jsoncpp_lib_static ${MOQI_PROTOBUF_TARGET} Rpcrt4 libuv)
+    add_test(NAME launcher-recovery COMMAND LauncherRecoveryTests)
+    set_tests_properties(launcher-recovery PROPERTIES TIMEOUT 20)
+endif()

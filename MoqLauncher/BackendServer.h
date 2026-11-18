@@ -55,7 +55,8 @@ public:
 		return name_;
 	}
 
-	void startProcess();
+	// Returns false on spawn failure or while a failed start is cooling down.
+	bool startProcess(bool forceRetry = false);
 
 	void terminateProcess();
 
@@ -70,6 +71,8 @@ public:
 	void uploadCloudClipboardText(const std::string& utf8Text);
 
 private:
+    void reportStartFailure(int error, const std::string& executablePath,
+                            const std::string& workingDir);
     void sendWarmupRequests();
 
     uv::Pipe* createStdinPipe();
@@ -110,6 +113,8 @@ private:
 	// throttle restarts so a backend that dies on startup (e.g. during logon /
 	// logoff) can never trigger a restart storm.
 	ULONGLONG lastProcessStartTick_ = 0;
+	ULONGLONG lastStartAttemptTick_ = 0;
+	ULONGLONG lastFailureNotificationTick_ = 0;
 
 	// Bumped on every spawn. The stdout/stderr read-error callbacks capture the
 	// generation of the pipes they belong to, so an error from a previous

@@ -26,6 +26,7 @@
 #include "MoqiLangBarButton.h"
 
 #include <deque>
+#include <memory>
 #include <atomic>
 #include <unordered_map>
 #include <string>
@@ -91,8 +92,7 @@ private:
     static std::wstring getPipeName(const wchar_t* base_name);
     HANDLE connectPipe(const wchar_t* pipeName, int timeoutMs);
     bool ensureLauncherRunning();
-    bool isLauncherProcessRunning();
-    bool forceRestartLauncher();
+    DWORD remainingRpcTime(DWORD maximum) const;
 
     moqi::protocol::ClientRequest createRpcRequest(const char* methodName);
 	bool callRpcMethod(moqi::protocol::ClientRequest& request, Json::Value& response);
@@ -112,10 +112,13 @@ private:
 	void flushPendingAsyncResponses(Ime::EditSession* session = nullptr);
 	bool applyAsyncResponse(Json::Value& msg, Ime::EditSession* session = nullptr);
 	static void CALLBACK onAsyncPollTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
-    void closeRpcConnection();
+    void closeRpcConnection(bool cleanupComposition = true);
+    bool cleanupOfflineComposition(bool allowAsync = true);
 
 	bool init();
-    void resetTextServiceState();
+    void resetTextServiceState(bool showOfflineStatus = true);
+    void ensureLocalStatusButton();
+    void retryLanguageButtonRegistration();
 
 	void addKeyEventToRpcRequest(moqi::protocol::ClientRequest& request, Ime::KeyEvent& keyEvent);
     bool sendOnMenu(std::string button_id, Json::Value& result);
@@ -135,6 +138,7 @@ private:
     void updateStatus(Json::Value& msg, Ime::EditSession* session = nullptr);
 
 private:
+	std::shared_ptr<const bool> lifetimeToken_ = std::make_shared<const bool>(true);
 	TextService* textService_;
 	std::string guid_;
 	HANDLE pipe_;
@@ -142,15 +146,22 @@ private:
 	std::atomic<bool> activationInProgress_;
 	std::unordered_map<std::string, Ime::ComPtr<Moqi::LangBarButton>> buttons_; // map buttons to string IDs
 	unsigned int nextSeqNum_;
-	bool isActivated_;
+	bool activationRequested_; // TSF intent; connection readiness is separate
     bool shouldWaitConnection_;
     bool handshakeComplete_;
     int connectAttempts_;
     ULONGLONG lastLauncherStartAttemptTick_;
-    ULONGLONG lastLauncherKillTick_;
+    ULONGLONG nextConnectionAttemptTick_;
+    ULONGLONG rpcDeadlineTick_;
+    ULONGLONG nextButtonRegistrationTick_ = 0;
 	HWND asyncPollTimerWindow_;
 	UINT_PTR asyncPollTimerId_;
 	bool asyncFlushInProgress_;
+	ULONGLONG connectionGeneration_ = 0;
+	bool offlineCleanupPending_ = false;
+	bool offlineCleanupInProgress_ = false;
+	bool offlineCleanupQueued_ = false;
+	Ime::ComPtr<ITfContext> compositionContext_;
 	std::deque<Json::Value> pendingAsyncResponses_;
 	std::vector<AutoPairRuleState> autoPairRules_;
 };

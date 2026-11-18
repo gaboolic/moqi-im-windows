@@ -28,6 +28,7 @@
 #include <codecvt> // for utf8 conversion
 #include <cstring>
 #include <fstream>
+#include <filesystem>
 #include <locale> // for wstring_convert
 #include <map>
 #include <sstream>
@@ -71,13 +72,6 @@ static DWORD trayNotificationInfoFlags(moqi::protocol::TrayNotificationIcon icon
   }
 }
 
-static std::string getUtf8CurrentDir() {
-  char dirPath[MAX_PATH];
-  size_t len = MAX_PATH;
-  uv_cwd(dirPath, &len);
-  return dirPath;
-}
-
 static std::vector<std::string> getUtf8EnvironmentVariables() {
   // build our own new environments
   auto env_strs = GetEnvironmentStringsW();
@@ -104,14 +98,17 @@ std::shared_ptr<spdlog::logger> &BackendServer::logger() {
 
 void BackendServer::handleClientMessage(PipeClient *client,
                                         const moqi::protocol::ClientRequest &request) {
-  if (!isProcessRunning()) {
-    startProcess();
-  }
-
   if (request.method() == moqi::protocol::METHOD_INIT &&
       !request.guid().empty()) {
-    // Remember the language profile GUID so we can warm up the backend.
     lastInitGuid_ = request.guid();
+  }
+  // A disconnect must never resurrect a stopped/crashing engine.
+  if (request.method() == moqi::protocol::METHOD_CLOSE && !isProcessRunning()) {
+    return;
+  }
+  if ((!isProcessRunning() && !startProcess()) || stdinPipe_ == nullptr) {
+    client->sendError(request, "Backend failed to start; check the launcher log");
+    return;
   }
 
   if (name_ == "moqi-ime" &&
@@ -159,6 +156,12 @@ void BackendServer::uploadCloudClipboardText(const std::string& utf8Text) {
 
 uv::Pipe *BackendServer::createStdinPipe() {
   auto stdinPipe = new uv::Pipe();
+  const unsigned int generation = pipeGeneration_;
+  stdinPipe->setWriteCallback([this, generation](int status) {
+    if (status < 0) {
+      onReadError(status, generation);
+    }
+  });
   stdinPipe->setCloseCallback([stdinPipe]() { delete stdinPipe; });
   return stdinPipe;
 }
@@ -185,8 +188,40 @@ uv::Pipe *BackendServer::createStderrPipe() {
   return stderrPipe;
 }
 
-void BackendServer::startProcess() {
+void BackendServer::reportStartFailure(int error, const std::string& executablePath,
+                                       const std::string& workingDir) {
+  logger()->error("Backend {} failed to start: {} ({}), executable={}, cwd={}",
+                  name_, uv_strerror(error), error, executablePath, workingDir);
+  const ULONGLONG now = ::GetTickCount64();
+  if (lastFailureNotificationTick_ == 0 ||
+      now - lastFailureNotificationTick_ >= 30000) {
+    lastFailureNotificationTick_ = now;
+    pipeServer_->enqueueTrayNotification(
+        L"墨奇引擎启动失败", L"请检查安装文件是否完整或被安全软件拦截；可从托盘打开日志查看具体原因。", NIIF_ERROR);
+  }
+}
+
+bool BackendServer::startProcess(bool forceRetry) {
+  if (isProcessRunning()) {
+    return true;
+  }
+  const ULONGLONG now = ::GetTickCount64();
+  if (!forceRetry && lastStartAttemptTick_ != 0 &&
+      now - lastStartAttemptTick_ < MIN_BACKEND_RESTART_INTERVAL_MS) {
+    return false;
+  }
+  lastStartAttemptTick_ = now;
+  // Never resolve a backend relative to the TSF host or a mutable process CWD.
+  const std::filesystem::path root(pipeServer_->programDir());
+  const auto executablePath = (root / std::filesystem::u8path(command_)).u8string();
+  const auto backendWorkingDirPath =
+      (root / std::filesystem::u8path(workingDir_)).u8string();
+  if (command_.empty() || workingDir_.empty()) {
+    reportStartFailure(UV_EINVAL, executablePath, backendWorkingDirPath);
+    return false;
+  }
   process_ = new uv_process_t{};
+  process_->data = this;
   // Bump the generation before creating the pipes so their read-error
   // callbacks are tagged with the new generation (stale errors from a previous
   // process's pipes will then be ignored).
@@ -207,17 +242,23 @@ void BackendServer::startProcess() {
   stdio_containers[2].data.stream = stderrPipe_->streamHandle();
   stdio_containers[2].flags = pipeFlags;
 
-  auto utf8CurrentDirPath = getUtf8CurrentDir();
-  auto executablePath = utf8CurrentDirPath + '\\' + command_;
-  const char *argv[] = {executablePath.c_str(), params_.c_str(), nullptr};
+  const char *argv[] = {executablePath.c_str(),
+                        params_.empty() ? nullptr : params_.c_str(), nullptr};
   uv_process_options_t options = {0};
   options.flags =
       UV_PROCESS_WINDOWS_HIDE; //  UV_PROCESS_WINDOWS_VERBATIM_ARGUMENTS;
   options.file = executablePath.c_str();
   options.args = const_cast<char **>(argv);
 
-  auto backendWorkingDirPath = utf8CurrentDirPath + '\\' + workingDir_;
   options.cwd = backendWorkingDirPath.c_str();
+  options.exit_cb = [](uv_process_t* process, int64_t exitStatus, int termSignal) {
+    auto* backend = static_cast<BackendServer*>(process->data);
+    if (backend != nullptr && backend->process_ == process) {
+      backend->logger()->error("Backend {} exited: status={}, signal={}",
+                               backend->name_, exitStatus, termSignal);
+      backend->onReadError(UV_EOF, backend->pipeGeneration_);
+    }
+  };
 
   // build our own new environments
   auto utf8EnvVars = getUtf8EnvironmentVariables();
@@ -242,10 +283,16 @@ void BackendServer::startProcess() {
   options.stdio = stdio_containers;
   int ret = uv_spawn(uv_default_loop(), process_, &options);
   if (ret < 0) {
-    delete process_;
+    // uv_spawn initializes the handle even on failure. It must be closed on
+    // the loop, not deleted while libuv's handle queue still refers to it.
+    process_->data = nullptr;
+    uv_close(reinterpret_cast<uv_handle_t*>(process_), [](uv_handle_t* handle) {
+      delete reinterpret_cast<uv_process_t*>(handle);
+    });
     process_ = nullptr;
     closeStdioPipes();
-    return;
+    reportStartFailure(ret, executablePath, backendWorkingDirPath);
+    return false;
   }
   lastProcessStartTick_ = ::GetTickCount64();
 
@@ -260,6 +307,7 @@ void BackendServer::startProcess() {
   // instead of blocking for several seconds (and instead of the client
   // timing out and reconnecting, which made it worse).
   sendWarmupRequests();
+  return isProcessRunning() && stdinPipe_ != nullptr;
 }
 
 // Send synthetic init/onActivate/filterKeyDown requests to a freshly spawned
@@ -287,6 +335,7 @@ void BackendServer::sendWarmupRequests() {
     return;
   }
   stdinPipe_->write(std::move(framedMessage));
+  if (stdinPipe_ == nullptr) return; // an immediate write error can stop the child
 
   request.set_method(moqi::protocol::METHOD_ON_ACTIVATE);
   request.set_is_keyboard_open(true);
@@ -296,6 +345,7 @@ void BackendServer::sendWarmupRequests() {
     return;
   }
   stdinPipe_->write(std::move(framedMessage));
+  if (stdinPipe_ == nullptr) return;
 
   // One harmless key press to trigger lazy dictionary loading / deferred UI.
   request.set_method(moqi::protocol::METHOD_FILTER_KEY_DOWN);
@@ -317,17 +367,16 @@ void BackendServer::sendWarmupRequests() {
 }
 
 void BackendServer::restartProcess() {
-  if (process_ == nullptr) {
-    return;
-  }
   terminateProcess();
-  startProcess();
+  // An explicit restart is also a start for a stopped/failed engine.
+  startProcess(true);
 }
 
 void BackendServer::terminateProcess() {
   if (process_) {
     closeStdioPipes();
 
+    process_->data = nullptr;
     uv_process_kill(process_, SIGTERM);
     uv_close(reinterpret_cast<uv_handle_t *>(process_),
              [](uv_handle_t *handle) {

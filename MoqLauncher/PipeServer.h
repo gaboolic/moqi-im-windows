@@ -52,7 +52,7 @@ class PipeClient;
 
 class PipeServer {
 public:
-	PipeServer();
+	explicit PipeServer(const std::wstring& dataDir = L"");
 
 	~PipeServer();
 
@@ -72,6 +72,8 @@ public:
 	BackendServer* backendFromLangProfileGuid(const char* guid);
 
 	BackendServer* backendFromName(const char* name);
+
+	const std::wstring& programDir() const { return topDirPath_; }
 
 	PipeClient* clientFromId(const std::string& clientId);
 
@@ -114,7 +116,7 @@ private:
 	void saveConfig();
     bool initSingleInstance();
 	static std::wstring getPipeName(const wchar_t* baseName);
-	void initPipe(uv_pipe_t* pipe, const wchar_t* appName, SECURITY_ATTRIBUTES* sa = nullptr);
+	bool initPipe(uv_pipe_t* pipe, const wchar_t* appName, SECURITY_ATTRIBUTES* sa = nullptr);
 	void terminateExistingLauncher(HWND existingHwnd);
 	void parseCommandLine(LPSTR cmd);
 	void asyncShutdown();
