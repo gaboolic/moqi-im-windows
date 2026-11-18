@@ -565,6 +565,9 @@ Client::~Client(void) {
     asyncPollTimerWindow_ = nullptr;
   }
   closeRpcConnection(false);
+  // Unregister every button before releasing our references (main's leak fix).
+  // Do not create an offline placeholder or request composition cleanup while
+  // this Client is being destroyed; resetTextServiceState(false) only removes.
   resetTextServiceState(false);
 }
 
@@ -872,11 +875,11 @@ void Client::updateLanguageButtons(Json::Value &msg) {
   if (addButtonVal.isArray()) {
     for (const auto &btn : addButtonVal) {
       if (!btn.isObject() || !btn["id"].isString()) continue;
-      const std::string id = btn["id"].asString();
-      auto existing = buttons_.find(id);
+      const std::string addId = btn["id"].asString();
+      auto existing = buttons_.find(addId);
       if (existing != buttons_.end()) {
-        // Repeated add (including the local mode placeholder) updates in place,
-        // preserving GUID and one registered TSF item per backend ID.
+        // Repeated add updates the registered item instead of leaking another
+        // TSF reference. A backend update also replaces the offline fallback.
         existing->second->setLocalFallback(false);
         existing->second->updateFromJson(btn);
         continue;
@@ -884,7 +887,7 @@ void Client::updateLanguageButtons(Json::Value &msg) {
       auto langBtn = Ime::ComPtr<Moqi::LangBarButton>::takeover(
           Moqi::LangBarButton::fromJson(textService_, btn));
       if (langBtn != nullptr) {
-        buttons_.emplace(langBtn->id(), langBtn); // insert into the map
+        buttons_.emplace(addId, langBtn); // insert into the map
         textService_->addButton(langBtn);
       }
     }
